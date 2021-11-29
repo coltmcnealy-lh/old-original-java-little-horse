@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "gradle",
+			"id": "/Users/coltmcnealy/little-horseapp:buildapp",
+			"script": "app:build",
+			"description": "Assembles and tests this project.",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"project": "app",
+			"buildFile": "/Users/coltmcnealy/little-horse/app/build.gradle.kts",
+			"rootProject": "little-horse",
+			"projectFolder": "/Users/coltmcnealy/little-horse",
+			"workspaceFolder": "/Users/coltmcnealy/little-horse",
+			"args": "",
+			"javaDebug": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"label": "gradle: app:build"
+		}
+	]
+}
