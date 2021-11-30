@@ -11,6 +11,8 @@ public class App {
         Config config = null;
         config = new Config();
         LittleHorseAPI lapi = new LittleHorseAPI(config);
+        Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
+        Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
         lapi.run();
     }
 }

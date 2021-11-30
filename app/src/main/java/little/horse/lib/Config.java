@@ -55,7 +55,7 @@ public class Config {
     public Future<RecordMetadata> send(
             ProducerRecord<String, String> record,
             Callback callback) {
-        return (Future<RecordMetadata>) this.producer.send(record, callback);
+        return this.producer.send(record, callback);
     }
 
     /**
@@ -64,6 +64,7 @@ public class Config {
      * block. Due to lack of Deconstructor in java.
      */
     public void cleanup() {
+        System.out.println("CLOSING");
         this.producer.close();
     }
 }

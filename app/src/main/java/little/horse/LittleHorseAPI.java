@@ -14,16 +14,12 @@ public class LittleHorseAPI {
         this.config = config;
         this.wfSpecAPI = new WFSpecAPI(this.config);
 
-        this.app = Javalin.create().events(event -> {
-            event.serverStopping(() -> {
-                this.cleanup();
-            });
-        });
+        this.app = Javalin.create();
         this.app.post("/wfSpec", this.wfSpecAPI::post);
     }
 
     public void cleanup() {
-        this.config.cleanup();
+        // Nothing to do yet.
     }
 
     public void run() {
