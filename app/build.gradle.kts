@@ -32,7 +32,12 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:1.7.31")
 
     // Stuff for Kafka
-    implementation("org.apache.kafka:kafka_2.12:6.0.0-ccs")
+    // implementation("org.apache.kafka:kafka_2.12:6.0.0-ccs")
+    implementation("org.apache.kafka:kafka-clients:3.0.0")
+    implementation("org.apache.kafka:kafka-streams:3.0.0")
+
+    // Kubernetes cient
+    implementation("io.kubernetes:client-java:10.0.0")
 }
 
 application {
