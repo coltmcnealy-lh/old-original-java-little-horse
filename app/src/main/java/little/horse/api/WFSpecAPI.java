@@ -1,6 +1,7 @@
 package little.horse.api;
 
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
 import little.horse.lib.Config;
@@ -10,9 +11,9 @@ import little.horse.lib.WFSpec.WFSpecSchema;
 
 public class WFSpecAPI {
     private Config config;
-    private KafkaStreams streams;
+    private APIStreamsContext streams;
 
-    public WFSpecAPI(Config config, KafkaStreams streams) {
+    public WFSpecAPI(Config config, APIStreamsContext streams) {
         this.config = config;
         this.streams = streams;
     }
@@ -27,5 +28,18 @@ public class WFSpecAPI {
         response.status = spec.getModel().status;
         response.name = spec.getModel().name;
         ctx.json(response);
+    }
+
+    public void get(Context ctx) {
+        ReadOnlyKeyValueStore<String, WFSpecSchema> store = streams.getWFSpecStore();
+        String wfSpecGuid = ctx.pathParam("guid");
+
+        WFSpecSchema schema = store.get(wfSpecGuid);
+        if (schema == null) {
+            ctx.status(404);
+            return;
+        }
+
+        ctx.json(schema);
     }
 }

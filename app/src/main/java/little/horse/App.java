@@ -5,8 +5,8 @@ package little.horse;
 
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.KStream;
 
+import little.horse.api.APIStreamsContext;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 
@@ -16,14 +16,20 @@ class FrontendAPIApp {
         Config config = null;
         config = new Config();
 
-        Topology topology = WFSpecTopology.build(config);
+        WFSpecTopology wfSpecTopology = new WFSpecTopology(config);
+        Topology topology = wfSpecTopology.build();
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
-        streams.start();
 
-        LittleHorseAPI lapi = new LittleHorseAPI(config, streams);
+        APIStreamsContext context = new APIStreamsContext(streams);
+        context.setWFSpecStoreName(wfSpecTopology.getStoreName());
+
+        LittleHorseAPI lapi = new LittleHorseAPI(config, context);
+
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
+        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+
+        streams.start();
         lapi.run();
     }
 }

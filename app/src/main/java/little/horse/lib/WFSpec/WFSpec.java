@@ -55,7 +55,7 @@ public class WFSpec {
         ObjectMapper mapper = new ObjectMapper();
         String result;
         try {
-            result = mapper.writeValueAsString(this);
+            result = mapper.writeValueAsString(this.getModel());
         } catch(JsonProcessingException exn) {
             System.out.println(exn.toString());
             result = "Could not serialize.";
