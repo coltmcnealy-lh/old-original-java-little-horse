@@ -3,10 +3,19 @@
  */
 package little.horse;
 
+import java.util.Collections;
+import java.util.Properties;
+
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.CreateTopicsResult;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.APIStreamsContext;
+import little.horse.api.TaskDefTopology;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 
@@ -16,20 +25,58 @@ class FrontendAPIApp {
         Config config = null;
         config = new Config();
 
+        Properties properties = new Properties();
+        properties.put(
+            AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
+            config.bootstrapServers
+        );
+        Admin admin = Admin.create(properties);
+        int partitions = 1;
+        short replicationFactor = 1;
+        NewTopic newTopic = new NewTopic(config.getWFSpecTopic(), partitions, replicationFactor);
+        NewTopic newTopic2 = new NewTopic(config.getTaskDefTopic(), partitions, replicationFactor);
+        CreateTopicsResult result = admin.createTopics(
+            Collections.singleton(newTopic)
+        );
+        CreateTopicsResult result2 = admin.createTopics(
+            Collections.singleton(newTopic2)
+        );
+
+        KafkaFuture<Void> future1 = result.values().get(config.getWFSpecTopic());
+        KafkaFuture<Void> future2 = result2.values().get(config.getTaskDefTopic());
+        try {
+            future1.get();
+            future2.get();
+        } catch (Exception e) {
+            System.out.println("Oooooooorzdash");
+        }
+
         WFSpecTopology wfSpecTopology = new WFSpecTopology(config);
         Topology topology = wfSpecTopology.build();
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
+        KafkaStreams wfSpecStreams = new KafkaStreams(topology, config.getStreamsConfig(
+            "wfSpec"
+        ));
 
-        APIStreamsContext context = new APIStreamsContext(streams);
+        TaskDefTopology taskDefTopology = new TaskDefTopology(config);
+        Topology taskDefTopo = taskDefTopology.build();
+        KafkaStreams taskDefStreams = new KafkaStreams(taskDefTopo, config.getStreamsConfig(
+            "taskDef"
+        ));
+
+        APIStreamsContext context = new APIStreamsContext(wfSpecStreams, taskDefStreams);
         context.setWFSpecStoreName(wfSpecTopology.getStoreName());
+        context.setTaskDefGuidStoreName(taskDefTopology.getGuidStoreName());
+        context.setTaskDefNameStoreName(taskDefTopology.getNameStoreName());
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);
 
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(wfSpecStreams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(taskDefStreams::close));
 
-        streams.start();
+        wfSpecStreams.start();
+        taskDefStreams.start();
         lapi.run();
     }
 }

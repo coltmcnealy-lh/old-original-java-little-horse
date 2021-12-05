@@ -1,6 +1,5 @@
 package little.horse.api;
 
-import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;

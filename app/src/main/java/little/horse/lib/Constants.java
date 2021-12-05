@@ -9,4 +9,6 @@ public class Constants {
 
     public static String ADVERTISED_URL_KEY = "LHORSE_ADVERTISED_URL";
     public static String STATE_DIR_KEY = "LHORSE_KAFKA_STREAMS_STATE_DIR";
+    
+    public static String DEFAULT_TASK_IMAGE_KEY = "LHORSE_DEFAULT_TASK_IMAGE";
 }

@@ -7,18 +7,22 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
+import org.yaml.snakeyaml.scanner.Constant;
 
 
 public class Config {
     private KafkaProducer<String, String> producer;
     private String appId;
-    private String bootstrapServers;
+    public String bootstrapServers;
     private Properties kafkaConfig;
     private String wfSpecTopic;
+    private String taskDeftopic;
     private String kafkaTopicPrefix;
     private String advertisedUrl;
     private String stateDirectory;
+    private String defaultTaskDockerImage;
 
     public Config() {
         // TODO: Make this more readable
@@ -54,16 +58,24 @@ public class Config {
         this.kafkaTopicPrefix = (kTopicPrefix == null) ? "" : kTopicPrefix;
 
         this.wfSpecTopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "WFSpec";
+        this.taskDeftopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "TaskDef";
 
         String theURL = System.getenv(Constants.ADVERTISED_URL_KEY);
         this.advertisedUrl = (theURL == null) ? "http://localhost:5000" : theURL;
 
         String sdir = System.getenv(Constants.STATE_DIR_KEY);
         this.stateDirectory = (sdir == null) ? "/tmp/kafkaState" : sdir;
+
+        String drmg = System.getenv(Constants.DEFAULT_TASK_IMAGE_KEY);
+        this.defaultTaskDockerImage = (drmg == null) ? "little-horse-task:latest": drmg;
     }
 
     public String getWFSpecTopic() {
         return this.wfSpecTopic;
+    }
+
+    public String getTaskDefTopic() {
+        return this.taskDeftopic;
     }
 
     public Future<RecordMetadata> send(ProducerRecord<String, String> record) {
@@ -77,12 +89,18 @@ public class Config {
     }
 
     public Properties getStreamsConfig() {
+        return this.getStreamsConfig("");
+    }
+
+    public Properties getStreamsConfig(String appIdSuffix) {
         Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, this.appId);
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, this.appId + appIdSuffix);
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.advertisedUrl);
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         return props;
     }
 
@@ -94,5 +112,9 @@ public class Config {
     public void cleanup() {
         System.out.println("CLOSING");
         this.producer.close();
+    }
+
+    public String getDefaultTaskDockerImage() {
+        return this.defaultTaskDockerImage;
     }
 }
