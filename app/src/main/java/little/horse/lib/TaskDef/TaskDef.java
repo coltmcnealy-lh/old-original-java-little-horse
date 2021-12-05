@@ -1,8 +1,16 @@
 package little.horse.lib.TaskDef;
 
 import little.horse.lib.Config;
+import little.horse.lib.Constants;
+import little.horse.lib.LHLookupException;
+import little.horse.lib.LHLookupExceptionReason;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
+import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,6 +45,67 @@ public class TaskDef {
 
         this.schema = schema;
         this.config = config;
+    }
+
+    public TaskDef fromGuid(String guid, Config config) throws LHLookupException {
+        OkHttpClient client = config.getHttpClient();
+        String url = config.getAPIUrlFor(Constants.TASK_DEF_API_PATH) + "/" + guid;
+        Request request = new Request.Builder().url(url).build();
+        Response response;
+        String responseBody = null;
+
+        try {
+            response = client.newCall(request).execute();
+            responseBody = response.body().string();
+        }
+        catch (IOException exn) {
+            String err = "Got an error making request to " + url + ": " + exn.getMessage() + ".\n";
+            err += "Was trying to call URL " + url;
+
+            System.err.println(err);
+            throw new LHLookupException(exn, LHLookupExceptionReason.IO_FAILURE, err);
+        }
+
+        // Check response code.
+        if (response.code() == 404) {
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.OBJECT_NOT_FOUND,
+                "Could not find WFSpec with guid " + guid + "."
+            );
+        } else if (response.code() != 200) {
+            if (responseBody == null) {
+                responseBody = "";
+            }
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.OTHER_ERROR,
+                "API Returned an error: " + String.valueOf(response.code()) + " " + responseBody
+            );
+        }
+
+        TaskDefSchema schema = null;
+        try {
+            schema = new ObjectMapper().readValue(responseBody, TaskDefSchema.class);
+        } catch (JsonProcessingException exn) {
+            System.err.println(
+                "Got an invalid response: " + exn.getMessage() + " " + responseBody
+            );
+            throw new LHLookupException(
+                exn,
+                LHLookupExceptionReason.INVALID_RESPONSE,
+                "Got an invalid response: " + responseBody + " " + exn.getMessage()
+            );
+        }
+
+        try {
+            return new TaskDef(schema, config);
+        } catch (LHValidationError exn) {
+            System.err.println("Orzdash we shouldn't be able to get here.");
+            // Shouldn't be possible because in order for the thing to get into the
+            // datastore, it had to have already passed this validation.
+            throw new LHLookupException(exn, LHLookupExceptionReason.OTHER_ERROR, "Orzdash");
+        }
     }
 
     public TaskDefSchema getModel() {

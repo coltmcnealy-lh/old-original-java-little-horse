@@ -1,8 +1,15 @@
 package little.horse.lib.WFSpec;
 
 import little.horse.lib.Config;
+import little.horse.lib.Constants;
+import little.horse.lib.LHLookupException;
+import little.horse.lib.LHLookupExceptionReason;
 import little.horse.lib.LHUtil;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -45,6 +52,67 @@ public class WFSpec {
 
         this.schema = schema;
         this.config = config;
+    }
+
+    /**
+     * Loads a WFSpec object by querying the backend data store (as of this commit, that
+     * means making a REST call to the main API running KafkaStreams).
+     * @param guid the guid to load.
+     * @param config a valid little.horse.lib.Config object representing this environment.
+     * @return a WFSpec object.
+     */
+    public WFSpec fromGuid(String guid, Config config) throws LHLookupException {
+        OkHttpClient client = config.getHttpClient();
+        String url = config.getAPIUrlFor(Constants.WF_SPEC_API_PATH) + "/" + guid;
+        Request request = new Request.Builder().url(url).build();
+        Response response;
+        String responseBody = null;
+
+        try {
+            response = client.newCall(request).execute();
+            responseBody = response.body().string();
+        }
+        catch (IOException exn) {
+            String err = "Got an error making request to " + url + ": " + exn.getMessage() + ".\n";
+            err += "Was trying to call URL " + url;
+
+            System.err.println(err);
+            throw new LHLookupException(exn, LHLookupExceptionReason.IO_FAILURE, err);
+        }
+
+        // Check response code.
+        if (response.code() == 404) {
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.OBJECT_NOT_FOUND,
+                "Could not find WFSpec with guid " + guid + "."
+            );
+        } else if (response.code() != 200) {
+            if (responseBody == null) {
+                responseBody = "";
+            }
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.OTHER_ERROR,
+                "API Returned an error: " + String.valueOf(response.code()) + " " + responseBody
+            );
+        }
+
+        WFSpecSchema schema = null;
+        try {
+            schema = new ObjectMapper().readValue(responseBody, WFSpecSchema.class);
+        } catch (JsonProcessingException exn) {
+            System.err.println(
+                "Got an invalid response: " + exn.getMessage() + " " + responseBody
+            );
+            throw new LHLookupException(
+                exn,
+                LHLookupExceptionReason.INVALID_RESPONSE,
+                "Got an invalid response: " + responseBody + " " + exn.getMessage()
+            );
+        }
+
+        return new WFSpec(schema, config);
     }
 
     public WFSpecSchema getModel() {

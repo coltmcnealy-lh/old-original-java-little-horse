@@ -57,9 +57,9 @@ public class TaskDefTopology {
 
         return builder.build();
     }
-
+    
     public String getGuidStoreName() {
-        return taskDefGuidTable.queryableStoreName();
+        return (taskDefGuidTable == null) ? null : taskDefGuidTable.queryableStoreName();
     }
 
     public String getNameStoreName() {

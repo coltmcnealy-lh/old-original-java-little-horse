@@ -10,6 +10,8 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
+import okhttp3.OkHttpClient;
+
 
 public class Config {
     private KafkaProducer<String, String> producer;
@@ -22,6 +24,8 @@ public class Config {
     private String advertisedUrl;
     private String stateDirectory;
     private String defaultTaskDockerImage;
+    private String apiURL;
+    private OkHttpClient httpClient;
 
     public Config() {
         // TODO: Make this more readable
@@ -67,10 +71,27 @@ public class Config {
 
         String drmg = System.getenv(Constants.DEFAULT_TASK_IMAGE_KEY);
         this.defaultTaskDockerImage = (drmg == null) ? "little-horse-task:latest": drmg;
+
+        String tempApiURL = System.getenv(Constants.API_URL_KEY);
+        this.apiURL = (tempApiURL == null) ? "http://localhost:5000" : tempApiURL;
+
+        this.httpClient = new OkHttpClient();
+    }
+
+    public OkHttpClient getHttpClient() {
+        return this.httpClient;
     }
 
     public String getWFSpecTopic() {
         return this.wfSpecTopic;
+    }
+
+    public String getAPIUrlFor(String extension) {
+        return this.getAPIUrl() + "/" + extension;
+    }
+
+    public String getAPIUrl() {
+        return this.apiURL;
     }
 
     public String getTaskDefTopic() {
