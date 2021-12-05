@@ -46,12 +46,12 @@ public class TaskDefAPI {
         String id = ctx.pathParam("nameOrGuid");
 
         // TaskDefSchema schemaFromName = nStore.get(id);
-        TaskDefSchema schemaFromName = null; // TODO: Fix this.
+        // TaskDefSchema schemaFromName = null; // TODO: Fix this.
         TaskDefSchema schemaFromGuid = gStore.get(id);
-        if (schemaFromName != null) {
-            ctx.json(schemaFromName);
-            return;
-        }
+        // if (schemaFromName != null) {
+        //     ctx.json(schemaFromName);
+        //     return;
+        // }
         if (schemaFromGuid != null) {
             ctx.json(schemaFromGuid);
             return;
