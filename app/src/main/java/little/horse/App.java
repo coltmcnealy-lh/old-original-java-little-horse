@@ -18,6 +18,7 @@ import little.horse.api.APIStreamsContext;
 import little.horse.api.TaskDefTopology;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
+import little.horse.lib.Constants;
 
 
 class FrontendAPIApp {
@@ -57,21 +58,17 @@ class FrontendAPIApp {
             "wfSpec"
         ));
 
-        TaskDefTopology taskDefTopology = new TaskDefTopology(config);
-        Topology taskDefTopo = taskDefTopology.build();
-        KafkaStreams taskDefStreams = new KafkaStreams(taskDefTopo, config.getStreamsConfig(
-            "taskDef"
-        ));
-        Topology taskDefIndex = taskDefTopology.buildIndex();
-        KafkaStreams taskDefIndexStreams = new KafkaStreams(taskDefIndex, config.getStreamsConfig(
-            "taskDefIndex"
-        ));
-
+        TaskDefTopology taskDefTopologyBuilder = new TaskDefTopology(config);
+        Topology taskDefTopology = taskDefTopologyBuilder.getTopology();
+        KafkaStreams taskDefStreams = new KafkaStreams(
+            taskDefTopology,
+            config.getStreamsConfig("taskDef")
+        );
 
         APIStreamsContext context = new APIStreamsContext(wfSpecStreams, taskDefStreams);
         context.setWFSpecStoreName(wfSpecTopology.getStoreName());
-        context.setTaskDefGuidStoreName(taskDefTopology.getGuidStoreName());
-        context.setTaskDefNameStoreName(taskDefTopology.getNameStoreName());
+        context.setTaskDefGuidStoreName(Constants.TASK_DEF_GUID_STORE);
+        context.setTaskDefNameStoreName(Constants.TASK_DEF_NAME_STORE);
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);
 
@@ -82,7 +79,6 @@ class FrontendAPIApp {
 
         wfSpecStreams.start();
         taskDefStreams.start();
-        taskDefIndexStreams.start();
         lapi.run();
     }
 }

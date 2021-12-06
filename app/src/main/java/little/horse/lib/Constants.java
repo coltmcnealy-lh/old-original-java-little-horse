@@ -15,4 +15,8 @@ public class Constants {
 
     public static String WF_SPEC_API_PATH = "wfSpec";
     public static String TASK_DEF_API_PATH = "taskDef";
+
+    // Should only be used by the actual API. TODO: Move this elsewhere.
+    public static String TASK_DEF_GUID_STORE = "taskDefGuidStore";
+    public static String TASK_DEF_NAME_STORE = "taskDefNameStore";
 }
