@@ -36,18 +36,26 @@ class FrontendAPIApp {
         short replicationFactor = 1;
         NewTopic newTopic = new NewTopic(config.getWFSpecTopic(), partitions, replicationFactor);
         NewTopic newTopic2 = new NewTopic(config.getTaskDefTopic(), partitions, replicationFactor);
+        NewTopic newTopic3 = new NewTopic(config.getTaskDefNameKeyedTopic(), partitions, replicationFactor);
         CreateTopicsResult result = admin.createTopics(
             Collections.singleton(newTopic)
         );
         CreateTopicsResult result2 = admin.createTopics(
             Collections.singleton(newTopic2)
         );
+        CreateTopicsResult result3 = admin.createTopics(
+            Collections.singleton(newTopic3)
+        );
 
         KafkaFuture<Void> future1 = result.values().get(config.getWFSpecTopic());
         KafkaFuture<Void> future2 = result2.values().get(config.getTaskDefTopic());
+        KafkaFuture<Void> future3 = result3.values().get(
+            config.getTaskDefNameKeyedTopic()
+        );
         try {
             future1.get();
             future2.get();
+            future3.get();
         } catch (Exception e) {
             System.out.println("Oooooooorzdash");
         }

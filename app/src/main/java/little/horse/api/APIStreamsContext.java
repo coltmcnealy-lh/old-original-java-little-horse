@@ -51,7 +51,7 @@ public class APIStreamsContext {
     }
 
     public ReadOnlyKeyValueStore<String, TaskDefSchema> getTaskDefNameStore() {
-        return wfSpecStreams.store(
+        return taskDefStreams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefNameStoreName,
                 QueryableStoreTypes.keyValueStore()

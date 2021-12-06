@@ -98,6 +98,10 @@ public class Config {
         return this.taskDeftopic;
     }
 
+    public String getTaskDefNameKeyedTopic() {
+        return this.taskDeftopic + "__nameKeyed";
+    }
+
     public Future<RecordMetadata> send(ProducerRecord<String, String> record) {
         return (Future<RecordMetadata>) this.producer.send(record);
     }

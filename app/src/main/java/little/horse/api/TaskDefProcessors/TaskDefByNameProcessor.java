@@ -27,6 +27,7 @@ String, TaskDefSchema, String, TaskDefSchema
         if (td == null) {
             kvStore.delete(record.key());
         } else {
+            System.out.println("putting in record: " + record.key() + " " + td.toString());
             kvStore.put(record.key(), td);
         }
 

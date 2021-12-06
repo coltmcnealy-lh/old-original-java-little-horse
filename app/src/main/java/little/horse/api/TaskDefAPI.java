@@ -41,16 +41,16 @@ public class TaskDefAPI {
     }
 
     public void get(Context ctx) {
-        // ReadOnlyKeyValueStore<String, TaskDefSchema> nStore = streams.getTaskDefNameStore();
+        ReadOnlyKeyValueStore<String, TaskDefSchema> nStore = streams.getTaskDefNameStore();
         ReadOnlyKeyValueStore<String, TaskDefSchema> gStore = streams.getTaskDefGuidStore();
         String id = ctx.pathParam("nameOrGuid");
 
-        // TaskDefSchema schemaFromName = nStore.get(id);
+        TaskDefSchema schemaFromName = nStore.get(id);
         TaskDefSchema schemaFromGuid = gStore.get(id);
-        // if (schemaFromName != null) {
-        //     ctx.json(schemaFromName);
-        //     return;
-        // }
+        if (schemaFromName != null) {
+            ctx.json(schemaFromName);
+            return;
+        }
         if (schemaFromGuid != null) {
             ctx.json(schemaFromGuid);
             return;

@@ -27,6 +27,8 @@ public class TaskDefTopology {
         String byGuidProcessorName = "TaskDef Guid Processor";
         String byNameProcessorName = "TaskDef Name Processor";
         String sourceName = "TaskDef Metadata Events";
+        String nameKeyedSink = "TaskDef Name Keyed Sink";
+        String nameKeyedSource = "TaskDef Name Keyed Source";
 
         Runtime.getRuntime().addShutdownHook(
             new Thread(() -> {serde.close();})
@@ -39,16 +41,36 @@ public class TaskDefTopology {
             config.getTaskDefTopic()
         );
 
+        // This step does two things:
+        // 1. Save the TaskDefSchema into the Guid-keyed State Store
+        // 2. Produce a re-keyed record to the Name-keyed Kafka Topic
         builder.addProcessor(
             byGuidProcessorName,
             TaskDefByGuidProcessor::new,
             sourceName
         );
 
+        // Sink the re-keyed stream into an intermediate topic
+        builder.addSink(
+            nameKeyedSink,
+            config.getTaskDefNameKeyedTopic(),
+            Serdes.String().serializer(),
+            serde.serializer(),
+            byGuidProcessorName
+        );
+
+        // Add a source so we can continue processing
+        builder.addSource(
+            nameKeyedSource,
+            Serdes.String().deserializer(),
+            serde.deserializer(),
+            config.getTaskDefNameKeyedTopic()
+        );
+
         builder.addProcessor(
             byNameProcessorName,
             TaskDefByNameProcessor::new,
-            byGuidProcessorName
+            nameKeyedSource
         );
 
         StoreBuilder<KeyValueStore<String, TaskDefSchema>> guidStoreBuilder =
@@ -57,6 +79,7 @@ public class TaskDefTopology {
                 Serdes.String(),
                 serde
         );
+
         StoreBuilder<KeyValueStore<String, TaskDefSchema>> nameStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(Constants.TASK_DEF_NAME_STORE),
