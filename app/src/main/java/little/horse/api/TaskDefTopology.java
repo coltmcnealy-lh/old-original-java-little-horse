@@ -27,20 +27,21 @@ public class TaskDefTopology {
         StreamsBuilder builder = new StreamsBuilder();
 
         KStream<String, TaskDefSchema> taskDefEvents = builder.stream(
-            config.getTaskDefTopic(),
+            config.getTaskDefTopic(), // 'foo' in the question above
             Consumed.with(Serdes.String(), new TaskDefSerdes())
         );
 
         KStream<String, TaskDefSchema> taskDefEventsNameKeyed = taskDefEvents.selectKey(
             ((k, v) -> v.name)
         );
-        String intermediateName = config.getTaskDefTopic() + "__intermediate";
-        String intermediateGuid = intermediateName + "2";
-        taskDefEventsNameKeyed.to(intermediateName);
-        taskDefEvents.to(intermediateGuid);
+        String intermediateTopicByName = config.getTaskDefTopic() + "__intermediate_name";
+        String intermediateTopicByGuid = config.getTaskDefTopic() + "__intermediate_guid";
+
+        taskDefEventsNameKeyed.to(intermediateTopicByName);
+        taskDefEvents.to(intermediateTopicByGuid);
 
         this.taskDefNameTable = builder.globalTable(
-            intermediateName,
+            intermediateTopicByName,
             Materialized.<String, TaskDefSchema, KeyValueStore<Bytes, byte[]>>
                 as("wf-spec-name")
                 .withKeySerde(Serdes.String())
@@ -48,7 +49,7 @@ public class TaskDefTopology {
         );
 
         this.taskDefGuidTable = builder.globalTable(
-            intermediateGuid,
+            intermediateTopicByGuid,
             Materialized.<String, TaskDefSchema, KeyValueStore<Bytes, byte[]>>
                 as("wf-spec-guid")
                 .withKeySerde(Serdes.String())
