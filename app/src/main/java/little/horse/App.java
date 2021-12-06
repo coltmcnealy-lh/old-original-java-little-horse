@@ -62,6 +62,11 @@ class FrontendAPIApp {
         KafkaStreams taskDefStreams = new KafkaStreams(taskDefTopo, config.getStreamsConfig(
             "taskDef"
         ));
+        Topology taskDefIndex = taskDefTopology.buildIndex();
+        KafkaStreams taskDefIndexStreams = new KafkaStreams(taskDefIndex, config.getStreamsConfig(
+            "taskDefIndex"
+        ));
+
 
         APIStreamsContext context = new APIStreamsContext(wfSpecStreams, taskDefStreams);
         context.setWFSpecStoreName(wfSpecTopology.getStoreName());
@@ -77,6 +82,7 @@ class FrontendAPIApp {
 
         wfSpecStreams.start();
         taskDefStreams.start();
+        taskDefIndexStreams.start();
         lapi.run();
     }
 }

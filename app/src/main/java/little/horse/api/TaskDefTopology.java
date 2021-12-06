@@ -23,6 +23,21 @@ public class TaskDefTopology {
         this.config = config;
     }
 
+    public Topology buildIndex() {
+        StreamsBuilder builder = new StreamsBuilder();
+        String intermediateTopicByName = config.getTaskDefTopic() + "__intermediate_name";
+
+        this.taskDefNameTable = builder.globalTable(
+            intermediateTopicByName,
+            Materialized.<String, TaskDefSchema, KeyValueStore<Bytes, byte[]>>
+                as("wf-spec-asdfasdf")
+                .withKeySerde(Serdes.String())
+                .withValueSerde(new TaskDefSerdes())
+        );
+
+        return builder.build();
+    }
+
     public Topology build() {
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -34,19 +49,11 @@ public class TaskDefTopology {
         KStream<String, TaskDefSchema> taskDefEventsNameKeyed = taskDefEvents.selectKey(
             ((k, v) -> v.name)
         );
-        String intermediateTopicByName = config.getTaskDefTopic() + "__intermediate_name";
+        String intermediateTopicByName = "wf-spec-asdfasdf"; //config.getTaskDefTopic() + "__intermediate_name";
         String intermediateTopicByGuid = config.getTaskDefTopic() + "__intermediate_guid";
 
         taskDefEventsNameKeyed.to(intermediateTopicByName);
         taskDefEvents.to(intermediateTopicByGuid);
-
-        this.taskDefNameTable = builder.globalTable(
-            intermediateTopicByName,
-            Materialized.<String, TaskDefSchema, KeyValueStore<Bytes, byte[]>>
-                as("wf-spec-name")
-                .withKeySerde(Serdes.String())
-                .withValueSerde(new TaskDefSerdes())
-        );
 
         this.taskDefGuidTable = builder.globalTable(
             intermediateTopicByGuid,
@@ -58,7 +65,7 @@ public class TaskDefTopology {
 
         return builder.build();
     }
-    
+
     public String getGuidStoreName() {
         return (taskDefGuidTable == null) ? null : taskDefGuidTable.queryableStoreName();
     }
