@@ -10,8 +10,12 @@ public class Constants {
     public static String API_URL_KEY = "LHORSE_API_URL";
     public static String ADVERTISED_URL_KEY = "LHORSE_ADVERTISED_URL";
     public static String STATE_DIR_KEY = "LHORSE_KAFKA_STREAMS_STATE_DIR";
-    
+
+    public static String WF_SPEC_GUID_KEY = "LHORSE_WF_SPEC_GUID";
+    public static String NODE_NAME_KEY = "LHORSE_NODE_NAME";
+
     public static String DEFAULT_TASK_IMAGE_KEY = "LHORSE_DEFAULT_TASK_IMAGE";
+    public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_K8S_REPLICAS";
 
     public static String WF_SPEC_API_PATH = "wfSpec";
     public static String TASK_DEF_API_PATH = "taskDef";

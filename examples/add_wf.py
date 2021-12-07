@@ -23,6 +23,7 @@ task_definition = {
 
 
 wf_definition = {
+    "name": "my-wf",
     "nodes": {
         "onlyNode": {
             "nodeType": "TASK",

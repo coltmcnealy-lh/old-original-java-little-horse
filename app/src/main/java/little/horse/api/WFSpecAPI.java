@@ -4,6 +4,7 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
 import little.horse.lib.Config;
+import little.horse.lib.LHValidationError;
 import little.horse.lib.WFSpec.PostWFSpecResponse;
 import little.horse.lib.WFSpec.WFSpec;
 import little.horse.lib.WFSpec.WFSpecSchema;
@@ -19,7 +20,15 @@ public class WFSpecAPI {
 
     public void post(Context ctx) {
         WFSpecSchema rawSpec = ctx.bodyAsClass(WFSpecSchema.class);
-        WFSpec spec = new WFSpec(rawSpec, this.config);
+        WFSpec spec;
+        try {
+            spec = new WFSpec(rawSpec, this.config);
+        } catch (LHValidationError exn) {
+            ctx.status(400);
+            LHAPIError err = new LHAPIError(exn.getMessage());
+            ctx.json(err);
+            return;
+        }
         spec.record();
 
         PostWFSpecResponse response = new PostWFSpecResponse();

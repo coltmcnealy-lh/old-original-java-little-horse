@@ -29,6 +29,7 @@ dependencies {
     // Stuff for Javalin
     implementation("io.javalin:javalin:4.1.1")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.12.4")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.4")
     implementation("org.slf4j:slf4j-simple:1.7.31")
 
     // Stuff for Kafka
@@ -37,6 +38,9 @@ dependencies {
 
     // Kubernetes cient
     implementation("io.kubernetes:client-java:10.0.0")
+
+    // Utils
+    implementation("org.apache.commons:commons-lang3:3.12.0")
 }
 
 application {

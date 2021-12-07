@@ -1,8 +1,10 @@
 package little.horse.lib;
 
+import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.Future;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -10,6 +12,9 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.Configuration;
+import little.horse.lib.K8sStuff.EnvEntry;
 import okhttp3.OkHttpClient;
 
 
@@ -26,6 +31,8 @@ public class Config {
     private String defaultTaskDockerImage;
     private String apiURL;
     private OkHttpClient httpClient;
+    private int defaultReplicas;
+    private ApiClient k8sClient;
 
     public Config() {
         // TODO: Make this more readable
@@ -75,7 +82,18 @@ public class Config {
         String tempApiURL = System.getenv(Constants.API_URL_KEY);
         this.apiURL = (tempApiURL == null) ? "http://localhost:5000" : tempApiURL;
 
+        String tempReplicas = System.getenv(Constants.DEFAULT_REPLICAS_KEY);
+        try {
+            defaultReplicas = Integer.valueOf(tempReplicas);
+        } catch (Exception exn) {
+            System.err.println(exn.getMessage());
+            defaultReplicas = 1;
+        }
+
         this.httpClient = new OkHttpClient();
+
+        this.k8sClient = Configuration.getDefaultApiClient();
+        this.k8sClient.setBasePath("https://kubernetes.docker.internal:6443");
     }
 
     public OkHttpClient getHttpClient() {
@@ -102,6 +120,46 @@ public class Config {
         return this.taskDeftopic + "__nameKeyed";
     }
 
+    public String getWFSpecActionsTopic() {
+        return this.wfSpecTopic + "__actions";
+    }
+
+    public String getWFSpecIntermediateTopic() {
+        return this.wfSpecTopic + "__intermediate";
+    }
+
+    public ArrayList<String> getTaskDaemonCommand() {
+        ArrayList<String> out = new ArrayList<String>();
+        out.add("gradle");
+        out.add("run");
+        return out;
+    }
+
+    public ArrayList<EnvEntry> getBaseK8sEnv() {
+        ArrayList<EnvEntry> out = new ArrayList<EnvEntry>();
+        out.add(new EnvEntry(Constants.API_URL_KEY, this.getAPIUrl()));
+        out.add(new EnvEntry(Constants.STATE_DIR_KEY, this.stateDirectory));
+        out.add(new EnvEntry(
+            Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.bootstrapServers
+        ));
+        out.add(new EnvEntry(
+            Constants.KAFKA_TOPIC_PREFIX_KEY, this.kafkaTopicPrefix
+        ));
+        return out;
+    }
+
+    public String getKafkaTopicPrefix() {
+        return kafkaTopicPrefix;
+    }
+
+    public int getDefaultReplicas() {
+        return this.defaultReplicas;
+    }
+
+    public ApiClient getK8sClient() {
+        return this.k8sClient;
+    }
+
     public Future<RecordMetadata> send(ProducerRecord<String, String> record) {
         return (Future<RecordMetadata>) this.producer.send(record);
     }
@@ -125,6 +183,13 @@ public class Config {
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
+        return props;
+    }
+
+    public Properties getConsumerConfig(String appIdSuffix) {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId + appIdSuffix);
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
         return props;
     }
 

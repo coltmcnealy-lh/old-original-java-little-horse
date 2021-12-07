@@ -47,9 +47,9 @@ public class TaskDef {
         this.config = config;
     }
 
-    public TaskDef fromGuid(String guid, Config config) throws LHLookupException {
+    public static TaskDef fromIdentifier(String identifier, Config config) throws LHLookupException {
         OkHttpClient client = config.getHttpClient();
-        String url = config.getAPIUrlFor(Constants.TASK_DEF_API_PATH) + "/" + guid;
+        String url = config.getAPIUrlFor(Constants.TASK_DEF_API_PATH) + "/" + identifier;
         Request request = new Request.Builder().url(url).build();
         Response response;
         String responseBody = null;
@@ -71,7 +71,7 @@ public class TaskDef {
             throw new LHLookupException(
                 null,
                 LHLookupExceptionReason.OBJECT_NOT_FOUND,
-                "Could not find WFSpec with guid " + guid + "."
+                "Could not find TaskDef with identifier " + identifier + "."
             );
         } else if (response.code() != 200) {
             if (responseBody == null) {
@@ -122,6 +122,10 @@ public class TaskDef {
             result = "Could not serialize.";
         }
         return result;
+    }
+
+    public String getTaskDaemonCommand() {
+        return config.getTaskDaemonCommand();
     }
 
     public void record() {

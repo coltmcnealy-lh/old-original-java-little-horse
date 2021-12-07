@@ -11,4 +11,7 @@ public class WFSpecSchema {
     public HashMap<String, NodeSchema> nodes;
     public ArrayList<EdgeSchema> edges;
     public LHStatus status;
+    public String inputKafkaTopic;
+    public String entrypointNodeName;
+    public LHStatus desiredStatus;
 }

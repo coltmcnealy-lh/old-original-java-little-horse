@@ -2,14 +2,11 @@ package little.horse.lib.WFSpec.kafkaStreamsSerdes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import java.nio.charset.StandardCharsets;
 import org.apache.kafka.common.serialization.Serializer;
 
 import little.horse.lib.WFSpec.WFSpecSchema;
 
 public class WFSpecSerializer implements Serializer<WFSpecSchema> {
-  private Gson gson = new Gson();
 
   @Override
   public byte[] serialize(String topic, WFSpecSchema wfSpecThingy) {

@@ -10,22 +10,26 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.KafkaFuture;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.APIStreamsContext;
 import little.horse.api.TaskDefTopology;
+import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
+import little.horse.lib.WFSpec.WFSpecSchema;
+import little.horse.lib.WFSpec.kafkaStreamsSerdes.WFSpecDeSerializer;
+import little.horse.lib.WFSpec.kafkaStreamsSerdes.WFSpecSerdes;
 
 
 class FrontendAPIApp {
-    public static void run() {
-        Config config = null;
-        config = new Config();
-
+    private static void createKafkaTopics(Config config) {
         Properties properties = new Properties();
         properties.put(
             AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
@@ -34,31 +38,35 @@ class FrontendAPIApp {
         Admin admin = Admin.create(properties);
         int partitions = 1;
         short replicationFactor = 1;
-        NewTopic newTopic = new NewTopic(config.getWFSpecTopic(), partitions, replicationFactor);
-        NewTopic newTopic2 = new NewTopic(config.getTaskDefTopic(), partitions, replicationFactor);
-        NewTopic newTopic3 = new NewTopic(config.getTaskDefNameKeyedTopic(), partitions, replicationFactor);
-        CreateTopicsResult result = admin.createTopics(
-            Collections.singleton(newTopic)
-        );
-        CreateTopicsResult result2 = admin.createTopics(
-            Collections.singleton(newTopic2)
-        );
-        CreateTopicsResult result3 = admin.createTopics(
-            Collections.singleton(newTopic3)
-        );
 
-        KafkaFuture<Void> future1 = result.values().get(config.getWFSpecTopic());
-        KafkaFuture<Void> future2 = result2.values().get(config.getTaskDefTopic());
-        KafkaFuture<Void> future3 = result3.values().get(
-            config.getTaskDefNameKeyedTopic()
-        );
-        try {
-            future1.get();
-            future2.get();
-            future3.get();
-        } catch (Exception e) {
-            System.out.println("Oooooooorzdash");
+        String[] topics = {
+            config.getWFSpecActionsTopic(),
+            config.getWFSpecTopic(),
+            config.getWFSpecIntermediateTopic(),
+            config.getTaskDefNameKeyedTopic(),
+            config.getTaskDefTopic()
+        };
+        for (String topicName : topics) {
+            NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
+            CreateTopicsResult result = admin.createTopics(
+                Collections.singleton(newTopic)
+            );
+            KafkaFuture<Void> future = result.values().get(topicName);
+            try {
+                System.out.println("asdfasdf");
+                future.get();
+                System.out.println("Success");
+            } catch (Exception exn) {
+                System.err.println("OOOOOOoooooooorrrzzzdash");
+            }
         }
+    }
+
+    public static void run() {
+        Config config = null;
+        config = new Config();
+
+        FrontendAPIApp.createKafkaTopics(config);
 
         WFSpecTopology wfSpecTopology = new WFSpecTopology(config);
         Topology topology = wfSpecTopology.build();
@@ -80,11 +88,24 @@ class FrontendAPIApp {
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);
 
+        Properties props = config.getConsumerConfig("wfSpecDeployer");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, WFSpecDeSerializer.class.getName());
+
+        KafkaConsumer<String, WFSpecSchema> consumer = new KafkaConsumer<>(
+            props
+        );
+        consumer.subscribe(Collections.singletonList(config.getWFSpecActionsTopic()));
+        WFSpecDeployer deployer = new WFSpecDeployer(consumer, config);
+        Thread deployerThread = new Thread(() -> deployer.run());
+
+        Runtime.getRuntime().addShutdownHook(new Thread(deployer::shutdown));
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(wfSpecStreams::close));
         Runtime.getRuntime().addShutdownHook(new Thread(taskDefStreams::close));
 
+        deployerThread.start();
         wfSpecStreams.start();
         taskDefStreams.start();
         lapi.run();
@@ -93,7 +114,6 @@ class FrontendAPIApp {
 
 
 public class App {
-
     public static void main(String[] args) {
         FrontendAPIApp.run();
     }

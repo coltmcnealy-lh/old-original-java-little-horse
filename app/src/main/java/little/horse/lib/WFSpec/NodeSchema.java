@@ -1,5 +1,7 @@
 package little.horse.lib.WFSpec;
 
+import java.util.ArrayList;
+
 public class NodeSchema {
     public String name;
     public NodeType nodeType;
@@ -7,6 +9,10 @@ public class NodeSchema {
     public String wfSpecGuid;
     public String externalEventDefinitionName;
     public String guid;
+
+    public String outputKafkaTopic;
+    public ArrayList<String> inputKafkaTopics;
+    public String interruptKafkaTopic;
 
     public String externalEventCorrelation;
 
