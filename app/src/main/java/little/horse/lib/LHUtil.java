@@ -20,16 +20,19 @@ public class LHUtil {
         str = StringUtils.stripStart(str, "-");
         str = StringUtils.stripEnd(str, "-");
         if (str.length() >= 63) {
-            MessageDigest digest = null;
-            try {
-                digest = MessageDigest.getInstance("SHA-256");
-            } catch(NoSuchAlgorithmException exn) {
-
-            }
-            byte[] encodedhash = digest.digest(str.getBytes(StandardCharsets.UTF_8));
-            String token = "-" + encodedhash.toString().substring(0, 8);
-            str = str.substring(0, 54) + token;
+            str = str.substring(0, 54) + "-" + digestify(str);
         }
         return str;
+    }
+
+    public static String digestify(String str) {
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch(NoSuchAlgorithmException exn) {
+
+        }
+        byte[] encodedhash = digest.digest(str.getBytes(StandardCharsets.UTF_8));
+        return encodedhash.toString().substring(0, 8);
     }
 }

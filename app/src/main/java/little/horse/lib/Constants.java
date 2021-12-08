@@ -26,4 +26,6 @@ public class Constants {
     // Should only be used by the actual API. TODO: Move this elsewhere.
     public static String TASK_DEF_GUID_STORE = "taskDefGuidStore";
     public static String TASK_DEF_NAME_STORE = "taskDefNameStore";
+
+    public static int EXPOSED_PORT = 5000;
 }

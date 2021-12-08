@@ -115,7 +115,7 @@ public class Config {
         String tempCollectorImage = System.getenv(Constants.DEFAULT_COLLECTOR_IMAGE_KEY);
         this.collectorImage = (
             tempCollectorImage == null
-        ) ? "little-horse-collector" :tempCollectorImage;
+        ) ? "little-horse-collector:latest" : tempCollectorImage;
     }
 
     public void createKafkaTopic(NewTopic topic) {
@@ -136,8 +136,10 @@ public class Config {
 
     public ArrayList<String> getCollectorCommand() {
         ArrayList<String> out = new ArrayList<String>();
-        out.add("gradle");
-        out.add("run");
+        out.add("java");
+        out.add("-jar");
+        out.add("/littleHorse.jar");
+        out.add("collector");
         return out;
     }
 
@@ -175,8 +177,10 @@ public class Config {
 
     public ArrayList<String> getTaskDaemonCommand() {
         ArrayList<String> out = new ArrayList<String>();
-        out.add("gradle");
-        out.add("run");
+        out.add("java");
+        out.add("-jar");
+        out.add("/littleHorse.jar");
+        out.add("daemon");
         return out;
     }
 

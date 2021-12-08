@@ -39,10 +39,9 @@ public class Node {
         return this.wfSpec.getNamespace();
     }
 
-    public String getName() {
-        String name = wfSpec.getModel().name + "-" + schema.name;
+    public String getK8sName() {
+        String name = wfSpec.getK8sName() + "-" + schema.name;
         name = LHUtil.toValidK8sName(name);
-        System.out.println("name is: " + name);
         return name;
     }
 
@@ -62,17 +61,17 @@ public class Node {
         dp.kind = "Deployment";
         dp.apiVersion = "apps/v1";
 
-        dp.metadata.name = this.getName();
+        dp.metadata.name = this.getK8sName();
         dp.metadata.labels = new HashMap<String, String>();
         dp.metadata.namespace = this.wfSpec.getNamespace();
-        dp.metadata.labels.put("app", this.getName());
+        dp.metadata.labels.put("app", this.getK8sName());
         dp.metadata.labels.put("little-horse.io/wfSpecGuid", this.wfSpec.getModel().guid);
         dp.metadata.labels.put("little-horse.io/NodeGuid", this.schema.guid);
         dp.metadata.labels.put("little-horse.io/NodeName", this.schema.name);
         dp.metadata.labels.put("little-horse.io/wfSpecName", this.wfSpec.getModel().name);
 
         Container container = new Container();
-        container.name = this.getName();
+        container.name = this.getK8sName();
         container.image = this.taskDef.getModel().dockerImage;
         container.command = getTaskDaemonCommand();
         container.env = config.getBaseK8sEnv();
@@ -91,10 +90,10 @@ public class Node {
 
         Template template = new Template();
         template.metadata = new DeploymentMetadata();
-        template.metadata.name = this.getName();
+        template.metadata.name = this.getK8sName();
         template.metadata.labels = new HashMap<String, String>();
         template.metadata.namespace = this.wfSpec.getNamespace();
-        template.metadata.labels.put("app", this.getName());
+        template.metadata.labels.put("app", this.getK8sName());
         template.metadata.labels.put("little-horse.io/wfSpecGuid", this.wfSpec.getModel().guid);
         template.metadata.labels.put("little-horse.io/NodeGuid", this.schema.guid);
         template.metadata.labels.put("little-horse.io/NodeName", this.schema.name);
@@ -108,8 +107,11 @@ public class Node {
         dp.spec.replicas = this.getReplicas();
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
-        dp.spec.selector.matchLabels.put("app", this.getName());
+        dp.spec.selector.matchLabels.put("app", this.getK8sName());
+        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecGuid", this.wfSpec.getModel().guid);
         dp.spec.selector.matchLabels.put("little-horse.io/NodeGuid", this.schema.guid);
+        dp.spec.selector.matchLabels.put("little-horse.io/NodeName", this.schema.name);
+        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecName", this.wfSpec.getModel().name);
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         try {

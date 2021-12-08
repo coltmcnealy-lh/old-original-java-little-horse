@@ -91,9 +91,22 @@ class FrontendAPIApp {
     }
 }
 
+class DaemonApp {
+    public static void run() {}
+}
+
+class CollectorApp {
+    public static void run() {}
+}
 
 public class App {
     public static void main(String[] args) {
-        FrontendAPIApp.run();
+        if (args[0] == "daemon") {
+            DaemonApp.run();
+        } else if (args[0] == "collector") {
+            CollectorApp.run();
+        } else {
+            FrontendAPIApp.run();
+        }
     }
 }

@@ -16,6 +16,8 @@ import little.horse.lib.K8sStuff.EnvEntry;
 import little.horse.lib.K8sStuff.PodSpec;
 import little.horse.lib.K8sStuff.Selector;
 import little.horse.lib.K8sStuff.Service;
+import little.horse.lib.K8sStuff.ServicePort;
+import little.horse.lib.K8sStuff.ServiceSpec;
 import little.horse.lib.K8sStuff.Template;
 import little.horse.lib.TaskDef.TaskDef;
 import okhttp3.OkHttpClient;
@@ -127,7 +129,9 @@ public class WFSpec {
         NodeSchema entrypoint = null;
         for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
             NodeSchema node = pair.getValue();
-            if (node.inputKafkaTopics.size() == 0) {
+            if (node.inputKafkaTopics.size() == 0 || (node.inputKafkaTopics.size() == 1 &&
+                node.inputKafkaTopics.get(0).equals(schema.inputKafkaTopic)
+            )) {
                 if (entrypoint != null) {
                     throw new LHValidationError(
                         "Invalid WFSpec: More than one node without incoming edges."
@@ -135,12 +139,12 @@ public class WFSpec {
                 }
                 entrypoint = node;
             }
-            if (entrypoint == null) {
-                throw new LHValidationError("No entrypoint node provided!");
-            }
-            schema.entrypointNodeName = node.name;
-            node.inputKafkaTopics.add(schema.inputKafkaTopic);
         }
+        if (entrypoint == null) {
+            throw new LHValidationError("No entrypoint node provided!");
+        }
+        schema.entrypointNodeName = entrypoint.name;
+        entrypoint.inputKafkaTopics.add(schema.inputKafkaTopic);
 
         this.schema = schema;
         this.config = config;
@@ -231,7 +235,7 @@ public class WFSpec {
     }
 
     public String getK8sName() {
-        return LHUtil.toValidK8sName(this.schema.name);
+        return LHUtil.toValidK8sName(this.schema.name + "-" + LHUtil.digestify(schema.guid));
     }
 
     public void record() {
@@ -311,13 +315,41 @@ public class WFSpec {
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
         dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        dp.spec.selector.matchLabels.put("little-horse.io/NodeGuid", this.schema.guid);
+        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
+        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecName", this.getModel().name);
         
         return dp;
     }
 
     public Service getCollectorService() {
-        return null;
+        Service svc = new Service();
+        svc.spec = new ServiceSpec();
+        svc.kind = "Service";
+        svc.apiVersion = "v1";
+        svc.metadata = new DeploymentMetadata();
+
+        svc.spec.ports = new ArrayList<ServicePort>();
+        ServicePort p = new ServicePort();
+        p.port = Constants.EXPOSED_PORT;
+        p.targetPort = Constants.EXPOSED_PORT;
+        p.protocol = "TCP";
+        p.name = "http";
+        svc.spec.ports.add(p);
+
+        svc.metadata.namespace = this.getNamespace();
+        svc.metadata.name = this.getK8sName();
+        svc.metadata.labels = new HashMap<String, String>();
+        svc.metadata.labels.put("app", this.getK8sName());
+        svc.metadata.labels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
+        svc.metadata.labels.put("little-horse.io/wfSpecName", this.getModel().name);
+
+        HashMap<String, String> selector = new HashMap<String, String>();
+        selector.put("app", this.getK8sName());
+        selector.put("little-horse.io/wfSpecGuid", this.getModel().guid);
+        selector.put("little-horse.io/wfSpecName", this.getModel().name);
+        svc.spec.selector = selector;
+
+        return svc;
     }
 
     public void deploy() throws LHDeployError {
@@ -334,16 +366,34 @@ public class WFSpec {
             this.schema.inputKafkaTopic, getPartitions(), getReplicationFactor()
         ));
 
-        // Next, deploy the kafkaStreams collector
-        
+        ArrayList<String> ymlStrings = new ArrayList<String>();
+        try {
+            ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(
+                getCollectorDeployment()
+            ));
+            ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(
+                getCollectorService()
+            ));
+        } catch(Exception exn) {
+            exn.printStackTrace();
+            throw new LHDeployError("Had an orzdash");
+        }
 
         // Finally, deploy task daemons for each of the Node's in the workflow.
         for (Node node : this.getNodes()) {
-            Deployment deployment = node.getK8sDeployment();
-            String yml;
             try {
-                yml = new ObjectMapper(new YAMLFactory()).writeValueAsString(deployment);
+                ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(
+                    node.getK8sDeployment()
+                ));
+            } catch (JsonProcessingException exn) {
+                exn.printStackTrace();
+                throw new LHDeployError("Had an orzdash");
+            }
+        }
 
+        for (String yml : ymlStrings) {
+            try {
+                System.out.println(yml + "\n\n\n");
                 Process process = Runtime.getRuntime().exec("kubectl apply -f -");
 
                 process.getOutputStream().write(yml.getBytes());
