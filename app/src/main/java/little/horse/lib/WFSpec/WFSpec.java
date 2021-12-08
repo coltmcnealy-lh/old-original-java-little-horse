@@ -8,7 +8,15 @@ import little.horse.lib.LHLookupExceptionReason;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
+import little.horse.lib.K8sStuff.Container;
 import little.horse.lib.K8sStuff.Deployment;
+import little.horse.lib.K8sStuff.DeploymentMetadata;
+import little.horse.lib.K8sStuff.DeploymentSpec;
+import little.horse.lib.K8sStuff.EnvEntry;
+import little.horse.lib.K8sStuff.PodSpec;
+import little.horse.lib.K8sStuff.Selector;
+import little.horse.lib.K8sStuff.Service;
+import little.horse.lib.K8sStuff.Template;
 import little.horse.lib.TaskDef.TaskDef;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -18,12 +26,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 
@@ -247,13 +257,87 @@ public class WFSpec {
         return list;
     }
 
+    public int getPartitions() {
+        return config.getDefaultPartitions();
+    }
+
+    public short getReplicationFactor() {
+        return (short) config.getDefaultReplicas();
+    }
+
+    public Deployment getCollectorDeployment() {
+        Deployment dp = new Deployment();
+        dp.metadata = new DeploymentMetadata();
+        dp.spec = new DeploymentSpec();
+        dp.kind = "Deployment";
+        dp.apiVersion = "apps/v1";
+
+        dp.metadata.name = this.getK8sName();
+        dp.metadata.labels = new HashMap<String, String>();
+        dp.metadata.namespace = this.getNamespace();
+        dp.metadata.labels.put("app", this.getK8sName());
+        dp.metadata.labels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
+        dp.metadata.labels.put("little-horse.io/wfSpecName", this.getModel().name);
+
+        Container container = new Container();
+        container.name = this.getK8sName();
+        container.image = config.getCollectorImage();
+        container.command = config.getCollectorCommand();
+        container.env = config.getBaseK8sEnv();
+        container.env.add(new EnvEntry(
+            Constants.KAFKA_APPLICATION_ID_KEY,
+            this.schema.guid
+        ));
+        container.env.add(new EnvEntry(
+            Constants.WF_SPEC_GUID_KEY,
+            this.schema.guid
+        ));
+
+        Template template = new Template();
+        template.metadata = new DeploymentMetadata();
+        template.metadata.name = this.getK8sName();
+        template.metadata.labels = new HashMap<String, String>();
+        template.metadata.namespace = this.getNamespace();
+        template.metadata.labels.put("app", this.getK8sName());
+        template.metadata.labels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
+        template.metadata.labels.put("little-horse.io/wfSpecName", this.getModel().name);
+
+        template.spec = new PodSpec();
+        template.spec.containers = new ArrayList<Container>();
+        template.spec.containers.add(container);
+
+        dp.spec.template = template;
+        dp.spec.replicas = this.getReplicationFactor();
+        dp.spec.selector = new Selector();
+        dp.spec.selector.matchLabels = new HashMap<String, String>();
+        dp.spec.selector.matchLabels.put("app", this.getK8sName());
+        dp.spec.selector.matchLabels.put("little-horse.io/NodeGuid", this.schema.guid);
+        
+        return dp;
+    }
+
+    public Service getCollectorService() {
+        return null;
+    }
+
     public void deploy() throws LHDeployError {
         // First, create the kafka topics
+        for (Map.Entry<String, NodeSchema> entry : schema.nodes.entrySet()) {
+            config.createKafkaTopic(new NewTopic(
+                entry.getValue().outputKafkaTopic, getPartitions(), getReplicationFactor()
+            ));
+            config.createKafkaTopic(new NewTopic(
+                entry.getValue().interruptKafkaTopic, getPartitions(), getReplicationFactor()
+            ));
+        }
+        config.createKafkaTopic(new NewTopic(
+            this.schema.inputKafkaTopic, getPartitions(), getReplicationFactor()
+        ));
 
         // Next, deploy the kafkaStreams collector
+        
 
-        // Finally, 
-
+        // Finally, deploy task daemons for each of the Node's in the workflow.
         for (Node node : this.getNodes()) {
             Deployment deployment = node.getK8sDeployment();
             String yml;

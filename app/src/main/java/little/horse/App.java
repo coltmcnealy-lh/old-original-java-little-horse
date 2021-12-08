@@ -6,13 +6,9 @@ package little.horse;
 import java.util.Collections;
 import java.util.Properties;
 
-import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
@@ -25,17 +21,10 @@ import little.horse.lib.Config;
 import little.horse.lib.Constants;
 import little.horse.lib.WFSpec.WFSpecSchema;
 import little.horse.lib.WFSpec.kafkaStreamsSerdes.WFSpecDeSerializer;
-import little.horse.lib.WFSpec.kafkaStreamsSerdes.WFSpecSerdes;
 
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
-        Properties properties = new Properties();
-        properties.put(
-            AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
-            config.bootstrapServers
-        );
-        Admin admin = Admin.create(properties);
         int partitions = 1;
         short replicationFactor = 1;
 
@@ -48,17 +37,7 @@ class FrontendAPIApp {
         };
         for (String topicName : topics) {
             NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
-            CreateTopicsResult result = admin.createTopics(
-                Collections.singleton(newTopic)
-            );
-            KafkaFuture<Void> future = result.values().get(topicName);
-            try {
-                System.out.println("asdfasdf");
-                future.get();
-                System.out.println("Success");
-            } catch (Exception exn) {
-                System.err.println("OOOOOOoooooooorrrzzzdash");
-            }
+            config.createKafkaTopic(newTopic);
         }
     }
 

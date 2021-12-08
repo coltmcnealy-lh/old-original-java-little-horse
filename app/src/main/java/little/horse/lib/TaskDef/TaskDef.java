@@ -11,6 +11,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -124,7 +125,7 @@ public class TaskDef {
         return result;
     }
 
-    public String getTaskDaemonCommand() {
+    public ArrayList<String> getTaskDaemonCommand() {
         return config.getTaskDaemonCommand();
     }
 

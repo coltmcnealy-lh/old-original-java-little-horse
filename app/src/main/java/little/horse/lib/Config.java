@@ -1,14 +1,20 @@
 package little.horse.lib;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.Future;
 
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.CreateTopicsResult;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
@@ -33,6 +39,9 @@ public class Config {
     private OkHttpClient httpClient;
     private int defaultReplicas;
     private ApiClient k8sClient;
+    private Admin kafkaAdmin;
+    private int defaultPartitions;
+    private String collectorImage;
 
     public Config() {
         // TODO: Make this more readable
@@ -94,6 +103,47 @@ public class Config {
 
         this.k8sClient = Configuration.getDefaultApiClient();
         this.k8sClient.setBasePath("https://kubernetes.docker.internal:6443");
+        Properties akProperties = new Properties();
+        akProperties.put(
+            AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
+            this.bootstrapServers
+        );
+        this.kafkaAdmin = Admin.create(akProperties);
+
+        String tempParts = System.getenv(Constants.DEFAULT_PARTITIONS_KEY);
+        try {
+            defaultPartitions = Integer.valueOf(tempParts);
+        } catch (Exception exn) {
+            defaultPartitions = 1;
+        }
+
+        String tempCollectorImage = System.getenv(Constants.DEFAULT_COLLECTOR_IMAGE_KEY);
+        this.collectorImage = (
+            tempCollectorImage == null
+        ) ? "little-horse-collector" :tempCollectorImage;
+    }
+
+    public void createKafkaTopic(NewTopic topic) {
+        CreateTopicsResult result = kafkaAdmin.createTopics(
+            Collections.singleton(topic)
+        );
+        KafkaFuture<Void> future = result.values().get(topic.name());
+        try {
+            future.get();
+        } catch (Exception any) {
+            // TODO: handle the orzdash
+        }
+    }
+
+    public String getCollectorImage() {
+        return this.collectorImage;
+    }
+
+    public ArrayList<String> getCollectorCommand() {
+        ArrayList<String> out = new ArrayList<String>();
+        out.add("gradle");
+        out.add("run");
+        return out;
     }
 
     public OkHttpClient getHttpClient() {
@@ -201,9 +251,14 @@ public class Config {
     public void cleanup() {
         System.out.println("CLOSING");
         this.producer.close();
+        this.kafkaAdmin.close();
     }
 
     public String getDefaultTaskDockerImage() {
         return this.defaultTaskDockerImage;
+    }
+
+    public int getDefaultPartitions() {
+        return this.defaultPartitions;
     }
 }

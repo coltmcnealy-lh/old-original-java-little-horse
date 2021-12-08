@@ -5,6 +5,8 @@ public class Constants {
     public static String KAFKA_TOPIC_PREFIX_KEY = "LHORSE_KAFKA_TOPIC_PREFIX";
     public static String KAFKA_APPLICATION_ID_KEY = "LHORSE_KAFKA_APPLICATION_ID";
 
+    public static String DEFAULT_PARTITIONS_KEY = "LHORSE_DEFAULT_PARTITIONS";
+    
     public static String SYSTEM_PREFIX = "SYSTEM__";
 
     public static String API_URL_KEY = "LHORSE_API_URL";
@@ -15,6 +17,7 @@ public class Constants {
     public static String NODE_NAME_KEY = "LHORSE_NODE_NAME";
 
     public static String DEFAULT_TASK_IMAGE_KEY = "LHORSE_DEFAULT_TASK_IMAGE";
+    public static String DEFAULT_COLLECTOR_IMAGE_KEY = "LHORSE_DEFAULT_COLLECTOR_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_K8S_REPLICAS";
 
     public static String WF_SPEC_API_PATH = "wfSpec";
