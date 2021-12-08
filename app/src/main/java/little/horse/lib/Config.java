@@ -18,8 +18,6 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
-import io.kubernetes.client.openapi.ApiClient;
-import io.kubernetes.client.openapi.Configuration;
 import little.horse.lib.K8sStuff.EnvEntry;
 import okhttp3.OkHttpClient;
 
@@ -38,7 +36,6 @@ public class Config {
     private String apiURL;
     private OkHttpClient httpClient;
     private int defaultReplicas;
-    private ApiClient k8sClient;
     private Admin kafkaAdmin;
     private int defaultPartitions;
     private String collectorImage;
@@ -101,8 +98,6 @@ public class Config {
 
         this.httpClient = new OkHttpClient();
 
-        this.k8sClient = Configuration.getDefaultApiClient();
-        this.k8sClient.setBasePath("https://kubernetes.docker.internal:6443");
         Properties akProperties = new Properties();
         akProperties.put(
             AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
@@ -204,10 +199,6 @@ public class Config {
 
     public int getDefaultReplicas() {
         return this.defaultReplicas;
-    }
-
-    public ApiClient getK8sClient() {
-        return this.k8sClient;
     }
 
     public Future<RecordMetadata> send(ProducerRecord<String, String> record) {
