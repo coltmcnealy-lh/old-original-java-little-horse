@@ -51,7 +51,7 @@ public class Config {
         conf.put("client.id", this.appId);
 
         String booty = System.getenv(Constants.KAFKA_BOOTSTRAP_SERVERS_KEY);
-        this.bootstrapServers = (booty == null) ? "host.docker.internal:9092" : booty;
+        this.bootstrapServers = (booty == null) ? "host.docker.internal:39092" : booty;
         conf.put("bootstrap.servers", this.bootstrapServers);
 
         conf.put(
