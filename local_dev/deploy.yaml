@@ -5,6 +5,7 @@ metadata:
   name: zookeeper
   labels:
     app: zookeeper
+    littlehorse.io/active: "true"
 spec:
   ports:
     - name: client
@@ -25,6 +26,7 @@ metadata:
   name: kafka-broker
   labels:
     name: kafka-broker
+    littlehorse.io/active: "true"
 spec:
   type: NodePort
   ports:
@@ -39,6 +41,8 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: zookeeper
+  labels:
+    littlehorse.io/active: "true"
 spec:
   selector:
     matchLabels:
@@ -47,6 +51,7 @@ spec:
     metadata:
       labels:
         app: zookeeper
+        littlehorse.io/active: "true"
     spec:
       containers:
         - name: zookeeper
@@ -63,6 +68,8 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: kafka-broker
+  labels:
+    littlehorse.io/active: "true"
 spec:
   selector:
     matchLabels:
@@ -71,6 +78,7 @@ spec:
     metadata:
       labels:
         app: kafka-broker
+        littlehorse.io/active: "true"
     spec:
       containers:
         - name: kafka-broker
@@ -109,6 +117,7 @@ spec:
     metadata:
       labels:
         app: little-horse-api
+        littlehorse.io/active: "true"
     spec:
       containers:
       - name: little-horse-api

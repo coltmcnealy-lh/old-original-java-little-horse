@@ -1,8 +1,6 @@
 #!/bin/bash
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+set -x
 
-cd $SCRIPT_DIR/local_dev
-docker-compose down && docker-compose up -d
-
-rm -r /tmp/kafkaState
+kubectl delete deploy --selector littlehorse.io/deployed-by="littlehorse" --all-namespaces
+kubectl delete po --selector littlehorse.io/active="true" --all-namespaces
