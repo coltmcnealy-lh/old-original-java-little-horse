@@ -26,8 +26,10 @@ metadata:
   labels:
     name: kafka-broker
 spec:
+  type: NodePort
   ports:
     - port: 9092
+      nodePort: 30002
       name: kafka-port
       protocol: TCP
   selector:
@@ -73,9 +75,6 @@ spec:
       containers:
         - name: kafka-broker
           image:  confluentinc/cp-kafka:6.2.0
-          # command:
-          #   - sleep
-          #   - "100000"
           ports:
             - containerPort: 9092
           env:
@@ -87,6 +86,12 @@ spec:
               value: "0"
             - name: KAFKA_ADVERTISED_LISTENERS
               value: PLAINTEXT://kafka-broker:9092,PLAINTEXT_INTERNAL://kafka-broker:29092
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
 ---
 apiVersion: apps/v1
 kind: Deployment
