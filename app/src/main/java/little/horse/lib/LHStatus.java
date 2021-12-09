@@ -1,9 +1,11 @@
 package little.horse.lib;
 
 public enum LHStatus {
-    STOPPED,
+    PENDING,
     STARTING,
     RUNNING,
+    COMPLETED,
+    STOPPED,
     ERROR,
     REMOVED;
 }

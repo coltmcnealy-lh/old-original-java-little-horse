@@ -4,7 +4,7 @@ import requests
 import time
 
 
-URL = "http://localhost:5000"
+URL = "http://localhost:30000"
 
 
 def print_prettily(response):
@@ -17,7 +17,7 @@ def print_prettily(response):
 
 task_definition = {
     "name": "myTaskDefinition",
-    "dockerImage": "little-horse",
+    "dockerImage": "little-horse-daemon",
     "bashCommand": ["python", "test.py"],
 }
 

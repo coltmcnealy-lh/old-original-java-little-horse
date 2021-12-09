@@ -12,7 +12,9 @@ public class LHUtil {
         return UUID.randomUUID().toString();
     }
 
-    public static String toValidK8sName(String str) {
+    public static String toValidK8sName(String oldStr) {
+        String str = new String(oldStr);
+
         // TODO: This is probably not right.
         str = str.replaceAll("[. _\n]", "-");
         str = str.replaceAll("[^0-9a-z-]", "");

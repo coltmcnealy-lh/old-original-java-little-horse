@@ -42,6 +42,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 public class WFSpec {
     private Config config;
     private WFSpecSchema schema;
+    private String k8sName;
 
     public WFSpec(WFSpecSchema schema, Config config) throws LHValidationError {
         // TODO (hard): do some validation that we don't have a 409.
@@ -144,10 +145,15 @@ public class WFSpec {
             throw new LHValidationError("No entrypoint node provided!");
         }
         schema.entrypointNodeName = entrypoint.name;
-        entrypoint.inputKafkaTopics.add(schema.inputKafkaTopic);
+        if (entrypoint.inputKafkaTopics.indexOf(schema.inputKafkaTopic) == -1) {
+            entrypoint.inputKafkaTopics.add(schema.inputKafkaTopic);
+        }
 
         this.schema = schema;
         this.config = config;
+        this.k8sName = LHUtil.toValidK8sName(
+            this.schema.name + "-" + LHUtil.digestify(schema.guid)
+        );
     }
 
     /**
@@ -235,7 +241,7 @@ public class WFSpec {
     }
 
     public String getK8sName() {
-        return LHUtil.toValidK8sName(this.schema.name + "-" + LHUtil.digestify(schema.guid));
+        return this.k8sName;
     }
 
     public void record() {
@@ -280,12 +286,14 @@ public class WFSpec {
         dp.metadata.labels = new HashMap<String, String>();
         dp.metadata.namespace = this.getNamespace();
         dp.metadata.labels.put("app", this.getK8sName());
-        dp.metadata.labels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
-        dp.metadata.labels.put("little-horse.io/wfSpecName", this.getModel().name);
+        dp.metadata.labels.put("littlehorse.io/wfSpecGuid", this.getModel().guid);
+        dp.metadata.labels.put("littlehorse.io/wfSpecName", this.getModel().name);
+        dp.metadata.labels.put("littlehorse.io/active", "true");
 
         Container container = new Container();
         container.name = this.getK8sName();
         container.image = config.getCollectorImage();
+        container.imagePullPolicy = "IfNotPresent";
         container.command = config.getCollectorCommand();
         container.env = config.getBaseK8sEnv();
         container.env.add(new EnvEntry(
@@ -303,8 +311,9 @@ public class WFSpec {
         template.metadata.labels = new HashMap<String, String>();
         template.metadata.namespace = this.getNamespace();
         template.metadata.labels.put("app", this.getK8sName());
-        template.metadata.labels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
-        template.metadata.labels.put("little-horse.io/wfSpecName", this.getModel().name);
+        template.metadata.labels.put("littlehorse.io/wfSpecGuid", this.getModel().guid);
+        template.metadata.labels.put("littlehorse.io/wfSpecName", this.getModel().name);
+        template.metadata.labels.put("littlehorse.io/active", "true");
 
         template.spec = new PodSpec();
         template.spec.containers = new ArrayList<Container>();
@@ -315,8 +324,8 @@ public class WFSpec {
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
         dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
-        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecName", this.getModel().name);
+        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecGuid", this.getModel().guid);
+        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecName", this.getModel().name);
         
         return dp;
     }
@@ -340,13 +349,14 @@ public class WFSpec {
         svc.metadata.name = this.getK8sName();
         svc.metadata.labels = new HashMap<String, String>();
         svc.metadata.labels.put("app", this.getK8sName());
-        svc.metadata.labels.put("little-horse.io/wfSpecGuid", this.getModel().guid);
-        svc.metadata.labels.put("little-horse.io/wfSpecName", this.getModel().name);
+        svc.metadata.labels.put("littlehorse.io/wfSpecGuid", this.getModel().guid);
+        svc.metadata.labels.put("littlehorse.io/wfSpecName", this.getModel().name);
+        svc.metadata.labels.put("littlehorse.io/active", "true");
 
         HashMap<String, String> selector = new HashMap<String, String>();
         selector.put("app", this.getK8sName());
-        selector.put("little-horse.io/wfSpecGuid", this.getModel().guid);
-        selector.put("little-horse.io/wfSpecName", this.getModel().name);
+        selector.put("littlehorse.io/wfSpecGuid", this.getModel().guid);
+        selector.put("littlehorse.io/wfSpecName", this.getModel().name);
         svc.spec.selector = selector;
 
         return svc;

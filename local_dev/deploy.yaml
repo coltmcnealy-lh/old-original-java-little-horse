@@ -123,6 +123,18 @@ spec:
       - name: little-horse-api
         image: little-horse-api:latest
         imagePullPolicy: IfNotPresent
+        command:
+          - 'java'
+          - '-jar'
+          - '/littleHorse.jar'
+          - 'api'
+        env:
+          - name: LHORSE_KAFKA_BOOTSTRAP_SERVERS
+            value: "kafka-broker:9092"
+          - name: LHORSE_API_URL
+            value: "http://host.docker.internal:30000"
+          - name: LHORSE_ADVERTISED_URL
+            value: "http://host.docker.internal:30000"
         ports:
         - containerPort: 5000
 ---

@@ -26,12 +26,17 @@ public class Node {
     private Config config;
     private WFSpec wfSpec;
     private TaskDef taskDef;
+    private String k8sName;
 
     public Node(NodeSchema schema, WFSpec wfSpec, Config config) throws LHLookupException {
         this.config = config;
         this.schema = schema;
         this.wfSpec = wfSpec;
         this.taskDef = TaskDef.fromIdentifier(schema.taskDefinitionName, config);
+
+        this.k8sName = wfSpec.getK8sName() + "-" + schema.name;
+        k8sName = LHUtil.toValidK8sName(k8sName);
+
         // TODO: Validate that wfSpec actually has the NodeSchema in it.
     }
 
@@ -40,9 +45,7 @@ public class Node {
     }
 
     public String getK8sName() {
-        String name = wfSpec.getK8sName() + "-" + schema.name;
-        name = LHUtil.toValidK8sName(name);
-        return name;
+        return this.k8sName;
     }
 
     public int getReplicas() {
@@ -65,14 +68,16 @@ public class Node {
         dp.metadata.labels = new HashMap<String, String>();
         dp.metadata.namespace = this.wfSpec.getNamespace();
         dp.metadata.labels.put("app", this.getK8sName());
-        dp.metadata.labels.put("little-horse.io/wfSpecGuid", this.wfSpec.getModel().guid);
-        dp.metadata.labels.put("little-horse.io/NodeGuid", this.schema.guid);
-        dp.metadata.labels.put("little-horse.io/NodeName", this.schema.name);
-        dp.metadata.labels.put("little-horse.io/wfSpecName", this.wfSpec.getModel().name);
+        dp.metadata.labels.put("littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid);
+        dp.metadata.labels.put("littlehorse.io/NodeGuid", this.schema.guid);
+        dp.metadata.labels.put("littlehorse.io/NodeName", this.schema.name);
+        dp.metadata.labels.put("littlehorse.io/wfSpecName", this.wfSpec.getModel().name);
+        dp.metadata.labels.put("littlehorse.io/active", "true");
 
         Container container = new Container();
         container.name = this.getK8sName();
         container.image = this.taskDef.getModel().dockerImage;
+        container.imagePullPolicy = "IfNotPresent";
         container.command = getTaskDaemonCommand();
         container.env = config.getBaseK8sEnv();
         container.env.add(new EnvEntry(
@@ -94,10 +99,11 @@ public class Node {
         template.metadata.labels = new HashMap<String, String>();
         template.metadata.namespace = this.wfSpec.getNamespace();
         template.metadata.labels.put("app", this.getK8sName());
-        template.metadata.labels.put("little-horse.io/wfSpecGuid", this.wfSpec.getModel().guid);
-        template.metadata.labels.put("little-horse.io/NodeGuid", this.schema.guid);
-        template.metadata.labels.put("little-horse.io/NodeName", this.schema.name);
-        template.metadata.labels.put("little-horse.io/wfSpecName", this.wfSpec.getModel().name);
+        template.metadata.labels.put("littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid);
+        template.metadata.labels.put("littlehorse.io/NodeGuid", this.schema.guid);
+        template.metadata.labels.put("littlehorse.io/NodeName", this.schema.name);
+        template.metadata.labels.put("littlehorse.io/wfSpecName", this.wfSpec.getModel().name);
+        template.metadata.labels.put("littlehorse.io/active", "true");
 
         template.spec = new PodSpec();
         template.spec.containers = new ArrayList<Container>();
@@ -108,10 +114,10 @@ public class Node {
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
         dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecGuid", this.wfSpec.getModel().guid);
-        dp.spec.selector.matchLabels.put("little-horse.io/NodeGuid", this.schema.guid);
-        dp.spec.selector.matchLabels.put("little-horse.io/NodeName", this.schema.name);
-        dp.spec.selector.matchLabels.put("little-horse.io/wfSpecName", this.wfSpec.getModel().name);
+        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid);
+        dp.spec.selector.matchLabels.put("littlehorse.io/NodeGuid", this.schema.guid);
+        dp.spec.selector.matchLabels.put("littlehorse.io/NodeName", this.schema.name);
+        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecName", this.wfSpec.getModel().name);
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         try {

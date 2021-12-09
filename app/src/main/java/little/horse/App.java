@@ -101,11 +101,11 @@ class CollectorApp {
 
 public class App {
     public static void main(String[] args) {
-        if (args[0] == "daemon") {
+        if (args[0].equals("daemon")) {
             DaemonApp.run();
-        } else if (args[0] == "collector") {
+        } else if (args[0].equals("collector")) {
             CollectorApp.run();
-        } else {
+        } else if (args[0].equals("api")) {
             FrontendAPIApp.run();
         }
     }

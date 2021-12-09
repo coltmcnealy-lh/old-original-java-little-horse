@@ -83,7 +83,7 @@ public class Config {
         this.stateDirectory = (sdir == null) ? "/tmp/kafkaState" : sdir;
 
         String drmg = System.getenv(Constants.DEFAULT_TASK_IMAGE_KEY);
-        this.defaultTaskDockerImage = (drmg == null) ? "little-horse-task:latest": drmg;
+        this.defaultTaskDockerImage = (drmg == null) ? "little-horse-daemon:latest": drmg;
 
         String tempApiURL = System.getenv(Constants.API_URL_KEY);
         this.apiURL = (tempApiURL == null) ? "http://localhost:5000" : tempApiURL;

@@ -8,4 +8,5 @@ public class Container {
     public ArrayList<String> command;
     public ArrayList<ContainerPort> ports;
     public ArrayList<EnvEntry> env;
+    public String imagePullPolicy;
 }

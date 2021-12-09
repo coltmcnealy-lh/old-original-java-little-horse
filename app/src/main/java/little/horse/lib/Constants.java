@@ -6,7 +6,7 @@ public class Constants {
     public static String KAFKA_APPLICATION_ID_KEY = "LHORSE_KAFKA_APPLICATION_ID";
 
     public static String DEFAULT_PARTITIONS_KEY = "LHORSE_DEFAULT_PARTITIONS";
-    
+
     public static String SYSTEM_PREFIX = "SYSTEM__";
 
     public static String API_URL_KEY = "LHORSE_API_URL";
