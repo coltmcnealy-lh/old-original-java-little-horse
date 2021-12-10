@@ -91,12 +91,17 @@ class FrontendAPIApp {
     }
 }
 
-class DaemonApp {
-    public static void run() {}
-}
 
 class CollectorApp {
     public static void run() {}
+}
+
+class DaemonApp {
+    public static void run() {
+        Config config = new Config();
+        
+        
+    }
 }
 
 public class App {

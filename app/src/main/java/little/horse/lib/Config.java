@@ -9,7 +9,9 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -19,6 +21,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
 import little.horse.lib.K8sStuff.EnvEntry;
+import little.horse.lib.WFRun.WFRunSchema;
 import okhttp3.OkHttpClient;
 
 
@@ -39,6 +42,7 @@ public class Config {
     private Admin kafkaAdmin;
     private int defaultPartitions;
     private String collectorImage;
+    private String wfSpecGuid;
 
     public Config() {
         // TODO: Make this more readable
@@ -116,6 +120,8 @@ public class Config {
         this.collectorImage = (
             tempCollectorImage == null
         ) ? "little-horse-collector:latest" : tempCollectorImage;
+
+        this.wfSpecGuid = System.getenv(Constants.WF_SPEC_GUID_KEY);
     }
 
     public void createKafkaTopic(NewTopic topic) {
@@ -255,5 +261,25 @@ public class Config {
 
     public int getDefaultPartitions() {
         return this.defaultPartitions;
+    }
+
+    /**
+     * Gets the WFSpecGuid from Environment
+     * @return the wfSpecGuid for this 
+     */
+    public String getWfSpecGuid() {
+        return this.wfSpecGuid;
+    }
+
+    public KafkaConsumer<String, WFRunSchema> getWFRunConsumer(
+        ArrayList<String> topics, String appIdSuffix
+    ) {
+        Properties consumerConfig = getConsumerConfig(appIdSuffix);
+        KafkaConsumer<String, WFRunSchema> cons = new KafkaConsumer<String, WFRunSchema>(
+            consumerConfig
+        );
+        Runtime.getRuntime().addShutdownHook(new Thread(cons::close));
+        cons.subscribe(topics);
+        return cons;
     }
 }
