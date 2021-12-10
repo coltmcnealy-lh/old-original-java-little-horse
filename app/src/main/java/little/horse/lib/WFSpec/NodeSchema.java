@@ -7,14 +7,9 @@ public class NodeSchema {
     public NodeType nodeType;
     public String taskDefinitionName;
     public String wfSpecGuid;
-    public String externalEventDefinitionName;
     public String guid;
 
-    public String outputKafkaTopic;
-    public ArrayList<String> inputKafkaTopics;
-    public String interruptKafkaTopic;
-
-    public String externalEventCorrelation;
+    public ArrayList<WFTriggerSchema> triggers;
 
     // LATER: Maybe add inputVariables, which would be just an annotation
     // denoting what is going to come next.

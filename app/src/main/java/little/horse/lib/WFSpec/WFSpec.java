@@ -50,8 +50,8 @@ public class WFSpec {
             schema.guid = LHUtil.generateGuid();
         }
 
-        if (schema.inputKafkaTopic == null) {
-            schema.inputKafkaTopic = config.getKafkaTopicPrefix() + schema.name + "_" + schema.guid;
+        if (schema.kafkaTopic == null) {
+            schema.kafkaTopic = config.getKafkaTopicPrefix() + schema.name + "_" + schema.guid;
         }
 
         if (schema.status == null) {
@@ -64,6 +64,9 @@ public class WFSpec {
 
         for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
             NodeSchema node = pair.getValue();
+            if (node.triggers == null) {
+                node.triggers = new ArrayList<WFTriggerSchema>();
+            }
             node.wfSpecGuid = schema.guid;
             if (node.guid == null) {
                 node.guid = LHUtil.generateGuid();
@@ -95,15 +98,6 @@ public class WFSpec {
                 }
             }
 
-            if (node.outputKafkaTopic == null) {
-                node.outputKafkaTopic = config.getKafkaTopicPrefix() + node.guid + "_output";
-            }
-            if (node.interruptKafkaTopic == null) {
-                node.interruptKafkaTopic = config.getKafkaTopicPrefix() + node.guid + "_interrupt";
-            }
-            if (node.inputKafkaTopics == null) {
-                node.inputKafkaTopics = new ArrayList<String>();
-            }
         }
 
         if (schema.edges == null) {
@@ -120,8 +114,22 @@ public class WFSpec {
             edge.sourceNodeGuid = source.guid;
             edge.sinkNodeGuid = sink.guid;
 
-            if (sink.inputKafkaTopics.indexOf(source.outputKafkaTopic) == -1) {
-                sink.inputKafkaTopics.add(source.outputKafkaTopic);
+            // Add a WFTrigger to the triggers list.
+            boolean found = false;
+            for (WFTriggerSchema trigger : sink.triggers) {
+                if (trigger.triggerNodeGuid.equals(source.guid) || 
+                    trigger.triggerNodeName.equals(source.name)
+                ) {
+                    // TODO: if found is already true, raise a big stink.
+                    found = true;
+                }
+            }
+            if (!found) {
+                WFTriggerSchema trigger = new WFTriggerSchema();
+                trigger.triggerEventType = WFEventType.TASK_COMPLETED;
+                trigger.triggerNodeName = source.name;
+                trigger.triggerNodeGuid = source.guid;
+                sink.triggers.add(trigger);
             }
         }
 
@@ -130,9 +138,16 @@ public class WFSpec {
         NodeSchema entrypoint = null;
         for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
             NodeSchema node = pair.getValue();
-            if (node.inputKafkaTopics.size() == 0 || (node.inputKafkaTopics.size() == 1 &&
-                node.inputKafkaTopics.get(0).equals(schema.inputKafkaTopic)
-            )) {
+            if (node.triggers.size() == 0) {
+                entrypoint = node;
+
+                WFTriggerSchema trigger = new WFTriggerSchema();
+                trigger.triggerEventType = WFEventType.WF_RUN_STARTED;
+                node.triggers.add(trigger);
+
+            } else if (node.triggers.size() == 1 &&
+                node.triggers.get(0).triggerEventType == WFEventType.WF_RUN_STARTED
+            ) {
                 if (entrypoint != null) {
                     throw new LHValidationError(
                         "Invalid WFSpec: More than one node without incoming edges."
@@ -140,14 +155,12 @@ public class WFSpec {
                 }
                 entrypoint = node;
             }
-        }
+        } // for node in schema.nodes
+
         if (entrypoint == null) {
             throw new LHValidationError("No entrypoint node provided!");
         }
         schema.entrypointNodeName = entrypoint.name;
-        if (entrypoint.inputKafkaTopics.indexOf(schema.inputKafkaTopic) == -1) {
-            entrypoint.inputKafkaTopics.add(schema.inputKafkaTopic);
-        }
 
         this.schema = schema;
         this.config = config;
@@ -364,31 +377,11 @@ public class WFSpec {
 
     public void deploy() throws LHDeployError {
         // First, create the kafka topics
-        for (Map.Entry<String, NodeSchema> entry : schema.nodes.entrySet()) {
-            config.createKafkaTopic(new NewTopic(
-                entry.getValue().outputKafkaTopic, getPartitions(), getReplicationFactor()
-            ));
-            config.createKafkaTopic(new NewTopic(
-                entry.getValue().interruptKafkaTopic, getPartitions(), getReplicationFactor()
-            ));
-        }
         config.createKafkaTopic(new NewTopic(
-            this.schema.inputKafkaTopic, getPartitions(), getReplicationFactor()
+            this.schema.kafkaTopic, getPartitions(), getReplicationFactor()
         ));
 
         ArrayList<String> ymlStrings = new ArrayList<String>();
-        try {
-            ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(
-                getCollectorDeployment()
-            ));
-            ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(
-                getCollectorService()
-            ));
-        } catch(Exception exn) {
-            exn.printStackTrace();
-            throw new LHDeployError("Had an orzdash");
-        }
-
         // Finally, deploy task daemons for each of the Node's in the workflow.
         for (Node node : this.getNodes()) {
             try {

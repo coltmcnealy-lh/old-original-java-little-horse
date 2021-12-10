@@ -3,7 +3,6 @@ package little.horse.lib.WFRun;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.kafka.clients.producer.ProducerRecord;
 
 import little.horse.lib.Config;
 import little.horse.lib.LHLookupException;
@@ -37,12 +36,19 @@ public class WFRun {
     public WFRun(WFRunSchema schema, Config config) throws LHLookupException, LHValidationError {
         this.config = config;
         this.schema = schema;
-        if (schema.wfSpecGuid != null) {
-            this.wfSpec = WFSpec.fromIdentifier(schema.wfSpecGuid, config);
-        } else if (schema.wfSpecName != null) {
-            this.wfSpec = WFSpec.fromIdentifier(schema.wfSpecName, config);
-        }
+        this.wfSpec = getWFSpec();
         this.processSchema();
+    }
+
+    public WFSpec getWFSpec() throws LHLookupException, LHValidationError {
+        if (schema.wfSpecGuid != null) {
+            return WFSpec.fromIdentifier(schema.wfSpecGuid, config);
+        } else if (schema.wfSpecName != null) {
+            return WFSpec.fromIdentifier(schema.wfSpecName, config);
+        }
+        throw new LHValidationError(
+            "Did not provide wfSpecName nor Guid for wfRun " + this.schema.guid
+        );
     }
 
     public WFRun(WFRunSchema schema, Config config, WFSpec wfSpec) {
@@ -69,11 +75,5 @@ public class WFRun {
     }
 
     public void start() {
-        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            this.wfSpec.getModel().inputKafkaTopic,
-            schema.guid,
-            this.toString()
-        );
-        this.config.send(record);
     }
 }

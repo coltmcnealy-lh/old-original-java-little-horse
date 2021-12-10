@@ -1,29 +1,38 @@
 package little.horse.api;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
+
 import io.javalin.http.Context;
+
 import little.horse.lib.Config;
 import little.horse.lib.LHLookupException;
+import little.horse.lib.LHStatus;
+import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.WFRun.WFRun;
-import little.horse.lib.WFRun.WFRunSchema;
+import little.horse.lib.WFRun.WFRunRequestSchema;
 import little.horse.lib.WFSpec.PostWFSpecResponse;
+import little.horse.lib.WFSpec.WFEventSchema;
 import little.horse.lib.WFSpec.WFSpec;
 
 public class WFRunAPI {
     private Config config;
+    private APIStreamsContext wfRunStreams;
 
-    public WFRunAPI(Config config) {
+    public WFRunAPI(Config config, APIStreamsContext wfRunStreams) {
         this.config = config;
+        this.wfRunStreams = wfRunStreams;
     }
 
     public void get(Context ctx) {
-        // TODO: Need to query the Collector pod for the WFSpec.
+        // TODO: Need to add a KafkaStreams topology which watches for this and collects it.
     }
 
     public void post(Context ctx) {
-        WFRunSchema request = ctx.bodyAsClass(WFRunSchema.class);
+        WFRunRequestSchema request = ctx.bodyAsClass(WFRunRequestSchema.class);
         String wfSpecId = ctx.pathParam("wfSpec");
         WFSpec wfSpec = null;
+
+        WFEventSchema event = new WFEventSchema();
 
         try {
             wfSpec = WFSpec.fromIdentifier(wfSpecId, config);
@@ -40,12 +49,23 @@ public class WFRunAPI {
             ctx.json(err);
             return;
         }
+        String guid = LHUtil.generateGuid();
+        event.wfRunGuid = guid;
+        event.wfSpecGuid = wfSpec.getModel().guid;
+        event.wfSpecName = wfSpec.getModel().name;
+        event.content = request.toString();
 
-        WFRun wfRun = new WFRun(request, config, wfSpec);
-        wfRun.start();
+        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
+            wfSpec.getModel().kafkaTopic,
+            event.wfRunGuid,
+            event.toString()
+        );
+
+        config.send(record); // TODO: Some checking that it went through.
+
         PostWFSpecResponse response = new PostWFSpecResponse();
-        response.guid = wfRun.getModel().guid;
-        response.status = wfRun.getModel().status;
+        response.guid = guid;
+        response.status = LHStatus.PENDING;
 
         ctx.status(201);
         ctx.json(response);
