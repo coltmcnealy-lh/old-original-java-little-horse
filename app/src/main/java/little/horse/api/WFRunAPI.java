@@ -9,10 +9,10 @@ import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.WFRun.WFRunRequestSchema;
-import little.horse.lib.WFSpec.PostWFSpecResponse;
-import little.horse.lib.WFSpec.WFEventSchema;
-import little.horse.lib.WFSpec.WFSpec;
+import little.horse.lib.PostWFSpecResponse;
+import little.horse.lib.WFEventSchema;
+import little.horse.lib.WFRunRequestSchema;
+import little.horse.lib.WFSpec;
 
 public class WFRunAPI {
     private Config config;

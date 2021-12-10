@@ -10,8 +10,8 @@ import little.horse.api.TaskDefProcessors.TaskDefByGuidProcessor;
 import little.horse.api.TaskDefProcessors.TaskDefByNameProcessor;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.TaskDef.TaskDefSchema;
-import little.horse.lib.TaskDef.kafkaStreamsSerdes.TaskDefSerdes;
+import little.horse.lib.TaskDefSchema;
+import little.horse.lib.kafkaStreamsSerdes.TaskDefSerdes;
 
 public class TaskDefTopology {
     private Config config;

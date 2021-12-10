@@ -5,19 +5,30 @@ import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
-import little.horse.lib.TaskDef.TaskDefSchema;
-import little.horse.lib.WFSpec.WFSpecSchema;
+import little.horse.lib.TaskDefSchema;
+import little.horse.lib.WFRunSchema;
+import little.horse.lib.WFSpecSchema;
 
 public class APIStreamsContext {
     private String wfSpecStoreName;
     private KafkaStreams wfSpecStreams;
     private KafkaStreams taskDefStreams;
+    private KafkaStreams wfRunStreams;
 
     private String taskDefNameStoreName;
     private String taskDefGuidStoreName;
+    private String wfRunStoreName;
     
     public String getTaskDefNameStoreName() {
         return taskDefNameStoreName;
+    }
+
+    public String getWFRunStoreName() {
+        return wfRunStoreName;
+    }
+
+    public void setWFRunStoreName(String name) {
+        this.wfRunStoreName = name;
     }
 
     public void setTaskDefNameStoreName(String taskDefNameStoreName) {
@@ -32,9 +43,14 @@ public class APIStreamsContext {
         this.taskDefGuidStoreName = taskDefGuidStoreName;
     }
 
-    public APIStreamsContext(KafkaStreams wfSpecStreams, KafkaStreams taskDefStreams) {
+    public APIStreamsContext(
+        KafkaStreams wfSpecStreams,
+        KafkaStreams taskDefStreams,
+        KafkaStreams wfRunStreams
+    ) {
         this.wfSpecStreams = wfSpecStreams;
         this.taskDefStreams = taskDefStreams;
+        this.wfRunStreams = wfRunStreams;
     }
 
     public void setWFSpecStoreName(String name) {
@@ -63,6 +79,15 @@ public class APIStreamsContext {
         return taskDefStreams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefGuidStoreName,
+                QueryableStoreTypes.keyValueStore()
+            )
+        );
+    }
+
+    public ReadOnlyKeyValueStore<String, WFRunSchema> getWFRunStore() {
+        return wfRunStreams.store(
+            StoreQueryParameters.fromNameAndType(
+                this.wfRunStoreName,
                 QueryableStoreTypes.keyValueStore()
             )
         );

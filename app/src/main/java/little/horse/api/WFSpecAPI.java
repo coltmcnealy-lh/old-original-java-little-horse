@@ -5,9 +5,9 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import io.javalin.http.Context;
 import little.horse.lib.Config;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.WFSpec.PostWFSpecResponse;
-import little.horse.lib.WFSpec.WFSpec;
-import little.horse.lib.WFSpec.WFSpecSchema;
+import little.horse.lib.PostWFSpecResponse;
+import little.horse.lib.WFSpec;
+import little.horse.lib.WFSpecSchema;
 
 public class WFSpecAPI {
     private Config config;

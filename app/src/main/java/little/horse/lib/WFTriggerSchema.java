@@ -1,4 +1,4 @@
-package little.horse.lib.WFSpec;
+package little.horse.lib;
 
 public class WFTriggerSchema {
     public String triggerNodeName;

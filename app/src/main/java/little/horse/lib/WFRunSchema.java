@@ -1,9 +1,7 @@
-package little.horse.lib.WFRun;
+package little.horse.lib;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import little.horse.lib.LHStatus;
 
 public class WFRunSchema {
     public String guid;

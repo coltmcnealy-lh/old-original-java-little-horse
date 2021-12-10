@@ -1,9 +1,7 @@
-package little.horse.lib.WFSpec;
+package little.horse.lib;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import little.horse.lib.LHStatus;
 
 public class WFSpecSchema {
     public String name;

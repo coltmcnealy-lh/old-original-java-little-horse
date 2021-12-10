@@ -11,8 +11,8 @@ import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.lib.Config;
-import little.horse.lib.WFSpec.WFSpecSchema;
-import little.horse.lib.WFSpec.kafkaStreamsSerdes.WFSpecSerdes;
+import little.horse.lib.WFSpecSchema;
+import little.horse.lib.kafkaStreamsSerdes.WFSpecSerdes;
 
 public class WFSpecTopology {
     private Config config;

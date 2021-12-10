@@ -6,10 +6,10 @@ import little.horse.api.TaskDefAPI;
 import little.horse.api.WFSpecAPI;
 import little.horse.api.WFRunAPI;
 import little.horse.lib.Config;
-
+ 
 
 public class LittleHorseAPI {
-    private Javalin app;
+    private Javalin app; 
     private Config config;
     private WFSpecAPI wfSpecAPI;
     private TaskDefAPI taskDefAPI;
@@ -21,7 +21,7 @@ public class LittleHorseAPI {
         this.streams = streams;
         this.wfSpecAPI = new WFSpecAPI(this.config, this.streams);
         this.taskDefAPI = new TaskDefAPI(this.config, this.streams);
-        this.wfRunAPI = new WFRunAPI(this.config);
+        this.wfRunAPI = new WFRunAPI(this.config, this.streams);
 
         this.app = Javalin.create();
         this.app.post("/wfSpec", this.wfSpecAPI::post);

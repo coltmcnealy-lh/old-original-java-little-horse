@@ -1,10 +1,10 @@
-package little.horse.lib.WFSpec.kafkaStreamsSerdes;
+package little.horse.lib.kafkaStreamsSerdes;
 
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.WFSpec.WFSpecSchema;
+import little.horse.lib.WFSpecSchema;
 
 public class WFSpecSerdes implements Serde<WFSpecSchema> {
 

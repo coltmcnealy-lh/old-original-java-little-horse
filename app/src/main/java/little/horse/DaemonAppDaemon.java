@@ -3,9 +3,9 @@ package little.horse;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 import little.horse.lib.Config;
-import little.horse.lib.WFRun.WFRunSchema;
-import little.horse.lib.WFSpec.NodeSchema;
-import little.horse.lib.WFSpec.WFSpec;
+import little.horse.lib.NodeSchema;
+import little.horse.lib.WFRunSchema;
+import little.horse.lib.WFSpec;
 
 public class DaemonAppDaemon {
     private Config config;

@@ -1,13 +1,5 @@
-package little.horse.lib.WFSpec;
+package little.horse.lib;
 
-import little.horse.lib.Config;
-import little.horse.lib.Constants;
-import little.horse.lib.LHDeployError;
-import little.horse.lib.LHLookupException;
-import little.horse.lib.LHLookupExceptionReason;
-import little.horse.lib.LHStatus;
-import little.horse.lib.LHUtil;
-import little.horse.lib.LHValidationError;
 import little.horse.lib.K8sStuff.Container;
 import little.horse.lib.K8sStuff.Deployment;
 import little.horse.lib.K8sStuff.DeploymentMetadata;
@@ -19,7 +11,6 @@ import little.horse.lib.K8sStuff.Service;
 import little.horse.lib.K8sStuff.ServicePort;
 import little.horse.lib.K8sStuff.ServiceSpec;
 import little.horse.lib.K8sStuff.Template;
-import little.horse.lib.TaskDef.TaskDef;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;

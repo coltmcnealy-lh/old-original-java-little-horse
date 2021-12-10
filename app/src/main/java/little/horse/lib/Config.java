@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.Callback;
@@ -21,7 +21,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
 import little.horse.lib.K8sStuff.EnvEntry;
-import little.horse.lib.WFRun.WFRunSchema;
 import okhttp3.OkHttpClient;
 
 
@@ -281,5 +280,19 @@ public class Config {
         Runtime.getRuntime().addShutdownHook(new Thread(cons::close));
         cons.subscribe(topics);
         return cons;
+    }
+
+    public String getWFRunTopicPrefix() {
+        return this.getKafkaTopicPrefix() + "wfEvents__";
+    }
+
+    public String getWFRunTopic(String wfRunGuid) {
+        return this.getWFRunTopicPrefix() + "-" + wfRunGuid;
+    }
+
+    public Pattern getAllWFRunTopicsPattern() {
+        return Pattern.compile(
+            "\\b" + this.getWFRunTopicPrefix() + "\\S+*"
+        );
     }
 }

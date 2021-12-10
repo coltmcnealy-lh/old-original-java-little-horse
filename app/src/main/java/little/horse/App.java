@@ -19,8 +19,9 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.WFSpec.WFSpecSchema;
-import little.horse.lib.WFSpec.kafkaStreamsSerdes.WFSpecDeSerializer;
+import little.horse.lib.WFRunTopology;
+import little.horse.lib.WFSpecSchema;
+import little.horse.lib.kafkaStreamsSerdes.WFSpecDeSerializer;
 
 
 class FrontendAPIApp {
@@ -60,10 +61,24 @@ class FrontendAPIApp {
             config.getStreamsConfig("taskDef")
         );
 
-        APIStreamsContext context = new APIStreamsContext(wfSpecStreams, taskDefStreams);
+        WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
+            config, config.getAllWFRunTopicsPattern()
+        );
+        Topology wfRunTopology = wfRunTopologyBuilder.getTopology();
+        KafkaStreams wfRunStreams = new KafkaStreams(
+            wfRunTopology,
+            config.getStreamsConfig("wfRunAPIStreams")
+        );
+
+        APIStreamsContext context = new APIStreamsContext(
+            wfSpecStreams,
+            taskDefStreams,
+            wfRunStreams
+        );
         context.setWFSpecStoreName(wfSpecTopology.getStoreName());
         context.setTaskDefGuidStoreName(Constants.TASK_DEF_GUID_STORE);
         context.setTaskDefNameStoreName(Constants.TASK_DEF_NAME_STORE);
+        context.setWFRunStoreName(Constants.WF_RUN_STORE);
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);
 

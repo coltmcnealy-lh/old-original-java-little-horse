@@ -1,10 +1,10 @@
-package little.horse.lib.TaskDef.kafkaStreamsSerdes;
+package little.horse.lib.kafkaStreamsSerdes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.TaskDef.TaskDefSchema;
+import little.horse.lib.TaskDefSchema;
 
 public class TaskDefSerializer implements Serializer<TaskDefSchema> {
 

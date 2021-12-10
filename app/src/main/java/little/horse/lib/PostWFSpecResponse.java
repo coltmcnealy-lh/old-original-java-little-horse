@@ -1,6 +1,4 @@
-package little.horse.lib.WFSpec;
-
-import little.horse.lib.LHStatus;
+package little.horse.lib;
 
 public class PostWFSpecResponse {
     public String name;

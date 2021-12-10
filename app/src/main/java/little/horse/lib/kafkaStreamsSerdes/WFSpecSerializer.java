@@ -1,10 +1,10 @@
-package little.horse.lib.WFSpec.kafkaStreamsSerdes;
+package little.horse.lib.kafkaStreamsSerdes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.WFSpec.WFSpecSchema;
+import little.horse.lib.WFSpecSchema;
 
 public class WFSpecSerializer implements Serializer<WFSpecSchema> {
 

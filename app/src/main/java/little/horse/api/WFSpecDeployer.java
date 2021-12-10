@@ -9,8 +9,8 @@ import little.horse.lib.Config;
 import little.horse.lib.LHDeployError;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.WFSpec.WFSpec;
-import little.horse.lib.WFSpec.WFSpecSchema;
+import little.horse.lib.WFSpec;
+import little.horse.lib.WFSpecSchema;
 
 public class WFSpecDeployer {
     private Consumer<String, WFSpecSchema> consumer;

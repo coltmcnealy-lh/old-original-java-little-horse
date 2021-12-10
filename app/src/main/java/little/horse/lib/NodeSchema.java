@@ -1,4 +1,4 @@
-package little.horse.lib.WFSpec;
+package little.horse.lib;
 
 import java.util.ArrayList;
 

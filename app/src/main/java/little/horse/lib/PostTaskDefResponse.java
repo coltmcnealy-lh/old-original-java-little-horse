@@ -1,4 +1,4 @@
-package little.horse.lib.TaskDef;
+package little.horse.lib;
 
 public class PostTaskDefResponse {
     public String name;
