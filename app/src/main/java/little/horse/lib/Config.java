@@ -298,7 +298,7 @@ public class Config {
 
     public Pattern getAllWFRunTopicsPattern() {
         return Pattern.compile(
-            "\\b" + this.getWFRunTopicPrefix() + "\\S+*"
+            "\\b" + this.getWFRunTopicPrefix() + "\\S+"
         );
     }
 }
