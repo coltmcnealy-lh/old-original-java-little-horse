@@ -42,6 +42,7 @@ public class Config {
     private int defaultPartitions;
     private String collectorImage;
     private String wfSpecGuid;
+    private String wfNodeName;
 
     public Config() {
         // TODO: Make this more readable
@@ -121,6 +122,7 @@ public class Config {
         ) ? "little-horse-collector:latest" : tempCollectorImage;
 
         this.wfSpecGuid = System.getenv(Constants.WF_SPEC_GUID_KEY);
+        this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
     }
 
     public void createKafkaTopic(NewTopic topic) {
@@ -268,6 +270,10 @@ public class Config {
      */
     public String getWfSpecGuid() {
         return this.wfSpecGuid;
+    }
+
+    public String getNodeName() {
+        return this.wfNodeName;
     }
 
     public KafkaConsumer<String, WFRunSchema> getWFRunConsumer(

@@ -5,6 +5,7 @@ package little.horse;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -19,6 +20,7 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
+import little.horse.lib.NullWFEventActor;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
 import little.horse.lib.WFSpecSchema;
@@ -62,7 +64,7 @@ class FrontendAPIApp {
             config.getStreamsConfig("taskDef")
         );
 
-        WFEventProcessorActor actor = null;
+        WFEventProcessorActor actor = new NullWFEventActor();
 
         WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
             config, config.getAllWFRunTopicsPattern(), actor
@@ -101,6 +103,7 @@ class FrontendAPIApp {
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(wfSpecStreams::close));
         Runtime.getRuntime().addShutdownHook(new Thread(taskDefStreams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(wfRunStreams::close));
 
         deployerThread.start();
         wfSpecStreams.start();
@@ -110,15 +113,23 @@ class FrontendAPIApp {
 }
 
 
-class CollectorApp {
-    public static void run() {}
-}
-
 class DaemonApp {
     public static void run() {
         Config config = new Config();
-        
-        
+
+        // just need to set up the topology and run it.
+        WFEventProcessorActor actor = new NullWFEventActor();
+
+        Pattern pattern = Pattern.compile(config.getNodeName());
+        WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
+            config, pattern, actor
+        );
+        KafkaStreams streams = new KafkaStreams(
+            wfRunTopologyBuilder.getTopology(),
+            config.getStreamsConfig(config.getNodeName())
+        );
+        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        streams.start();
     }
 }
 
@@ -126,10 +137,12 @@ public class App {
     public static void main(String[] args) {
         if (args[0].equals("daemon")) {
             DaemonApp.run();
-        } else if (args[0].equals("collector")) {
-            CollectorApp.run();
         } else if (args[0].equals("api")) {
             FrontendAPIApp.run();
+        } else {
+            System.out.println(
+                "Please specify either 'api' or 'daemon' commandline arg"
+            );
         }
     }
 }
