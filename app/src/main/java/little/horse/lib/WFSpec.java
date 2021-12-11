@@ -69,6 +69,10 @@ public class WFSpec {
                 throw new LHValidationError("Node name didn't match for node " + pair.getKey());
             }
 
+            if (node.outgoingEdges == null) {
+                node.outgoingEdges = new ArrayList<EdgeSchema>();
+            }
+
             // Now validate that the TaskDef's actually exist
             if (node.taskDefinitionName == null) {
                 throw new LHValidationError(
@@ -104,6 +108,17 @@ public class WFSpec {
             NodeSchema sink = schema.nodes.get(edge.sinkNodeName);
             edge.sourceNodeGuid = source.guid;
             edge.sinkNodeGuid = sink.guid;
+
+            boolean alreadyHasEdge = false;
+            for (EdgeSchema candidate : source.outgoingEdges) {
+                if (candidate.sinkNodeName == sink.name) {
+                    alreadyHasEdge = true;
+                    break;
+                }
+            }
+            if (!alreadyHasEdge) {
+                source.outgoingEdges.add(edge);
+            }
 
             // Add a WFTrigger to the triggers list.
             boolean found = false;

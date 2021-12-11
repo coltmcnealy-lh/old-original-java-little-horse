@@ -9,9 +9,9 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import little.horse.lib.Constants;
 import little.horse.lib.TaskDefSchema;
 
-public class TaskDefByGuidProcessor implements Processor<
-    String, TaskDefSchema, String, TaskDefSchema
-> {
+public class TaskDefByGuidProcessor
+    implements Processor<String, TaskDefSchema, String, TaskDefSchema>
+{
     private KeyValueStore<String, TaskDefSchema> kvStore;
     private ProcessorContext<String, TaskDefSchema> context;
 

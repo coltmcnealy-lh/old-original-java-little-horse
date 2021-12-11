@@ -1,15 +1,17 @@
 package little.horse.lib;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 public class TaskRunSchema {
+    public String wfRunGuid;
     public String wfSpecGuid;
     public String wfSpecName;
     public String wfNodeName;
     public String wfNodeGuid;
     public int executionNumber;
     public LHStatus status;
-    public String bashCommand;
+    public ArrayList<String> bashCommand;
     public String dockerImage;
     public String stdin;
     public String stdout;

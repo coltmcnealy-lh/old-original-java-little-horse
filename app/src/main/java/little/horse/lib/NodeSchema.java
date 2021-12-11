@@ -10,6 +10,7 @@ public class NodeSchema {
     public String guid;
 
     public ArrayList<WFTriggerSchema> triggers;
+    public ArrayList<EdgeSchema> outgoingEdges;
 
     // LATER: Maybe add inputVariables, which would be just an annotation
     // denoting what is going to come next.

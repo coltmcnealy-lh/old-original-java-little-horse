@@ -3,16 +3,26 @@ package little.horse.lib;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
+
+import little.horse.lib.kafkaStreamsSerdes.WFEventSerdes;
+import little.horse.lib.kafkaStreamsSerdes.WFRunSerdes;
 
 public class WFRunTopology {
     private Config config;
     private Pattern topicPattern;
+    private WFEventProcessorActor actor;
     
-    public WFRunTopology(Config config, Pattern topicPattern) {
+    public WFRunTopology(
+        Config config, Pattern topicPattern, WFEventProcessorActor actor
+    ) {
         this.config = config;
         this.topicPattern = topicPattern;
+        this.actor = actor;
+    }
+
+    public WFEventProcessor processorFactory() {
+        return new WFEventProcessor(actor, config);
     }
 
     public Topology getTopology() {
@@ -23,7 +33,7 @@ public class WFRunTopology {
 
         WFEventSerdes eventSerde = new WFEventSerdes();
         WFRunSerdes runSerde = new WFRunSerdes();
-        
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             eventSerde.close();
             runSerde.close();
@@ -37,8 +47,10 @@ public class WFRunTopology {
         );
 
         topo.addProcessor(
-
-        )
+            updateProcessorName,
+            this::processorFactory,
+            topoSource
+        );
 
         return topo;
     }
