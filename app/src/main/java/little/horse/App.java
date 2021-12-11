@@ -19,6 +19,7 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
+import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
 import little.horse.lib.WFSpecSchema;
 import little.horse.lib.kafkaStreamsSerdes.WFSpecDeSerializer;
@@ -61,8 +62,10 @@ class FrontendAPIApp {
             config.getStreamsConfig("taskDef")
         );
 
+        WFEventProcessorActor actor = null;
+
         WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
-            config, config.getAllWFRunTopicsPattern()
+            config, config.getAllWFRunTopicsPattern(), actor
         );
         Topology wfRunTopology = wfRunTopologyBuilder.getTopology();
         KafkaStreams wfRunStreams = new KafkaStreams(
