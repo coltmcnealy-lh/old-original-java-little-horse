@@ -1,7 +1,5 @@
 package little.horse.api;
 
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-
 import io.javalin.http.Context;
 import little.horse.lib.Config;
 import little.horse.lib.LHValidationError;
