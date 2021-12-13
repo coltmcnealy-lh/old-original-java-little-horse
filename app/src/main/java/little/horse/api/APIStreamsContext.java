@@ -10,7 +10,8 @@ import little.horse.lib.WFRunSchema;
 import little.horse.lib.WFSpecSchema;
 
 public class APIStreamsContext {
-    private String wfSpecStoreName;
+    private String wfSpecNameStoreName;
+    private String wfSpecGuidStoreName;
     private KafkaStreams streams;
 
     private String taskDefNameStoreName;
@@ -45,14 +46,27 @@ public class APIStreamsContext {
         this.streams = streams;
     }
 
-    public void setWFSpecStoreName(String name) {
-        this.wfSpecStoreName = name;
+    public void setWFSpecNameStoreName(String name) {
+        this.wfSpecNameStoreName = name;
     }
 
-    public ReadOnlyKeyValueStore<String, WFSpecSchema> getWFSpecStore() {
+    public void setWFSpecGuidStoreName(String name) {
+        this.wfSpecGuidStoreName = name;
+    }
+
+    public ReadOnlyKeyValueStore<String, WFSpecSchema> getWFSpecNameStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
-                this.wfSpecStoreName,
+                this.wfSpecNameStoreName,
+                QueryableStoreTypes.keyValueStore()
+            )
+        );
+    }
+
+    public ReadOnlyKeyValueStore<String, WFSpecSchema> getWFSpecGuidStore() {
+        return streams.store(
+            StoreQueryParameters.fromNameAndType(
+                this.wfSpecGuidStoreName,
                 QueryableStoreTypes.keyValueStore()
             )
         );

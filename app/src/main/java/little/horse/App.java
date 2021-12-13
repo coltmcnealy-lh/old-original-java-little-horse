@@ -78,8 +78,8 @@ class FrontendAPIApp {
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
 
         APIStreamsContext context = new APIStreamsContext(streams);
-        context.setWFSpecStoreName(Constants.WF_SPEC_NAME_STORE);
-        context.setWFSpecStoreName(Constants.WF_SPEC_GUID_STORE);
+        context.setWFSpecNameStoreName(Constants.WF_SPEC_NAME_STORE);
+        context.setWFSpecGuidStoreName(Constants.WF_SPEC_GUID_STORE);
         context.setTaskDefGuidStoreName(Constants.TASK_DEF_GUID_STORE);
         context.setTaskDefNameStoreName(Constants.TASK_DEF_NAME_STORE);
         context.setWFRunStoreName(Constants.WF_RUN_STORE);

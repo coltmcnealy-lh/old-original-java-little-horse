@@ -39,15 +39,21 @@ public class WFSpecAPI {
     }
 
     public void get(Context ctx) {
-        ReadOnlyKeyValueStore<String, WFSpecSchema> store = streams.getWFSpecStore();
-        String wfSpecGuid = ctx.pathParam("guid");
+        String wfSpecId = ctx.pathParam("nameOrGuid");
 
-        WFSpecSchema schema = store.get(wfSpecGuid);
-        if (schema == null) {
-            ctx.status(404);
+        WFSpecSchema schema = streams.getWFSpecGuidStore().get(wfSpecId);
+        if (schema != null) {
+            ctx.json(schema);
             return;
         }
 
-        ctx.json(schema);
+        schema = streams.getWFSpecNameStore().get(wfSpecId);
+        if (schema != null) {
+            ctx.json(schema);
+            return;
+        }
+
+        ctx.status(404);
+        return;
     }
 }

@@ -25,7 +25,7 @@ public class LittleHorseAPI {
 
         this.app = Javalin.create();
         this.app.post("/wfSpec", this.wfSpecAPI::post);
-        this.app.get("/wfSpec/{guid}", this.wfSpecAPI::get);
+        this.app.get("/wfSpec/{nameOrGuid}", this.wfSpecAPI::get);
 
         this.app.get("/taskDef/{nameOrGuid}", this.taskDefAPI::get);
         this.app.post("/taskDef", this.taskDefAPI::post);

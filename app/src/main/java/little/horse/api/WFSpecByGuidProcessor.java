@@ -28,7 +28,14 @@ String, WFSpecSchema, String, WFSpecSchema
         } else {
             kvStore.put(record.key(), wfs);
         }
-        context.forward(record);
+
+        // Now, we re-key it.
+        Record<String, WFSpecSchema> nameKeyedRecord = new Record<>(
+            wfs.name,
+            wfs,
+            record.timestamp()
+        );
+        context.forward(nameKeyedRecord);
     }
 
 }
