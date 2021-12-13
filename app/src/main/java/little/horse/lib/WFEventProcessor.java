@@ -1,9 +1,11 @@
 package little.horse.lib;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.kafka.common.message.DescribeUserScramCredentialsResponseDataJsonConverter;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -37,6 +39,8 @@ public class WFEventProcessor
         WFRunSchema wfRun = kvStore.get(wfRunGuid);
         if (wfRun == null) {
             if (event.type != WFEventType.WF_RUN_STARTED) {
+                System.out.println("Got null wfRUN but event not wfrunstarted");
+                System.out.println(event.toString());
                 raiseError();
                 return;
             }
@@ -47,9 +51,12 @@ public class WFEventProcessor
                 );
             } catch (Exception exn) {
                 exn.printStackTrace();
+                System.out.println("Got error while reading the runRequest");
                 raiseError();
                 return;
             }
+
+            System.out.println("Got a runrequest: " + runRequest.toString());
 
             wfRun = new WFRunSchema();
             wfRun.guid = wfRunGuid;
@@ -77,9 +84,11 @@ public class WFEventProcessor
             tr.status = LHStatus.PENDING;
             wfRun.taskRuns.add(tr);
 
+            System.out.println("just added the wfRunSpec:\n\n" + wfRun.toString() + "\n\n");
             kvStore.put(wfRunGuid, wfRun);
         } else {
             if (event.type == WFEventType.WF_RUN_STARTED) {
+                System.out.println("Got the wfRUN but now event is wfrunstarted");
                 raiseError();
                 return;
             } else if (event.type == WFEventType.TASK_STARTED) {
@@ -87,6 +96,7 @@ public class WFEventProcessor
                 // Thus it should be in the PENDING state. If not, raise error.
                 TaskRunSchema runningTask = wfRun.taskRuns.get(wfRun.taskRuns.size() -1);
                 if (runningTask.status != LHStatus.PENDING) {
+                    System.out.println("Task isn't pending");
                     raiseError();
                     return;
                 }
@@ -111,7 +121,11 @@ public class WFEventProcessor
 
             } else if (event.type == WFEventType.TASK_COMPLETED) {
                 TaskRunSchema runningTask = wfRun.taskRuns.get(wfRun.taskRuns.size() -1);
-                if (runningTask.status != LHStatus.PENDING) {
+                if (!runningTask.status.equals(LHStatus.RUNNING) && runningTask.status != LHStatus.PENDING) {
+                    System.out.println("Raising error cuz status is not running");
+                    System.out.println(LHStatus.RUNNING);
+                    System.out.println(LHStatus.PENDING);
+                    System.out.println(runningTask.status);
                     raiseError();
                     return;
                 }
@@ -121,7 +135,7 @@ public class WFEventProcessor
                 TaskRunEndedEventSchema taskRunEnd;
                 try {
                     taskRunEnd = new ObjectMapper().readValue(
-                        event.toString(),
+                        event.content,
                         TaskRunEndedEventSchema.class
                     );
                 } catch (Exception exn) {
@@ -168,9 +182,18 @@ public class WFEventProcessor
             }
         }
 
+        System.out.println("about to call actor.act");
         actor.act(wfRun, event);
+        System.out.println("called actor.act");
+        try {
+        System.out.println("\n\n\n" + new ObjectMapper().writeValueAsString(wfRun) + "\n\n\n");
+        } catch(Exception exn) {}
+
+        Date timestamp = (event.timestamp == null)
+            ? new Date(record.timestamp())
+            : event.timestamp;
         context.forward(new Record<String, WFRunSchema>(
-            wfRunGuid, wfRun, event.timestamp.getTime()
+            wfRunGuid, wfRun, timestamp.getTime()
         ));
     }
 

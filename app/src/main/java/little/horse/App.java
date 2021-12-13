@@ -20,9 +20,13 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
+import little.horse.lib.NodeSchema;
 import little.horse.lib.NullWFEventActor;
+import little.horse.lib.TaskDaemonEventActor;
+import little.horse.lib.TaskDef;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
+import little.horse.lib.WFSpec;
 import little.horse.lib.WFSpecSchema;
 import little.horse.lib.kafkaStreamsSerdes.WFSpecDeSerializer;
 
@@ -105,6 +109,7 @@ class FrontendAPIApp {
         Runtime.getRuntime().addShutdownHook(new Thread(taskDefStreams::close));
         Runtime.getRuntime().addShutdownHook(new Thread(wfRunStreams::close));
 
+        wfRunStreams.start();
         deployerThread.start();
         wfSpecStreams.start();
         taskDefStreams.start();
@@ -114,13 +119,24 @@ class FrontendAPIApp {
 
 
 class DaemonApp {
-    public static void run() {
+    public static void run() throws Exception {
         Config config = new Config();
 
         // just need to set up the topology and run it.
-        WFEventProcessorActor actor = new NullWFEventActor();
+        
+        WFSpec wfSpec = WFSpec.fromIdentifier(config.getWfSpecGuid(), config);
 
-        Pattern pattern = Pattern.compile(config.getNodeName());
+        NodeSchema node = wfSpec.getModel().nodes.get(config.getNodeName());
+        TaskDef td = TaskDef.fromIdentifier(node.taskDefinitionName, config);
+
+        WFEventProcessorActor actor = new TaskDaemonEventActor(
+            wfSpec,
+            node,
+            td,
+            config
+        );
+
+        Pattern pattern = Pattern.compile(wfSpec.getModel().kafkaTopic);
         WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
             config, pattern, actor
         );
@@ -136,7 +152,11 @@ class DaemonApp {
 public class App {
     public static void main(String[] args) {
         if (args[0].equals("daemon")) {
-            DaemonApp.run();
+            try {
+                DaemonApp.run();
+            } catch(Exception exn) {
+                exn.printStackTrace();
+            }
         } else if (args[0].equals("api")) {
             FrontendAPIApp.run();
         } else {

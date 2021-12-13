@@ -1,6 +1,9 @@
 #!/bin/bash
 set -ex
 
+kubectl delete deploy -llittlehorse.io/wfSpecGuid
+kubectl delete svc -llittlehorse.io/wfSpecGuid
+
 kubectl scale deploy little-horse-api --replicas=0
 ./clear_local_data.sh
 ./docker_build.sh

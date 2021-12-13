@@ -31,6 +31,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
     }
 
     public void act(WFRunSchema wfRun, WFEventSchema event) {
+        System.out.println("\\n\n\n\n\n\n\n");
         System.out.println(event.toString());
         System.out.println(wfRun.toString());
 
@@ -39,6 +40,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         // 2. We're not entrypoint, so we watch out for completed tasks of the upstream
         //    nodes.
         if (trigger.triggerEventType != event.type) {
+            System.out.println("leaving because wrong trigger event type");
             return;
         }
         
@@ -50,6 +52,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
             }
         }
 
+        System.out.println("about to start the thread");
         Thread thread = new Thread(() -> {
             try {
                 this.doAction(wfRun, event.executionNumber + 1);

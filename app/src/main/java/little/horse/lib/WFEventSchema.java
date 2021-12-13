@@ -12,7 +12,7 @@ public class WFEventSchema {
     public int executionNumber;
     public Date timestamp;
 
-    WFEventType type;
+    public WFEventType type;
 
     // In the case of a Task Run, for example, this is just a serialized TaskRunSchema
     // object. For other things, such as external events, it'll be other things.

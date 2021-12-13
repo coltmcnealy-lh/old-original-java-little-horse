@@ -4,6 +4,9 @@ import java.util.regex.Pattern;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 
 import little.horse.lib.kafkaStreamsSerdes.WFEventSerdes;
 import little.horse.lib.kafkaStreamsSerdes.WFRunSerdes;
@@ -38,7 +41,7 @@ public class WFRunTopology {
             eventSerde.close();
             runSerde.close();
         }));
-
+        
         topo.addSource(
             topoSource,
             Serdes.String().deserializer(),
@@ -51,6 +54,15 @@ public class WFRunTopology {
             this::processorFactory,
             topoSource
         );
+            
+        StoreBuilder<KeyValueStore<String, WFRunSchema>> storeBuilder =
+            Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore(Constants.WF_RUN_STORE),
+                Serdes.String(),
+                runSerde
+            );
+
+        topo.addStateStore(storeBuilder, updateProcessorName);
 
         return topo;
     }

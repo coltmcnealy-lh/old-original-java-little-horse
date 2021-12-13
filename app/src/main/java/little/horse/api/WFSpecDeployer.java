@@ -26,7 +26,6 @@ public class WFSpecDeployer {
             final ConsumerRecords<String, WFSpecSchema> records = consumer.poll(
                 Duration.ofSeconds(1)
             );
-            System.out.println(records.count());
 
             records.forEach(record -> {
                 try {

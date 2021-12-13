@@ -30,7 +30,7 @@ public class LittleHorseAPI {
         this.app.get("/taskDef/{nameOrGuid}", this.taskDefAPI::get);
         this.app.post("/taskDef", this.taskDefAPI::post);
 
-        this.app.get("/wfRun/{wfSpec}/{wfRunGuid}", this.wfRunAPI::get);
+        this.app.get("/wfRun/{wfRunGuid}", this.wfRunAPI::get);
         this.app.post("/wfRun/{wfSpec}", this.wfRunAPI::post);
     }
 

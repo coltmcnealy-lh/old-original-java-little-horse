@@ -18,7 +18,7 @@ def print_prettily(response):
 task_definition = {
     "name": "myTaskDefinition",
     "dockerImage": "little-horse-daemon",
-    "bashCommand": ["python", "test.py"],
+    "bashCommand": ["ls"],
 }
 
 
@@ -40,3 +40,4 @@ print_prettily(create_task_def_response)
 time.sleep(2)
 create_wf_response = requests.post(f"{URL}/wfSpec", json=wf_definition)
 print_prettily(create_wf_response)
+

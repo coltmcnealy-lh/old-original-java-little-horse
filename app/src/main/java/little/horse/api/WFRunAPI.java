@@ -1,6 +1,7 @@
 package little.horse.api;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
 
@@ -11,7 +12,9 @@ import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.PostWFSpecResponse;
 import little.horse.lib.WFEventSchema;
+import little.horse.lib.WFEventType;
 import little.horse.lib.WFRunRequestSchema;
+import little.horse.lib.WFRunSchema;
 import little.horse.lib.WFSpec;
 
 public class WFRunAPI {
@@ -24,7 +27,16 @@ public class WFRunAPI {
     }
 
     public void get(Context ctx) {
-        // TODO: Need to add a KafkaStreams topology which watches for this and collects it.
+        ReadOnlyKeyValueStore<String, WFRunSchema> store = wfRunStreams.getWFRunStore();
+        String wfRunGuid = ctx.pathParam("wfRunGuid");
+
+        WFRunSchema wfRun = store.get(wfRunGuid);
+        if (wfRun == null) {
+            ctx.status(404);
+            return;
+        }
+
+        ctx.json(wfRun);
     }
 
     public void post(Context ctx) {
@@ -54,6 +66,7 @@ public class WFRunAPI {
         event.wfSpecGuid = wfSpec.getModel().guid;
         event.wfSpecName = wfSpec.getModel().name;
         event.content = request.toString();
+        event.type = WFEventType.WF_RUN_STARTED;
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             wfSpec.getModel().kafkaTopic,
