@@ -6,22 +6,14 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import little.horse.api.TaskDefProcessors.TaskDefByGuidProcessor;
-import little.horse.api.TaskDefProcessors.TaskDefByNameProcessor;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
 import little.horse.lib.TaskDefSchema;
 import little.horse.lib.kafkaStreamsSerdes.TaskDefSerdes;
 
 public class TaskDefTopology {
-    private Config config;
 
-    public TaskDefTopology(Config config) {
-        this.config = config;
-    }
-
-    public Topology getTopology() {
-        Topology builder = new Topology();
+    public static void addStuff(Topology topology, Config config) {
         TaskDefSerdes serde = new TaskDefSerdes();
 
         String byGuidProcessorName = "TaskDef Guid Processor";
@@ -34,7 +26,7 @@ public class TaskDefTopology {
             new Thread(() -> {serde.close();})
         );
 
-        builder.addSource(
+        topology.addSource(
             sourceName,
             Serdes.String().deserializer(),
             serde.deserializer(),
@@ -44,14 +36,14 @@ public class TaskDefTopology {
         // This step does two things:
         // 1. Save the TaskDefSchema into the Guid-keyed State Store
         // 2. Produce a re-keyed record to the Name-keyed Kafka Topic
-        builder.addProcessor(
+        topology.addProcessor(
             byGuidProcessorName,
             TaskDefByGuidProcessor::new,
             sourceName
         );
 
         // Sink the re-keyed stream into an intermediate topic
-        builder.addSink(
+        topology.addSink(
             nameKeyedSink,
             config.getTaskDefNameKeyedTopic(),
             Serdes.String().serializer(),
@@ -60,14 +52,14 @@ public class TaskDefTopology {
         );
 
         // Add a source so we can continue processing
-        builder.addSource(
+        topology.addSource(
             nameKeyedSource,
             Serdes.String().deserializer(),
             serde.deserializer(),
             config.getTaskDefNameKeyedTopic()
         );
 
-        builder.addProcessor(
+        topology.addProcessor(
             byNameProcessorName,
             TaskDefByNameProcessor::new,
             nameKeyedSource
@@ -88,9 +80,8 @@ public class TaskDefTopology {
         );
 
         // add the state store to our topology and connect it to the "Digital Twin Processor"
-        builder.addStateStore(guidStoreBuilder, byGuidProcessorName);
-        builder.addStateStore(nameStoreBuilder, byNameProcessorName);
+        topology.addStateStore(guidStoreBuilder, byGuidProcessorName);
+        topology.addStateStore(nameStoreBuilder, byNameProcessorName);
 
-        return builder;
     }
 }

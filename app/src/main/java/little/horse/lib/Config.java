@@ -178,6 +178,10 @@ public class Config {
         return this.wfSpecTopic + "__actions";
     }
 
+    public String getWFSpecNameKeyedTopic() {
+        return this.wfSpecTopic + "__nameKeyed";
+    }
+
     public String getWFSpecIntermediateTopic() {
         return this.wfSpecTopic + "__intermediate";
     }
@@ -300,5 +304,6 @@ public class Config {
         return Pattern.compile(
             "\\b" + this.getWFRunTopicPrefix() + "\\S+"
         );
+        // return Pattern.compile("my-wf_59a65ff8-d7f3-49d2-b744-e5a2e829bb82");
     }
 }

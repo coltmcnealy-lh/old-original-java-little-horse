@@ -26,6 +26,8 @@ public class Constants {
     // Should only be used by the actual API. TODO: Move this elsewhere.
     public static String TASK_DEF_GUID_STORE = "taskDefGuidStore";
     public static String TASK_DEF_NAME_STORE = "taskDefNameStore";
+    public static String WF_SPEC_GUID_STORE = "wfSpecGuidStore";
+    public static String WF_SPEC_NAME_STORE = "wfSpecNameStore";
     public static String WF_RUN_STORE = "wfRunStorePlus";
 
     public static int EXPOSED_PORT = 5000;

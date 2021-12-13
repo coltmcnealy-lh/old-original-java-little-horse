@@ -5,7 +5,6 @@ import java.util.Date;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.kafka.common.message.DescribeUserScramCredentialsResponseDataJsonConverter;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;

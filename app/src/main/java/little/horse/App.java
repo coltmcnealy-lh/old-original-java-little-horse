@@ -41,7 +41,8 @@ class FrontendAPIApp {
             config.getWFSpecTopic(),
             config.getWFSpecIntermediateTopic(),
             config.getTaskDefNameKeyedTopic(),
-            config.getTaskDefTopic()
+            config.getTaskDefTopic(),
+            config.getWFSpecNameKeyedTopic()
         };
         for (String topicName : topics) {
             NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
@@ -49,42 +50,35 @@ class FrontendAPIApp {
         }
     }
 
+    /**
+     * Does three things:
+     * 1. Sets up a KafkaStreams topology for processing WFSpec, TaskDef, and WFRun updates.
+     * 2. Sets up a LittleHorseAPI to respond to metadata control requests.
+     * 3. Sets up a listener for new WFSpecs that deploys them to kubernetes (if necessary).
+     */
     public static void run() {
         Config config = null;
         config = new Config();
 
         FrontendAPIApp.createKafkaTopics(config);
+        Topology topology = new Topology();
 
-        WFSpecTopology wfSpecTopology = new WFSpecTopology(config);
-        Topology topology = wfSpecTopology.build();
-        KafkaStreams wfSpecStreams = new KafkaStreams(topology, config.getStreamsConfig(
-            "wfSpec"
-        ));
-
-        TaskDefTopology taskDefTopologyBuilder = new TaskDefTopology(config);
-        Topology taskDefTopology = taskDefTopologyBuilder.getTopology();
-        KafkaStreams taskDefStreams = new KafkaStreams(
-            taskDefTopology,
-            config.getStreamsConfig("taskDef")
-        );
+        TaskDefTopology.addStuff(topology, config);
+        WFSpecTopology.addStuff(topology, config);
 
         WFEventProcessorActor actor = new NullWFEventActor();
-
-        WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
-            config, config.getAllWFRunTopicsPattern(), actor
-        );
-        Topology wfRunTopology = wfRunTopologyBuilder.getTopology();
-        KafkaStreams wfRunStreams = new KafkaStreams(
-            wfRunTopology,
-            config.getStreamsConfig("wfRunAPIStreams")
+        WFRunTopology.addStuff(
+            topology,
+            config,
+            config.getAllWFRunTopicsPattern(),
+            actor
         );
 
-        APIStreamsContext context = new APIStreamsContext(
-            wfSpecStreams,
-            taskDefStreams,
-            wfRunStreams
-        );
-        context.setWFSpecStoreName(wfSpecTopology.getStoreName());
+        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
+
+        APIStreamsContext context = new APIStreamsContext(streams);
+        context.setWFSpecStoreName(Constants.WF_SPEC_NAME_STORE);
+        context.setWFSpecStoreName(Constants.WF_SPEC_GUID_STORE);
         context.setTaskDefGuidStoreName(Constants.TASK_DEF_GUID_STORE);
         context.setTaskDefNameStoreName(Constants.TASK_DEF_NAME_STORE);
         context.setWFRunStoreName(Constants.WF_RUN_STORE);
@@ -105,14 +99,10 @@ class FrontendAPIApp {
         Runtime.getRuntime().addShutdownHook(new Thread(deployer::shutdown));
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(wfSpecStreams::close));
-        Runtime.getRuntime().addShutdownHook(new Thread(taskDefStreams::close));
-        Runtime.getRuntime().addShutdownHook(new Thread(wfRunStreams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
-        wfRunStreams.start();
         deployerThread.start();
-        wfSpecStreams.start();
-        taskDefStreams.start();
+        streams.start();
         lapi.run();
     }
 }
@@ -137,11 +127,11 @@ class DaemonApp {
         );
 
         Pattern pattern = Pattern.compile(wfSpec.getModel().kafkaTopic);
-        WFRunTopology wfRunTopologyBuilder = new WFRunTopology(
-            config, pattern, actor
-        );
+        Topology topology = new Topology();
+
+        WFRunTopology.addStuff(topology, config, pattern, actor);
         KafkaStreams streams = new KafkaStreams(
-            wfRunTopologyBuilder.getTopology(),
+            topology,
             config.getStreamsConfig(config.getNodeName())
         );
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));

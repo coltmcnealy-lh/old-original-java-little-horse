@@ -12,26 +12,16 @@ import little.horse.lib.kafkaStreamsSerdes.WFEventSerdes;
 import little.horse.lib.kafkaStreamsSerdes.WFRunSerdes;
 
 public class WFRunTopology {
-    private Config config;
-    private Pattern topicPattern;
-    private WFEventProcessorActor actor;
-    
-    public WFRunTopology(
-        Config config, Pattern topicPattern, WFEventProcessorActor actor
-    ) {
-        this.config = config;
-        this.topicPattern = topicPattern;
-        this.actor = actor;
-    }
 
-    public WFEventProcessor processorFactory() {
+    public static WFEventProcessor processorFactory(WFEventProcessorActor actor, Config config) {
         return new WFEventProcessor(actor, config);
     }
 
-    public Topology getTopology() {
-        Topology topo = new Topology();
+    public static void addStuff(
+        Topology topology, Config config, Pattern topicPattern, WFEventProcessorActor actor
+    ) {
 
-        String topoSource = "Source";
+        String topoSource = "WFRun Source";
         String updateProcessorName = "WFRun Update Surfacer";
 
         WFEventSerdes eventSerde = new WFEventSerdes();
@@ -41,20 +31,20 @@ public class WFRunTopology {
             eventSerde.close();
             runSerde.close();
         }));
-        
-        topo.addSource(
+
+        topology.addSource(
             topoSource,
             Serdes.String().deserializer(),
             eventSerde.deserializer(),
             topicPattern
         );
 
-        topo.addProcessor(
+        topology.addProcessor(
             updateProcessorName,
-            this::processorFactory,
+            () -> {return WFRunTopology.processorFactory(actor, config);},
             topoSource
         );
-            
+
         StoreBuilder<KeyValueStore<String, WFRunSchema>> storeBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(Constants.WF_RUN_STORE),
@@ -62,8 +52,7 @@ public class WFRunTopology {
                 runSerde
             );
 
-        topo.addStateStore(storeBuilder, updateProcessorName);
+        topology.addStateStore(storeBuilder, updateProcessorName);
 
-        return topo;
     }
 }

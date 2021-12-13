@@ -11,9 +11,7 @@ import little.horse.lib.WFSpecSchema;
 
 public class APIStreamsContext {
     private String wfSpecStoreName;
-    private KafkaStreams wfSpecStreams;
-    private KafkaStreams taskDefStreams;
-    private KafkaStreams wfRunStreams;
+    private KafkaStreams streams;
 
     private String taskDefNameStoreName;
     private String taskDefGuidStoreName;
@@ -43,14 +41,8 @@ public class APIStreamsContext {
         this.taskDefGuidStoreName = taskDefGuidStoreName;
     }
 
-    public APIStreamsContext(
-        KafkaStreams wfSpecStreams,
-        KafkaStreams taskDefStreams,
-        KafkaStreams wfRunStreams
-    ) {
-        this.wfSpecStreams = wfSpecStreams;
-        this.taskDefStreams = taskDefStreams;
-        this.wfRunStreams = wfRunStreams;
+    public APIStreamsContext(KafkaStreams streams) {
+        this.streams = streams;
     }
 
     public void setWFSpecStoreName(String name) {
@@ -58,7 +50,7 @@ public class APIStreamsContext {
     }
 
     public ReadOnlyKeyValueStore<String, WFSpecSchema> getWFSpecStore() {
-        return wfSpecStreams.store(
+        return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.wfSpecStoreName,
                 QueryableStoreTypes.keyValueStore()
@@ -67,7 +59,7 @@ public class APIStreamsContext {
     }
 
     public ReadOnlyKeyValueStore<String, TaskDefSchema> getTaskDefNameStore() {
-        return taskDefStreams.store(
+        return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefNameStoreName,
                 QueryableStoreTypes.keyValueStore()
@@ -76,7 +68,7 @@ public class APIStreamsContext {
     }
 
     public ReadOnlyKeyValueStore<String, TaskDefSchema> getTaskDefGuidStore() {
-        return taskDefStreams.store(
+        return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefGuidStoreName,
                 QueryableStoreTypes.keyValueStore()
@@ -85,7 +77,7 @@ public class APIStreamsContext {
     }
 
     public ReadOnlyKeyValueStore<String, WFRunSchema> getWFRunStore() {
-        return wfRunStreams.store(
+        return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.wfRunStoreName,
                 QueryableStoreTypes.keyValueStore()
