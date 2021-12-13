@@ -42,7 +42,7 @@ public class WFSpec {
         }
 
         if (schema.kafkaTopic == null) {
-            schema.kafkaTopic = config.getKafkaTopicPrefix() + schema.name + "_" + schema.guid;
+            schema.kafkaTopic = config.getWFRunTopicPrefix() + schema.name + "_" + schema.guid;
         }
 
         if (schema.status == null) {

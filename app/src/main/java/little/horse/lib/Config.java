@@ -239,6 +239,8 @@ public class Config {
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
+        props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 30000);
+        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 30000);
         return props;
     }
 
@@ -302,7 +304,7 @@ public class Config {
 
     public Pattern getAllWFRunTopicsPattern() {
         return Pattern.compile(
-            "\\b" + this.getWFRunTopicPrefix() + "\\S+"
+            this.getWFRunTopicPrefix() + ".*"
         );
         // return Pattern.compile("my-wf_59a65ff8-d7f3-49d2-b744-e5a2e829bb82");
     }

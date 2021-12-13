@@ -5,6 +5,7 @@ package little.horse;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.admin.NewTopic;
@@ -141,18 +142,30 @@ class DaemonApp {
 
 public class App {
     public static void main(String[] args) {
-        if (args[0].equals("daemon")) {
+        if (args.length > 0 && args[0].equals("daemon")) {
             try {
                 DaemonApp.run();
             } catch(Exception exn) {
                 exn.printStackTrace();
             }
-        } else if (args[0].equals("api")) {
+        } else if (args.length > 0 && args[0].equals("api")) {
             FrontendAPIApp.run();
         } else {
-            System.out.println(
-                "Please specify either 'api' or 'daemon' commandline arg"
-            );
+            System.out.println("Here is the topic:");
+            System.out.println("my-wf_c750f7f7-692d-45a8-8fed-64b78cd3899b");
+            String topic = "wfEvents__my-wf_c750f7f7-692d-45a8-8fed-64b78cd3899b";
+
+            Config config = new Config();
+            Pattern pattern = config.getAllWFRunTopicsPattern();
+            System.out.println(pattern.toString());
+            
+            Matcher m = pattern.matcher(topic);
+            if (m.matches()) {
+                System.out.println("We got a match!!");
+            } else {
+                System.out.println("orzdash");
+            }
+            System.out.println();
         }
     }
 }
