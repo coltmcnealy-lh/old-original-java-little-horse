@@ -7,5 +7,6 @@ public enum LHStatus {
     COMPLETED,
     STOPPED,
     ERROR,
+    PENDING_REMOVAL,
     REMOVED;
 }

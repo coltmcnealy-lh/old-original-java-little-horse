@@ -6,6 +6,7 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.lib.Constants;
+import little.horse.lib.LHStatus;
 import little.horse.lib.WFSpecSchema;
 
 public class WFSpecByGuidProcessor implements Processor<
@@ -23,11 +24,7 @@ String, WFSpecSchema, String, WFSpecSchema
     @Override
     public void process(final Record<String, WFSpecSchema> record) {
         WFSpecSchema wfs = record.value();
-        if (wfs == null) {
-            kvStore.delete(record.key());
-        } else {
-            kvStore.put(record.key(), wfs);
-        }
+        kvStore.put(record.key(), wfs);
 
         // Now, we re-key it.
         Record<String, WFSpecSchema> nameKeyedRecord = new Record<>(

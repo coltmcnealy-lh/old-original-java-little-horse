@@ -8,6 +8,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import little.horse.lib.Config;
 import little.horse.lib.LHDeployError;
 import little.horse.lib.LHLookupException;
+import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.WFSpec;
 import little.horse.lib.WFSpecSchema;
@@ -34,7 +35,12 @@ public class WFSpecDeployer {
                         Thread.sleep(500);
                     } catch(Exception exn) {}
                     WFSpec spec = WFSpec.fromIdentifier(record.value().guid, config);
-                    spec.deploy();
+                    WFSpecSchema schema = record.value();
+                    if (schema.desiredStatus == LHStatus.REMOVED) {
+                        spec.undeploy();
+                    } else if (schema.desiredStatus == LHStatus.RUNNING) {
+                        spec.deploy();
+                    }
                 } catch (LHLookupException exn) {
                     System.out.println("Got a lookup orzdash");
                     System.out.println(exn.getMessage());

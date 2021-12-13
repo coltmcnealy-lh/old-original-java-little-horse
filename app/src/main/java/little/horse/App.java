@@ -114,7 +114,7 @@ class DaemonApp {
         Config config = new Config();
 
         // just need to set up the topology and run it.
-        
+
         WFSpec wfSpec = WFSpec.fromIdentifier(config.getWfSpecGuid(), config);
 
         NodeSchema node = wfSpec.getModel().nodes.get(config.getNodeName());

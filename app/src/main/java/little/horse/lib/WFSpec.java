@@ -434,4 +434,36 @@ public class WFSpec {
         this.record();
     }
 
+    public void undeploy() {
+        try {
+            Process process = Runtime.getRuntime().exec(
+                "kubectl delete deploy -llittlehorse.io/wfSpecGuid=" + this.schema.guid
+            );
+            process.getOutputStream().close();
+            process.waitFor();
+            BufferedReader input = new BufferedReader(
+                new InputStreamReader(process.getInputStream())
+            );
+            String line = null;
+            while ((line = input.readLine()) != null) {
+                System.out.println(line);
+            }
+
+            BufferedReader error = new BufferedReader(
+                new InputStreamReader(process.getErrorStream())
+            );
+            line = null;
+            while ((line = error.readLine()) != null) {
+                System.out.println(line);
+            }
+
+            this.schema.status = LHStatus.REMOVED;
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            this.schema.status = LHStatus.ERROR;
+        }
+
+        this.record();
+    }
+
 }

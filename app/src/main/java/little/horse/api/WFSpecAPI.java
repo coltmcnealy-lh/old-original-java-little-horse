@@ -2,6 +2,7 @@ package little.horse.api;
 
 import io.javalin.http.Context;
 import little.horse.lib.Config;
+import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.PostWFSpecResponse;
 import little.horse.lib.WFSpec;
@@ -36,16 +37,20 @@ public class WFSpecAPI {
         ctx.json(response);
     }
 
-    public void get(Context ctx) {
-        String wfSpecId = ctx.pathParam("nameOrGuid");
-
+    private WFSpecSchema getFromIdentifier(String wfSpecId) {
         WFSpecSchema schema = streams.getWFSpecGuidStore().get(wfSpecId);
         if (schema != null) {
-            ctx.json(schema);
-            return;
+            return schema;
         }
 
         schema = streams.getWFSpecNameStore().get(wfSpecId);
+        return schema;
+    }
+
+    public void get(Context ctx) {
+        String wfSpecId = ctx.pathParam("nameOrGuid");
+
+        WFSpecSchema schema = getFromIdentifier(wfSpecId);
         if (schema != null) {
             ctx.json(schema);
             return;
@@ -53,5 +58,39 @@ public class WFSpecAPI {
 
         ctx.status(404);
         return;
+    }
+
+    public void delete(Context ctx) {
+        String wfSpecId = ctx.pathParam("nameOrGuid");
+
+        WFSpecSchema schema = getFromIdentifier(wfSpecId);
+
+        if (schema == null) {
+            ctx.status(404);
+            return;
+        }
+
+        // TODO: validate that the action is valid given current status.
+
+        schema.desiredStatus = LHStatus.REMOVED;
+        try {
+            WFSpec wfSpec = new WFSpec(schema, config);
+            wfSpec.record();
+            ctx.status(202);
+
+            PostWFSpecResponse response = new PostWFSpecResponse();
+            response.guid = schema.guid;
+            response.name = schema.name;
+            response.status = schema.status;
+
+            ctx.json(response);
+
+        } catch (LHValidationError exn) {
+            LHAPIError error = new LHAPIError(exn.getMessage());
+            ctx.status(400);
+            ctx.json(error);
+            return;
+        }
+
     }
 }
