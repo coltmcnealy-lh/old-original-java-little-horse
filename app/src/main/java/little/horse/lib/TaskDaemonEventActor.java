@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Date;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -43,11 +44,18 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
             System.out.println("leaving because wrong trigger event type");
             return;
         }
-        
+
         if (trigger.triggerEventType == WFEventType.TASK_COMPLETED) {
+            TaskRunEndedEventSchema tr;
+            try {
+                tr = new ObjectMapper().readValue(event.content, TaskRunEndedEventSchema.class);
+            } catch (Exception exn) {
+                exn.printStackTrace();
+                return;
+            }
             // Then we gotta make sure we only process the right node's outputs.
-            TaskRunSchema lastTR = wfRun.taskRuns.get(wfRun.taskRuns.size() - 1);
-            if (lastTR.wfNodeGuid != trigger.triggerNodeGuid) {
+            if (!tr.nodeGuid.equals(trigger.triggerNodeGuid)) {
+                System.out.println("Guid mismatch: " + tr.nodeGuid + " " + trigger.triggerNodeGuid);
                 return;
             }
         }
@@ -101,6 +109,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.stdout = stdoutBuilder.toString();
         tr.stderr = stderrBuilder.toString();
         tr.returncode = proc.exitValue();
+        tr.nodeGuid = node.guid;
 
         WFEventSchema event = new WFEventSchema();
         event.content = new ObjectMapper().writeValueAsString(tr);

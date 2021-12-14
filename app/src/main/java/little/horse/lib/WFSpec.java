@@ -111,7 +111,7 @@ public class WFSpec {
 
             boolean alreadyHasEdge = false;
             for (EdgeSchema candidate : source.outgoingEdges) {
-                if (candidate.sinkNodeName == sink.name) {
+                if (candidate.sinkNodeName.equals(sink.name)) {
                     alreadyHasEdge = true;
                     break;
                 }

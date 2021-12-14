@@ -25,12 +25,19 @@ task_definition = {
 wf_definition = {
     "name": "my-wf",
     "nodes": {
-        "onlyNode": {
+        "firstNode": {
+            "nodeType": "TASK",
+            "taskDefinitionName": "myTaskDefinition",
+        },
+        "secondNode": {
             "nodeType": "TASK",
             "taskDefinitionName": "myTaskDefinition",
         }
     },
-    "edges": []
+    "edges": [{
+        "sourceNodeName": "firstNode",
+        "sinkNodeName": "secondNode"
+    }]
 }
 
 
