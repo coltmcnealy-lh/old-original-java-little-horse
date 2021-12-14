@@ -1,5 +1,7 @@
 package little.horse.lib;
 
+import java.util.regex.Pattern;
+
 public class Constants {
     public static String KAFKA_BOOTSTRAP_SERVERS_KEY = "LHORSE_KAFKA_BOOTSTRAP_SERVERS";
     public static String KAFKA_TOPIC_PREFIX_KEY = "LHORSE_KAFKA_TOPIC_PREFIX";
@@ -31,4 +33,8 @@ public class Constants {
     public static String WF_RUN_STORE = "wfRunStorePlus";
 
     public static int EXPOSED_PORT = 5000;
+
+    public static Pattern VARIABLE_PATTERN = Pattern.compile(
+        "<<(.*?)>>"
+    );
 }

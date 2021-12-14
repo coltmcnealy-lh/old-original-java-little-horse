@@ -29,6 +29,17 @@ public class WFEventProcessor
         this.context = context;
     }
 
+    private Object jsonifyIfPossible(String data) {
+        try {
+            Object obj = new ObjectMapper().readValue(data, Object.class);
+            return obj;
+        } catch(Exception exn) {
+            System.out.println("Caught orzdash while processing: " + data);
+            exn.printStackTrace();
+            return data;
+        }
+    }
+
     @Override
     public void process(final Record<String, WFEventSchema> record) {
         // First, we gotta update the WFRun.
@@ -112,7 +123,7 @@ public class WFEventProcessor
                     raiseError();
                     return;
                 }
-                runningTask.stdin = taskRunStart.stdin;
+                runningTask.stdin = jsonifyIfPossible(taskRunStart.stdin);
                 runningTask.bashCommand = taskRunStart.bashCommand;
                 runningTask.dockerImage = taskRunStart.dockerImage;
 
@@ -143,8 +154,8 @@ public class WFEventProcessor
                     return;
                 }
 
-                runningTask.stderr = taskRunEnd.stderr;
-                runningTask.stdout = taskRunEnd.stdout;
+                runningTask.stderr = jsonifyIfPossible(taskRunEnd.stderr);
+                runningTask.stdout = jsonifyIfPossible(taskRunEnd.stdout);
                 runningTask.returnCode = taskRunEnd.returncode;
 
                 // Now see if any task runs need to be scheduled.

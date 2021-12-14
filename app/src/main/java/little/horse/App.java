@@ -5,9 +5,14 @@ package little.horse;
 
 import java.util.Collections;
 import java.util.Properties;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.JsonPath;
+
+import org.apache.commons.lang3.compare.ObjectToStringComparator;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -140,6 +145,11 @@ class DaemonApp {
     }
 }
 
+class Thing {
+    public String mystring;
+    public Object foobar;
+}
+
 public class App {
     public static void main(String[] args) {
         if (args.length > 0 && args[0].equals("daemon")) {
@@ -151,21 +161,34 @@ public class App {
         } else if (args.length > 0 && args[0].equals("api")) {
             FrontendAPIApp.run();
         } else {
-            System.out.println("Here is the topic:");
-            System.out.println("my-wf_c750f7f7-692d-45a8-8fed-64b78cd3899b");
-            String topic = "wfEvents__my-wf_c750f7f7-692d-45a8-8fed-64b78cd3899b";
+            String json = "{\"foo\": 1234, \"b{}\"ar\": {\"asdf\": 1234}}";
 
-            Config config = new Config();
-            Pattern pattern = config.getAllWFRunTopicsPattern();
-            System.out.println(pattern.toString());
-            
-            Matcher m = pattern.matcher(topic);
-            if (m.matches()) {
-                System.out.println("We got a match!!");
-            } else {
-                System.out.println("orzdash");
+            try {
+                Object out = new ObjectMapper().readValue(json, Object.class);
+                System.out.println(out);
+                Thing thing = new Thing();
+                thing.mystring = "hellothere";
+                thing.foobar = out;
+
+                System.out.println(new ObjectMapper().writeValueAsString(thing));
+            } catch (Exception exn) {
+                exn.printStackTrace();
             }
-            System.out.println();
+            // DocumentContext jdoc;
+            // try {
+            //     jdoc = JsonPath.parse(json);
+            // } catch(InvalidJsonException exn) {
+            //     exn.printStackTrace();
+            //     return;
+            // }
+            // Object result = jdoc.read("$");
+            // System.out.println(result);
+            
+            // try {
+            //     System.out.println(new ObjectMapper().writeValueAsString(result));
+            // } catch(Exception exn) {
+            //     exn.printStackTrace();
+            // }
         }
     }
 }

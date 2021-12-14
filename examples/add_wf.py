@@ -15,10 +15,17 @@ def print_prettily(response):
         print(strdata)
 
 
-task_definition = {
-    "name": "myTaskDefinition",
+task_definition1 = {
+    "name": "task1",
     "dockerImage": "little-horse-daemon",
-    "bashCommand": ["ls"],
+    "bashCommand": ["python3", "/examples/task1.py", "<<personName>>"],
+}
+
+
+task_definition2 = {
+    "name": "task2",
+    "dockerImage": "little-horse-daemon",
+    "bashCommand": ["python3", "/examples/task2.py", "<<personNameSecondTask>>"],
 }
 
 
@@ -27,11 +34,17 @@ wf_definition = {
     "nodes": {
         "firstNode": {
             "nodeType": "TASK",
-            "taskDefinitionName": "myTaskDefinition",
+            "taskDefinitionName": "task1",
+            "variables": {
+                "personName": "$.inputVariables.name"
+            }
         },
         "secondNode": {
             "nodeType": "TASK",
-            "taskDefinitionName": "myTaskDefinition",
+            "taskDefinitionName": "task2",
+            "variables": {
+                "personNameSecondTask": "$.taskRuns.firstNode[0].stdout.person"
+            }
         }
     },
     "edges": [{
@@ -41,7 +54,9 @@ wf_definition = {
 }
 
 
-create_task_def_response = requests.post(f"{URL}/taskDef", json=task_definition)
+create_task_def_response = requests.post(f"{URL}/taskDef", json=task_definition1)
+print_prettily(create_task_def_response)
+create_task_def_response = requests.post(f"{URL}/taskDef", json=task_definition2)
 print_prettily(create_task_def_response)
 
 time.sleep(2)

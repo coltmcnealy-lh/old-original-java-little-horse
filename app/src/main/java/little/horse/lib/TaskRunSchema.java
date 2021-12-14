@@ -13,9 +13,9 @@ public class TaskRunSchema {
     public LHStatus status;
     public ArrayList<String> bashCommand;
     public String dockerImage;
-    public String stdin;
-    public String stdout;
-    public String stderr;
+    public Object stdin;
+    public Object stdout;
+    public Object stderr;
     public int returnCode;
     public Date startTime;
     public Date endTime;
