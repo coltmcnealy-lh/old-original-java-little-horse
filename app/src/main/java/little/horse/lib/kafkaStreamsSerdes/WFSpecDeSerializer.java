@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import org.apache.kafka.common.serialization.Deserializer;
 
-import little.horse.lib.WFSpecSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecDeSerializer implements Deserializer<WFSpecSchema> {
 

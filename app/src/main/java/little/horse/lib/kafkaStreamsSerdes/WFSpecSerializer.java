@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.WFSpecSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecSerializer implements Serializer<WFSpecSchema> {
 

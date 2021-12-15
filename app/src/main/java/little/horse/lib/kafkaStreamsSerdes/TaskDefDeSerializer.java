@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import org.apache.kafka.common.serialization.Deserializer;
 
-import little.horse.lib.TaskDefSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefDeSerializer implements Deserializer<TaskDefSchema> {
 

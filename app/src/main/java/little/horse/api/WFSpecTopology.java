@@ -8,8 +8,8 @@ import org.apache.kafka.streams.state.Stores;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.WFSpecSchema;
 import little.horse.lib.kafkaStreamsSerdes.WFSpecSerdes;
+import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecTopology {
 

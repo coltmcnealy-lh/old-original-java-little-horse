@@ -2,12 +2,12 @@ package little.horse.lib.kafkaStreamsSerdes;
 
 import org.apache.kafka.common.serialization.Deserializer;
 
+import little.horse.lib.schemas.WFEventSchema;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-
-import little.horse.lib.WFEventSchema;
 
 
 public class WFEventDeSerializer implements Deserializer<WFEventSchema> {

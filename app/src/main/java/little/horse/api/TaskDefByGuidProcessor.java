@@ -7,7 +7,7 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.lib.Constants;
-import little.horse.lib.TaskDefSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefByGuidProcessor
     implements Processor<String, TaskDefSchema, String, TaskDefSchema>

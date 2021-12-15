@@ -4,7 +4,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.WFSpecSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecSerdes implements Serde<WFSpecSchema> {
 

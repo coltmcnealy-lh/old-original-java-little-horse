@@ -10,6 +10,15 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import little.horse.lib.schemas.EdgeSchema;
+import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.TaskRunEndedEventSchema;
+import little.horse.lib.schemas.TaskRunSchema;
+import little.horse.lib.schemas.TaskRunStartedEventSchema;
+import little.horse.lib.schemas.WFEventSchema;
+import little.horse.lib.schemas.WFRunRequestSchema;
+import little.horse.lib.schemas.WFSpecSchema;
+
 public class WFEventProcessor
     implements Processor<String, WFEventSchema, String, WFRunSchema>
 {
@@ -34,8 +43,7 @@ public class WFEventProcessor
             Object obj = new ObjectMapper().readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
-            System.out.println("Caught orzdash while processing: " + data);
-            exn.printStackTrace();
+            System.out.println("Caught orzdash trying to jsonify '" + data + "'");
             return data;
         }
     }

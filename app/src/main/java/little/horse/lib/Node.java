@@ -15,6 +15,7 @@ import little.horse.lib.K8sStuff.EnvEntry;
 import little.horse.lib.K8sStuff.PodSpec;
 import little.horse.lib.K8sStuff.Selector;
 import little.horse.lib.K8sStuff.Template;
+import little.horse.lib.schemas.NodeSchema;
 
 public class Node {
     private NodeSchema schema;

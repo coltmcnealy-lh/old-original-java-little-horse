@@ -4,7 +4,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.WFEventSchema;
+import little.horse.lib.schemas.WFEventSchema;
 
 
 public class WFEventSerdes implements Serde<WFEventSchema> {

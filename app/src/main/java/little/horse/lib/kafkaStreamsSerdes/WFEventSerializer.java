@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.WFEventSchema;
+import little.horse.lib.schemas.WFEventSchema;
 
 public class WFEventSerializer implements Serializer<WFEventSchema> {
     @Override

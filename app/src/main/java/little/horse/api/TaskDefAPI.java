@@ -7,7 +7,7 @@ import little.horse.lib.Config;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.PostTaskDefResponse;
 import little.horse.lib.TaskDef;
-import little.horse.lib.TaskDefSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefAPI {
     private Config config;

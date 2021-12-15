@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.TaskDefSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefSerializer implements Serializer<TaskDefSchema> {
 

@@ -8,8 +8,8 @@ import org.apache.kafka.streams.state.Stores;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.TaskDefSchema;
 import little.horse.lib.kafkaStreamsSerdes.TaskDefSerdes;
+import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefTopology {
 

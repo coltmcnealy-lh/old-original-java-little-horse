@@ -26,15 +26,15 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.NodeSchema;
 import little.horse.lib.NullWFEventActor;
 import little.horse.lib.TaskDaemonEventActor;
 import little.horse.lib.TaskDef;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
 import little.horse.lib.WFSpec;
-import little.horse.lib.WFSpecSchema;
 import little.horse.lib.kafkaStreamsSerdes.WFSpecDeSerializer;
+import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 
 
 class FrontendAPIApp {

@@ -4,7 +4,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.lib.TaskDefSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 
 
 public class TaskDefSerdes implements Serde<TaskDefSchema> {

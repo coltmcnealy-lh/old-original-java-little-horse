@@ -6,12 +6,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.lang3.StringUtils;
 
 public class LHUtil {
     public static String generateGuid() {
         return UUID.randomUUID().toString();
     }
+
+    public static final ObjectMapper mapper = new ObjectMapper();
 
     public static String toValidK8sName(String oldStr) {
         String str = new String(oldStr);

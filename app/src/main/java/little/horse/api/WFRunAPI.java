@@ -11,11 +11,11 @@ import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.PostWFSpecResponse;
-import little.horse.lib.WFEventSchema;
 import little.horse.lib.WFEventType;
-import little.horse.lib.WFRunRequestSchema;
 import little.horse.lib.WFRunSchema;
 import little.horse.lib.WFSpec;
+import little.horse.lib.schemas.WFEventSchema;
+import little.horse.lib.schemas.WFRunRequestSchema;
 
 public class WFRunAPI {
     private Config config;

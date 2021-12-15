@@ -6,7 +6,7 @@ import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.PostWFSpecResponse;
 import little.horse.lib.WFSpec;
-import little.horse.lib.WFSpecSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecAPI {
     private Config config;

@@ -14,6 +14,13 @@ import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.TaskRunEndedEventSchema;
+import little.horse.lib.schemas.TaskRunSchema;
+import little.horse.lib.schemas.WFEventSchema;
+import little.horse.lib.schemas.WFRunVariableContexSchema;
+import little.horse.lib.schemas.WFTriggerSchema;
+
 public class TaskDaemonEventActor implements WFEventProcessorActor {
     private WFSpec wfSpec;
     private NodeSchema node;
