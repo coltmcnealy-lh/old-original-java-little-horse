@@ -8,8 +8,9 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import little.horse.lib.kafkaStreamsSerdes.WFEventSerdes;
-import little.horse.lib.kafkaStreamsSerdes.WFRunSerdes;
+import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
+import little.horse.lib.schemas.WFEventSchema;
+
 
 public class WFRunTopology {
 
@@ -24,8 +25,12 @@ public class WFRunTopology {
         String topoSource = "WFRun Source";
         String updateProcessorName = "WFRun Update Surfacer";
 
-        WFEventSerdes eventSerde = new WFEventSerdes();
-        WFRunSerdes runSerde = new WFRunSerdes();
+        LHSerdes<WFEventSchema> eventSerde = new LHSerdes<>(
+            WFEventSchema.class
+        );
+        LHSerdes<WFRunSchema> runSerde = new LHSerdes<>(
+            WFRunSchema.class
+        );
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             eventSerde.close();

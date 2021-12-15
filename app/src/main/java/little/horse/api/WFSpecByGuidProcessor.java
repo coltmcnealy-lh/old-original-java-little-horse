@@ -6,7 +6,6 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.lib.Constants;
-import little.horse.lib.LHStatus;
 import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecByGuidProcessor implements Processor<

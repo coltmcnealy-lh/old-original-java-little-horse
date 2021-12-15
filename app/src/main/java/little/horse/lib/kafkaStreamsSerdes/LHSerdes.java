@@ -8,6 +8,12 @@ import little.horse.lib.schemas.BaseSchema;
 
 
 public class LHSerdes<T extends BaseSchema> implements Serde<T> {
+    private Class<? extends BaseSchema> cls;
+    
+    public LHSerdes(Class<? extends BaseSchema> asdf) {
+        this.cls = asdf;
+    }
+
     @Override
     public Serializer<T> serializer() {
         return new LHSerializer<T>();
@@ -15,6 +21,6 @@ public class LHSerdes<T extends BaseSchema> implements Serde<T> {
 
     @Override
     public Deserializer<T> deserializer() {
-        return new LHDeserializer<T>();
+        return new LHDeserializer<T>(cls);
     }
 }

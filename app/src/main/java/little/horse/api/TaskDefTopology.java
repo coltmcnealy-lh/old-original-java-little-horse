@@ -8,13 +8,15 @@ import org.apache.kafka.streams.state.Stores;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.kafkaStreamsSerdes.TaskDefSerdes;
+import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
 import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefTopology {
 
     public static void addStuff(Topology topology, Config config) {
-        TaskDefSerdes serde = new TaskDefSerdes();
+        LHSerdes<TaskDefSchema> serde = new LHSerdes<TaskDefSchema>(
+            TaskDefSchema.class
+        );
 
         String byGuidProcessorName = "TaskDef Guid Processor";
         String byNameProcessorName = "TaskDef Name Processor";

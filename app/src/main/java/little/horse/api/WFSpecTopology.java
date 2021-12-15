@@ -8,13 +8,15 @@ import org.apache.kafka.streams.state.Stores;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.kafkaStreamsSerdes.WFSpecSerdes;
+import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
 import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecTopology {
 
     public static void addStuff(Topology topology, Config config) {
-        WFSpecSerdes serde = new WFSpecSerdes();
+        LHSerdes<WFSpecSchema> serde = new LHSerdes<>(
+            WFSpecSchema.class
+        );
 
         String sourceName = "WFSpec Metadata Events";
         String byGuidProcessorName = "WFSpec Guid Processor";

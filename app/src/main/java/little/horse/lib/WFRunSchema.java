@@ -3,9 +3,10 @@ package little.horse.lib;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 
-public class WFRunSchema {
+public class WFRunSchema extends BaseSchema {
     public String guid;
     public String wfSpecGuid;
     public String wfSpecName;

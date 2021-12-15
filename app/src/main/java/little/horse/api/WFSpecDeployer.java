@@ -11,20 +11,21 @@ import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.WFSpec;
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecDeployer {
-    private Consumer<String, WFSpecSchema> consumer;
+    private Consumer<String, String> consumer;
     private Config config;
 
-    public WFSpecDeployer(Consumer<String, WFSpecSchema> consumer, Config config) {
+    public WFSpecDeployer(Consumer<String, String> consumer, Config config) {
         this.consumer = consumer;
         this.config = config;
     }
 
     public void run() {
         while (true) {
-            final ConsumerRecords<String, WFSpecSchema> records = consumer.poll(
+            final ConsumerRecords<String, String> records = consumer.poll(
                 Duration.ofSeconds(1)
             );
 
@@ -34,8 +35,8 @@ public class WFSpecDeployer {
                     try {
                         Thread.sleep(500);
                     } catch(Exception exn) {}
-                    WFSpec spec = WFSpec.fromIdentifier(record.value().guid, config);
-                    WFSpecSchema schema = record.value();
+                    WFSpecSchema schema = BaseSchema.fromString(record.value(), WFSpecSchema.class);
+                    WFSpec spec = WFSpec.fromIdentifier(schema.guid, config);
                     if (schema.desiredStatus == LHStatus.REMOVED) {
                         spec.undeploy();
                     } else if (schema.desiredStatus == LHStatus.RUNNING) {

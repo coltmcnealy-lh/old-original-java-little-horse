@@ -7,8 +7,6 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -28,9 +26,9 @@ import little.horse.lib.TaskDef;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
 import little.horse.lib.WFSpec;
-import little.horse.lib.kafkaStreamsSerdes.WFSpecDeSerializer;
+import little.horse.lib.kafkaStreamsSerdes.LHDeserializer;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.WFSpecSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 
 
 class FrontendAPIApp {
@@ -89,9 +87,9 @@ class FrontendAPIApp {
 
         Properties props = config.getConsumerConfig("wfSpecDeployer");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, WFSpecDeSerializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 
-        KafkaConsumer<String, WFSpecSchema> consumer = new KafkaConsumer<>(
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(
             props
         );
         consumer.subscribe(Collections.singletonList(config.getWFSpecActionsTopic()));
@@ -157,34 +155,13 @@ public class App {
         } else if (args.length > 0 && args[0].equals("api")) {
             FrontendAPIApp.run();
         } else {
-            String json = "{\"foo\": 1234, \"b{}\"ar\": {\"asdf\": 1234}}";
+            String json = "{\"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
 
-            try {
-                Object out = new ObjectMapper().readValue(json, Object.class);
-                System.out.println(out);
-                Thing thing = new Thing();
-                thing.mystring = "hellothere";
-                thing.foobar = out;
-
-                System.out.println(new ObjectMapper().writeValueAsString(thing));
-            } catch (Exception exn) {
-                exn.printStackTrace();
-            }
-            // DocumentContext jdoc;
-            // try {
-            //     jdoc = JsonPath.parse(json);
-            // } catch(InvalidJsonException exn) {
-            //     exn.printStackTrace();
-            //     return;
-            // }
-            // Object result = jdoc.read("$");
-            // System.out.println(result);
-            
-            // try {
-            //     System.out.println(new ObjectMapper().writeValueAsString(result));
-            // } catch(Exception exn) {
-            //     exn.printStackTrace();
-            // }
+            LHDeserializer<TaskDefSchema> deser = new LHDeserializer<>(
+                TaskDefSchema.class
+            );
+            System.out.println(deser.deserialize("foo", json.getBytes()));
+            deser.close();
         }
     }
 }
