@@ -7,11 +7,9 @@ import okhttp3.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDef {
@@ -81,17 +79,15 @@ public class TaskDef {
             );
         }
 
-        TaskDefSchema schema = null;
-        try {
-            schema = new ObjectMapper().readValue(responseBody, TaskDefSchema.class);
-        } catch (JsonProcessingException exn) {
-            System.err.println(
-                "Got an invalid response: " + exn.getMessage() + " " + responseBody
-            );
+        TaskDefSchema schema = BaseSchema.fromString(
+            responseBody,
+            TaskDefSchema.class
+        );
+        if (schema == null) {
             throw new LHLookupException(
-                exn,
+                null,
                 LHLookupExceptionReason.INVALID_RESPONSE,
-                "Got an invalid response: " + responseBody + " " + exn.getMessage()
+                "Got an invalid response: " + responseBody
             );
         }
 
@@ -110,15 +106,7 @@ public class TaskDef {
     }
 
     public String toString() {
-        ObjectMapper mapper = new ObjectMapper();
-        String result;
-        try {
-            result = mapper.writeValueAsString(this.getModel());
-        } catch(JsonProcessingException exn) {
-            System.out.println(exn.toString());
-            result = "Could not serialize.";
-        }
-        return result;
+        return schema.toString();
     }
 
     public ArrayList<String> getTaskDaemonCommand() {

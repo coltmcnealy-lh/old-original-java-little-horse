@@ -1,8 +1,5 @@
 package little.horse.lib;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 public class WFRun {
     private WFRunSchema schema;
     private WFSpec wfSpec;
@@ -55,15 +52,7 @@ public class WFRun {
     }
 
     public String toString() {
-        ObjectMapper mapper = new ObjectMapper();
-        String result;
-        try {
-            result = mapper.writeValueAsString(this.getModel());
-        } catch(JsonProcessingException exn) {
-            System.out.println(exn.toString());
-            result = "Could not serialize.";
-        }
-        return result;
+        return schema.toString();
     }
 
     public void start() {

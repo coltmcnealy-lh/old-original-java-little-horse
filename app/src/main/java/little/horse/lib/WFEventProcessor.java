@@ -3,13 +3,12 @@ package little.horse.lib;
 import java.util.ArrayList;
 import java.util.Date;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunEndedEventSchema;
@@ -40,7 +39,7 @@ public class WFEventProcessor
 
     private Object jsonifyIfPossible(String data) {
         try {
-            Object obj = new ObjectMapper().readValue(data, Object.class);
+            Object obj = LHUtil.mapper.readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
             System.out.println("Caught orzdash trying to jsonify '" + data + "'");
@@ -62,15 +61,12 @@ public class WFEventProcessor
                 raiseError();
                 return;
             }
-            WFRunRequestSchema runRequest;
-            try {
-                runRequest = new ObjectMapper().readValue(
-                    event.content, WFRunRequestSchema.class
-                );
-            } catch (Exception exn) {
-                exn.printStackTrace();
-                System.out.println("Got error while reading the runRequest");
-                raiseError();
+            WFRunRequestSchema runRequest = BaseSchema.fromString(
+                event.content, WFRunRequestSchema.class
+            );
+            
+            if (runRequest == null) {
+                raiseError("Failed to unmarshal the run request.");
                 return;
             }
 
@@ -114,23 +110,20 @@ public class WFEventProcessor
                 // Thus it should be in the PENDING state. If not, raise error.
                 TaskRunSchema runningTask = wfRun.taskRuns.get(wfRun.taskRuns.size() -1);
                 if (runningTask.status != LHStatus.PENDING) {
-                    System.out.println("Task isn't pending");
-                    raiseError();
+                    raiseError("Task isn't PENDING");
                     return;
                 }
                 runningTask.status = LHStatus.RUNNING;
                 runningTask.startTime = event.timestamp;
 
-                TaskRunStartedEventSchema taskRunStart;
-                try {
-                    taskRunStart = new ObjectMapper().readValue(
-                        event.toString(), TaskRunStartedEventSchema.class
-                    );
-                } catch (Exception exn) {
-                    exn.printStackTrace();
-                    raiseError();
+                TaskRunStartedEventSchema taskRunStart = BaseSchema.fromString(
+                    event.toString(), TaskRunStartedEventSchema.class
+                );
+                if (taskRunStart == null) {
+                    raiseError("Invalid taskRunStart event.");
                     return;
                 }
+
                 runningTask.stdin = jsonifyIfPossible(taskRunStart.stdin);
                 runningTask.bashCommand = taskRunStart.bashCommand;
                 runningTask.dockerImage = taskRunStart.dockerImage;
@@ -150,15 +143,13 @@ public class WFEventProcessor
                 runningTask.status = LHStatus.COMPLETED;
                 runningTask.endTime = event.timestamp;
 
-                TaskRunEndedEventSchema taskRunEnd;
-                try {
-                    taskRunEnd = new ObjectMapper().readValue(
-                        event.content,
-                        TaskRunEndedEventSchema.class
-                    );
-                } catch (Exception exn) {
-                    exn.printStackTrace();
-                    raiseError();
+                TaskRunEndedEventSchema taskRunEnd = BaseSchema.fromString(
+                    event.content,
+                    TaskRunEndedEventSchema.class
+                );
+                
+                if (taskRunEnd == null) {
+                    raiseError("invalid TaskRunEnded Event");
                     return;
                 }
 
@@ -204,7 +195,7 @@ public class WFEventProcessor
         actor.act(wfRun, event);
         System.out.println("called actor.act");
         try {
-        System.out.println("\n\n\n" + new ObjectMapper().writeValueAsString(wfRun) + "\n\n\n");
+        System.out.println("\n\n\n" + wfRun.toString() + "\n\n\n");
         } catch(Exception exn) {}
 
         Date timestamp = (event.timestamp == null)
@@ -227,6 +218,10 @@ public class WFEventProcessor
     
     private void raiseError() {
         System.out.println("Raising error!!");
+    }
+
+    private void raiseError(String msg) {
+        raiseError();
     }
     
 }

@@ -8,12 +8,11 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunEndedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
@@ -58,11 +57,11 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         }
 
         if (trigger.triggerEventType == WFEventType.TASK_COMPLETED) {
-            TaskRunEndedEventSchema tr;
-            try {
-                tr = new ObjectMapper().readValue(event.content, TaskRunEndedEventSchema.class);
-            } catch (Exception exn) {
-                exn.printStackTrace();
+            TaskRunEndedEventSchema tr = BaseSchema.fromString(
+                event.content, TaskRunEndedEventSchema.class
+            );
+            if (tr == null) {
+                System.out.println("Got a null taskrun, leaving.");
                 return;
             }
             // Then we gotta make sure we only process the right node's outputs.
@@ -103,13 +102,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
 
     public static String getContextString(WFRunSchema wfRun) {
         WFRunVariableContexSchema schema = TaskDaemonEventActor.getContext(wfRun);
-
-        try {
-            return new ObjectMapper().writeValueAsString(schema);
-        } catch(JsonProcessingException exn) {
-            exn.printStackTrace();
-            return null;
-        }
+        return schema.toString();
     }
 
     private ArrayList<String> getBashCommand(WFRunSchema wfRun) {
@@ -130,7 +123,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 if (jsonpath == null) {
                     System.out.println("got null");
                     try {
-                        System.out.println(new ObjectMapper().writeValueAsString(node));
+                        System.out.println(node.toString());
                         System.out.println(jsonpath);
                         System.out.println(varName);
                         System.out.println(arg);
@@ -192,7 +185,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.bashCommand = command;
 
         WFEventSchema event = new WFEventSchema();
-        event.content = new ObjectMapper().writeValueAsString(tr);
+        event.content = tr.toString();
         event.timestamp = new Date();
         event.executionNumber = newExecutionNumber + 1;
         event.type = WFEventType.TASK_COMPLETED;
@@ -203,7 +196,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             wfSpec.getModel().kafkaTopic,
             wfRun.guid,
-            new ObjectMapper().writeValueAsString(event)
+            event.toString()
         );
         config.send(record);
     }
