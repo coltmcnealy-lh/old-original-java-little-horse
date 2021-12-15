@@ -4,8 +4,8 @@ import io.javalin.http.Context;
 import little.horse.lib.Config;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.PostWFSpecResponse;
-import little.horse.lib.WFSpec;
+import little.horse.lib.objects.WFSpec;
+import little.horse.lib.schemas.LHAPIResponsePost;
 import little.horse.lib.schemas.WFSpecSchema;
 
 public class WFSpecAPI {
@@ -30,7 +30,7 @@ public class WFSpecAPI {
         }
         spec.record();
 
-        PostWFSpecResponse response = new PostWFSpecResponse();
+        LHAPIResponsePost response = new LHAPIResponsePost();
         response.guid = spec.getModel().guid;
         response.status = spec.getModel().status;
         response.name = spec.getModel().name;
@@ -78,7 +78,7 @@ public class WFSpecAPI {
             wfSpec.record();
             ctx.status(202);
 
-            PostWFSpecResponse response = new PostWFSpecResponse();
+            LHAPIResponsePost response = new LHAPIResponsePost();
             response.guid = schema.guid;
             response.name = schema.name;
             response.status = schema.status;

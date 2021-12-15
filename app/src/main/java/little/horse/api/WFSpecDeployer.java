@@ -10,7 +10,7 @@ import little.horse.lib.LHDeployError;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.WFSpec;
+import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 

@@ -1,4 +1,4 @@
-package little.horse.lib;
+package little.horse.lib.objects;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -9,6 +9,12 @@ import java.util.ArrayList;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import little.horse.lib.Config;
+import little.horse.lib.Constants;
+import little.horse.lib.LHLookupException;
+import little.horse.lib.LHLookupExceptionReason;
+import little.horse.lib.LHUtil;
+import little.horse.lib.LHValidationError;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.TaskDefSchema;
 

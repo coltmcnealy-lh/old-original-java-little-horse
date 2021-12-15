@@ -5,8 +5,8 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import io.javalin.http.Context;
 import little.horse.lib.Config;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.PostTaskDefResponse;
-import little.horse.lib.TaskDef;
+import little.horse.lib.objects.TaskDef;
+import little.horse.lib.schemas.LHAPIResponsePost;
 import little.horse.lib.schemas.TaskDefSchema;
 
 public class TaskDefAPI {
@@ -34,7 +34,7 @@ public class TaskDefAPI {
 
         spec.record();
 
-        PostTaskDefResponse response = new PostTaskDefResponse();
+        LHAPIResponsePost response = new LHAPIResponsePost();
         response.guid = spec.getModel().guid;
         response.name = spec.getModel().name;
         ctx.json(response);

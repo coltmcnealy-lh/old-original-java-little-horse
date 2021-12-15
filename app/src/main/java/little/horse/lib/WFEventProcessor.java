@@ -8,6 +8,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;

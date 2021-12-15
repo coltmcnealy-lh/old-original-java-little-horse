@@ -12,6 +12,8 @@ import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import little.horse.lib.objects.TaskDef;
+import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunEndedEventSchema;

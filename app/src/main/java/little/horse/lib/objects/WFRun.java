@@ -1,4 +1,11 @@
-package little.horse.lib;
+package little.horse.lib.objects;
+
+import little.horse.lib.Config;
+import little.horse.lib.LHLookupException;
+import little.horse.lib.LHStatus;
+import little.horse.lib.LHUtil;
+import little.horse.lib.LHValidationError;
+import little.horse.lib.WFRunSchema;
 
 public class WFRun {
     private WFRunSchema schema;

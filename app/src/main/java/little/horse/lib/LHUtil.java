@@ -19,6 +19,7 @@ public class LHUtil {
 
     public static String toValidK8sName(String oldStr) {
         String str = new String(oldStr);
+        str = str.toLowerCase();
 
         // TODO: This is probably not right.
         str = str.replaceAll("[. _\n]", "-");
