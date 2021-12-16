@@ -38,13 +38,41 @@ public class LHUtil {
         try {
             digest = MessageDigest.getInstance("SHA-256");
         } catch(NoSuchAlgorithmException exn) {
-
+            // LOL shouldn't happen
         }
         byte[] encodedhash = digest.digest(str.getBytes(StandardCharsets.UTF_8));
         return encodedhash.toString().substring(0, 8);
     }
 
-    public Date now() {
+    public static Date now() {
         return new Date();
+    }
+
+    public static void log(Object... things) {
+        System.out.print(Thread.currentThread().getStackTrace()[3].getMethodName());
+        System.out.print(" ");
+        System.out.print(Thread.currentThread().getStackTrace()[3].getFileName());
+        System.out.print(": ");
+        System.out.print(Thread.currentThread().getStackTrace()[3].getLineNumber());
+        System.out.print(": ");
+        for (Object thing : things) {
+            System.out.print(thing.toString());
+            System.out.print(" ");
+        }
+        System.out.println();
+    }
+
+    public static void logError(Object... things) {
+        System.out.print(Thread.currentThread().getStackTrace()[3].getMethodName());
+        System.out.print(" ");
+        System.out.print(Thread.currentThread().getStackTrace()[3].getFileName());
+        System.out.print(": ");
+        System.out.print(Thread.currentThread().getStackTrace()[3].getLineNumber());
+        System.out.print(": ");
+        for (Object thing : things) {
+            System.out.print(thing.toString());
+            System.out.print(" ");
+        }
+        System.out.println();
     }
 }

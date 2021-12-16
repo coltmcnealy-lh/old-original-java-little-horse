@@ -57,7 +57,6 @@ public class Node {
     }
 
     public Deployment getK8sDeployment() {
-        System.out.println("here in getK8sDeployment");
         Deployment dp = new Deployment();
         dp.metadata = new DeploymentMetadata();
         dp.spec = new DeploymentSpec();
@@ -122,11 +121,9 @@ public class Node {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         try {
             String result = mapper.writeValueAsString(dp);
-            System.out.println("The Result:");
-            System.out.println(result);
+            LHUtil.log("Node tok8s: ", result);
         } catch (JsonProcessingException exn) {
-            System.out.println("asdfasdfasdf");
-            System.out.println(exn.getMessage());
+            LHUtil.logError(exn.getMessage());
         }
 
         return dp;

@@ -6,5 +6,7 @@ public class TaskRunStartedEventSchema extends BaseSchema {
     public String dockerImage;
     public ArrayList<String> bashCommand;
     public String stdin;
-    public String nodeIdentifier;
+    public String nodeGuid;
+    public String nodeName;
+    public int taskExecutionNumber;
 }

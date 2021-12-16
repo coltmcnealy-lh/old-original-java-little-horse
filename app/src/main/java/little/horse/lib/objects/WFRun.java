@@ -5,7 +5,7 @@ import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.WFRunSchema;
+import little.horse.lib.schemas.WFRunSchema;
 
 public class WFRun {
     private WFRunSchema schema;

@@ -1,10 +1,9 @@
-package little.horse.lib;
+package little.horse.lib.schemas;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import little.horse.lib.schemas.BaseSchema;
-import little.horse.lib.schemas.TaskRunSchema;
+import little.horse.lib.LHStatus;
 
 public class WFRunSchema extends BaseSchema {
     public String guid;

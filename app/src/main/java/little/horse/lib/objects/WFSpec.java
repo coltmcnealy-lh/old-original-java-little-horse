@@ -193,7 +193,6 @@ public class WFSpec {
         Request request = new Request.Builder().url(url).build();
         Response response;
         String responseBody = null;
-        System.out.println("Calling url: " + url);
 
         try {
             response = client.newCall(request).execute();
@@ -268,8 +267,7 @@ public class WFSpec {
             try {
                 list.add(new Node(entry.getValue(), this, config));
             } catch (LHLookupException exn) {
-                System.out.println("oops");
-                System.out.println(exn.getMessage());
+                LHUtil.logError("Shouldn't be possible to have this but we do.", exn.getMessage());
                 // Nothing to do, because shouldn't be able to get here.
             }
         }
@@ -305,7 +303,7 @@ public class WFSpec {
 
         for (String yml : ymlStrings) {
             try {
-                System.out.println(yml + "\n\n\n");
+                LHUtil.log("About to apply this: ", yml, "\n\n");
                 Process process = Runtime.getRuntime().exec("kubectl apply -f -");
 
                 process.getOutputStream().write(yml.getBytes());
@@ -317,7 +315,7 @@ public class WFSpec {
                 );
                 String line = null;
                 while ((line = input.readLine()) != null) {
-                    System.out.println(line);
+                    LHUtil.log(line);
                 }
 
                 BufferedReader error = new BufferedReader(
@@ -325,7 +323,7 @@ public class WFSpec {
                 );
                 line = null;
                 while ((line = error.readLine()) != null) {
-                    System.out.println(line);
+                    LHUtil.log(line);
                 }
 
             } catch (Exception exn) {
@@ -349,7 +347,7 @@ public class WFSpec {
             );
             String line = null;
             while ((line = input.readLine()) != null) {
-                System.out.println(line);
+                LHUtil.log(line);
             }
 
             BufferedReader error = new BufferedReader(
@@ -357,7 +355,7 @@ public class WFSpec {
             );
             line = null;
             while ((line = error.readLine()) != null) {
-                System.out.println(line);
+                LHUtil.log(line);
             }
 
             this.schema.status = LHStatus.REMOVED;

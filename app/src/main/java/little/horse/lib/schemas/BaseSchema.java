@@ -14,8 +14,6 @@ public class BaseSchema {
             result = LHUtil.mapper.readValue(src, valueType);
         } catch(JsonProcessingException exn) {
             exn.printStackTrace();
-            System.out.println("Failed jsonloading this: " + src);
-
             // John Hanley question: Should we throw an OrzDash here instead of returning null?
             return null;
         }
@@ -33,15 +31,11 @@ public class BaseSchema {
             result = LHUtil.mapper.readValue(src, valueType);
         } catch(JsonProcessingException exn) {
             exn.printStackTrace();
-            System.out.println("Failed jsonloading this: " + src);
-            System.out.println(new String(src));
 
             // John Hanley question: Should we throw an OrzDash here instead of returning null?
             return null;
         } catch(IOException exn) {
             exn.printStackTrace();
-            System.out.println("Failed jsonloading this: " + src);
-            System.out.println(new String(src));
             return null;
         }
         if (result.getClass() == valueType) {

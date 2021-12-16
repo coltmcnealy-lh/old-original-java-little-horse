@@ -11,7 +11,6 @@ public class WFEventSchema extends BaseSchema {
     public String wfSpecGuid;
     public String wfSpecName;
     public String wfRunGuid;
-    public int executionNumber;
     public Date timestamp;
 
     public WFEventType type;

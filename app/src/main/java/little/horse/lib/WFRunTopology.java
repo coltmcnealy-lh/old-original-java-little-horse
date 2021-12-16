@@ -10,12 +10,13 @@ import org.apache.kafka.streams.state.Stores;
 
 import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
 import little.horse.lib.schemas.WFEventSchema;
+import little.horse.lib.schemas.WFRunSchema;
 
 
 public class WFRunTopology {
 
-    public static WFEventProcessor processorFactory(WFEventProcessorActor actor, Config config) {
-        return new WFEventProcessor(actor, config);
+    public static WFRuntime processorFactory(WFEventProcessorActor actor, Config config) {
+        return new WFRuntime(actor, config);
     }
 
     public static void addStuff(

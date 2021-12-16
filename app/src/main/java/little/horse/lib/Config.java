@@ -21,6 +21,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
 import little.horse.lib.K8sStuff.EnvEntry;
+import little.horse.lib.schemas.WFRunSchema;
 import okhttp3.OkHttpClient;
 
 
@@ -239,8 +240,8 @@ public class Config {
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
-        props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 30000);
-        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 30000);
+        props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 15000);
+        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 15000);
         return props;
     }
 
@@ -257,7 +258,6 @@ public class Config {
      * block. Due to lack of Deconstructor in java.
      */
     public void cleanup() {
-        System.out.println("CLOSING");
         this.producer.close();
         this.kafkaAdmin.close();
     }

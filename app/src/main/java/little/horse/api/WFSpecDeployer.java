@@ -9,6 +9,7 @@ import little.horse.lib.Config;
 import little.horse.lib.LHDeployError;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
+import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
@@ -31,7 +32,6 @@ public class WFSpecDeployer {
 
             records.forEach(record -> {
                 try {
-                    System.out.println("hello there");
                     try {
                         Thread.sleep(500);
                     } catch(Exception exn) {}
@@ -43,12 +43,11 @@ public class WFSpecDeployer {
                         spec.deploy();
                     }
                 } catch (LHLookupException exn) {
-                    System.out.println("Got a lookup orzdash");
-                    System.out.println(exn.getMessage());
+                    LHUtil.log("Got a lookup orzdash", exn.getMessage());
                 } catch (LHValidationError exn) {
-                    System.out.println(exn.getMessage());
+                    LHUtil.log("Got a validation orzdash", exn.getMessage());
                 } catch(LHDeployError exn) {
-                    System.out.println(exn.getMessage());
+                    LHUtil.log("Got a deploy orzdash", exn.getMessage());
                 }
             });
         }
