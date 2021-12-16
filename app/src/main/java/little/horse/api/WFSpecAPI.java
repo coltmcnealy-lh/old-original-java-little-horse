@@ -18,7 +18,15 @@ public class WFSpecAPI {
     }
 
     public void post(Context ctx) {
-        WFSpecSchema rawSpec = ctx.bodyAsClass(WFSpecSchema.class);
+        WFSpecSchema rawSpec;
+        try {
+            rawSpec = ctx.bodyAsClass(WFSpecSchema.class);
+        } catch(Exception exn) {
+            ctx.status(400);
+            LHAPIError error = new LHAPIError("Bad input value: " + exn.getMessage());
+            ctx.json(error);
+            return;
+        }
         WFSpec spec;
         try {
             spec = new WFSpec(rawSpec, this.config);

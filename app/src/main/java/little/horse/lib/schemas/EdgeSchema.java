@@ -8,4 +8,6 @@ public class EdgeSchema extends BaseSchema {
 
     public String sourceNodeGuid;
     public String sinkNodeGuid;
+
+    public EdgeConditionSchema condition;
 }

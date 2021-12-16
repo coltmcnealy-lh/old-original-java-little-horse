@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.lang3.StringUtils;
@@ -93,5 +94,14 @@ public class LHUtil {
             exn.printStackTrace();
         }
         return out.toString();
+    }
+
+    public static String jsonify(Object thing) {
+        try {
+            return mapper.writeValueAsString(thing);
+        } catch(JsonProcessingException exn) {
+            exn.printStackTrace();
+            return null;
+        }
     }
 }

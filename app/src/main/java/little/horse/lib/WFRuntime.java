@@ -138,7 +138,6 @@ public class WFRuntime
         wfRun.guid = record.key();
         wfRun.wfSpecGuid = event.wfSpecGuid;
         wfRun.wfSpecName = event.wfSpecName;
-        wfRun.inputVariables = runRequest.inputVariables;
         wfRun.variables = runRequest.variables;
         wfRun.status = LHStatus.RUNNING;
         wfRun.taskRuns = new ArrayList<TaskRunSchema>();

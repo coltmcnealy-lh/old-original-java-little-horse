@@ -36,14 +36,19 @@ wf_definition = {
             "nodeType": "TASK",
             "taskDefinitionName": "task1",
             "variables": {
-                "personName": "$.inputVariables.name"
+                "personName": {
+                    "wfRunVariableName": "name"
+                }
             }
         },
         "secondNode": {
             "nodeType": "TASK",
             "taskDefinitionName": "task2",
             "variables": {
-                "personNameSecondTask": "$.taskRuns.firstNode[0].stdout.person"
+                "personNameSecondTask": {
+                    "nodeName": "firstNode",
+                    "jsonPath": "$.stdout.person"
+                }
             }
         }
     },

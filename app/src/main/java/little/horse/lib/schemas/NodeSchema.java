@@ -15,7 +15,7 @@ public class NodeSchema extends BaseSchema {
     public ArrayList<WFTriggerSchema> triggers;
     public ArrayList<EdgeSchema> outgoingEdges;
 
-    public HashMap<String, String> variables;
+    public HashMap<String, VariableDefinitionSchema> variables;
 
     // LATER: Maybe add inputVariables, which would be just an annotation
     // denoting what is going to come next.

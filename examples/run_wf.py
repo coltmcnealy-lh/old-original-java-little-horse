@@ -16,7 +16,7 @@ def print_prettily(response):
 
 
 wf_run_schema = {
-    "inputVariables": {
+    "variables": {
         "name": "foobar"
     }
 }

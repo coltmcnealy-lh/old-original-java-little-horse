@@ -2,26 +2,22 @@ package little.horse.lib;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import little.horse.lib.objects.TaskDef;
+import little.horse.lib.objects.WFRun;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunEndedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
-import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
+import little.horse.lib.schemas.VariableDefinitionSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFRunVariableContexSchema;
 import little.horse.lib.schemas.WFTriggerSchema;
 
 public class TaskDaemonEventActor implements WFEventProcessorActor {
@@ -30,18 +26,6 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
     private Config config;
     private WFTriggerSchema trigger;
     private TaskDef taskDef;
-
-    private class VarSubOrzDash extends Exception {
-        public String varName;
-        public String jsonpath;
-        public PathNotFoundException exn;
-
-        public VarSubOrzDash(PathNotFoundException exn, String varName, String jsonpath) {
-            this.exn = exn;
-            this.varName = varName;
-            this.jsonpath = jsonpath;
-        }
-    }
 
     public TaskDaemonEventActor(
         WFSpec wfSpec,
@@ -93,29 +77,9 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         thread.start();
     }
 
-    // TODO: Maybe move this into the wfRunSchema class...?
-    public static WFRunVariableContexSchema getContext(WFRunSchema wfRun) {
-        WFRunVariableContexSchema schema = new WFRunVariableContexSchema();
-
-        schema.inputVariables = wfRun.inputVariables;
-        schema.taskRuns = new HashMap<String, ArrayList<TaskRunSchema>>();
-        for (TaskRunSchema tr : wfRun.taskRuns) {
-            if (!schema.taskRuns.containsKey(tr.nodeName)) {
-                schema.taskRuns.put(tr.nodeName, new ArrayList<TaskRunSchema>());
-            }
-            schema.taskRuns.get(tr.nodeName).add(tr);
-        }
-
-        schema.variables = wfRun.variables;
-        return schema;
-    }
-
-    public static String getContextString(WFRunSchema wfRun) {
-        WFRunVariableContexSchema schema = TaskDaemonEventActor.getContext(wfRun);
-        return schema.toString();
-    }
-
-    private ArrayList<String> getBashCommand(WFRunSchema wfRun) throws VarSubOrzDash {
+    private ArrayList<String> getBashCommand(WFRunSchema wfRun)
+        throws VarSubOrzDash
+    {
         ArrayList<String> cmd = taskDef.getModel().bashCommand;
         ArrayList<String> newCmd = new ArrayList<String>();
         Pattern p = Constants.VARIABLE_PATTERN;
@@ -126,18 +90,17 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 String varName = arg.substring(2, arg.length() - 2); // hackityhack
                 
                 // Now we gotta make sure that the varName is actually in the wfRun
-                String jsonpath = node.variables.get(varName);
-                if (jsonpath == null) {
-                    return null;
-                }
-                try {
-                    String result = JsonPath.parse(getContextString(wfRun)).read(jsonpath);
-                    newCmd.add(result);
-                } catch (PathNotFoundException exn) {
+                VariableDefinitionSchema var = node.variables.get(varName);
+
+                if (var == null) {
                     throw new VarSubOrzDash(
-                        exn, varName, jsonpath
+                        null,
+                        "WFSpec doesnt assign var " + varName+ " on node " + node.name
                     );
                 }
+
+                String substitutionResult = WFRun.getVariableSubstitution(wfRun, var);
+                newCmd.add(substitutionResult);
             } else {
                 newCmd.add(arg);
             }
@@ -152,10 +115,8 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
             command = this.getBashCommand(wfRun);
         } catch(VarSubOrzDash exn) {
             exn.exn.printStackTrace();
-            String message = "Failed looking up a variable in the workflow context";
-            message += "\nVarName: " + exn.varName;
-            message += "\nJsonPath: " + exn.jsonpath;
-            message += "\nContext " + getContextString(wfRun);
+            String message = "Failed looking up a variable in the workflow context\n";
+            message += exn.message;
 
             TaskRunFailedEventSchema trf = new TaskRunFailedEventSchema();
             trf.message = message;
