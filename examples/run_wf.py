@@ -17,9 +17,15 @@ def print_prettily(response):
 
 wf_run_schema = {
     "variables": {
-        "name": "foobar"
+        "name": "colt"
     }
 }
 
 run_wf_response = requests.post(f'{URL}/wfRun/{sys.argv[1]}', json=wf_run_schema)
-print_prettily(run_wf_response)
+
+import time
+time.sleep(2)
+
+response = requests.get(f"{URL}/wfRun/{run_wf_response.json()['guid']}")
+
+print(response.content.decode())

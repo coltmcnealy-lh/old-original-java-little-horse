@@ -3,9 +3,12 @@
  */
 package little.horse;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.regex.Pattern;
+
+import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -29,6 +32,7 @@ import little.horse.lib.objects.TaskDef;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskDefSchema;
+import little.horse.lib.schemas.WFRunSchema;
 
 
 class FrontendAPIApp {
@@ -156,13 +160,22 @@ public class App {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else {
-            String json = "{\"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
+            String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
+            Object obj = JsonPath.parse(json).read("$.foo");
+            System.out.println(obj.getClass());
+            System.out.println(((Comparable)obj).compareTo(Integer.valueOf(-100)));
 
-            LHDeserializer<TaskDefSchema> deser = new LHDeserializer<>(
-                TaskDefSchema.class
-            );
-            System.out.println(deser.deserialize("foo", json.getBytes()));
-            deser.close();
+            // LHDeserializer<TaskDefSchema> deser = new LHDeserializer<>(
+            //     TaskDefSchema.class
+            // );
+            // System.out.println(deser.deserialize("foo", json.getBytes()));
+            // deser.close();
+
+            ArrayList<Object> thing = new ArrayList<Object>();
+            NodeSchema node = new NodeSchema();
+            node.guid = "asdf;";
+            thing.add(node);
+            System.out.println(thing.toString());
         }
     }
 }

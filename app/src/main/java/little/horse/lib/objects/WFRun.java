@@ -1,6 +1,7 @@
 package little.horse.lib.objects;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 
 import com.jayway.jsonpath.JsonPath;
@@ -11,6 +12,7 @@ import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.VarSubOrzDash;
+import little.horse.lib.schemas.EdgeConditionSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.VariableDefinitionSchema;
 import little.horse.lib.schemas.WFRunSchema;
@@ -91,10 +93,56 @@ public class WFRun {
         return schema.toString();
     }
 
-    public void start() {
+    public static boolean evaluateEdge(
+        WFRunSchema wfRun, EdgeConditionSchema condition
+    ) throws VarSubOrzDash {
+        if (condition == null) return true;
+        Object lhs = getVariableSubstitution(wfRun, condition.leftSide);
+        Object rhs = getVariableSubstitution(wfRun, condition.rightSide);
+        switch (condition.comparator) {
+            case LESS_THAN: return compare(lhs, rhs) < 0;
+            case LESS_THAN_EQ: return compare(lhs, rhs) <= 0;
+            case GREATER_THAN: return compare(lhs, rhs) > 0;
+            case GRREATER_THAN_EQ: return compare(lhs, rhs) >= 0;
+            case EQUALS: return compare(lhs, rhs) == 0;
+            case NOT_EQUALS: return compare(lhs, rhs) != 0;
+            case IN: return contains(lhs, rhs);
+            case NOT_IN: return !contains(lhs, rhs);
+            default: return false;
+        }
     }
-    
-    public static String getVariableSubstitution(
+
+    @SuppressWarnings("all")
+    private static boolean contains(Object left, Object right) throws VarSubOrzDash {
+        try {
+            Collection<Object> collection = (Collection<Object>) left;
+            for (Object thing : collection) {
+                if (thing.equals(right)) {
+                    return true;
+                }
+            }
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            throw new VarSubOrzDash(
+                exn,
+                "Failed determing whether the left contains the right "
+            );
+        }
+        return false;
+
+    }
+
+    @SuppressWarnings("all") // lol
+    private static int compare(Object left, Object right) throws VarSubOrzDash {
+        try {
+            int result = ((Comparable) left).compareTo((Comparable) right);
+            return result;
+        } catch(Exception exn) {
+            throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
+        }
+    }
+
+    public static Object getVariableSubstitution(
             WFRunSchema wfRun, VariableDefinitionSchema var
     ) throws VarSubOrzDash {
 

@@ -99,7 +99,9 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                     );
                 }
 
-                String substitutionResult = WFRun.getVariableSubstitution(wfRun, var);
+                String substitutionResult = WFRun.getVariableSubstitution(
+                    wfRun, var
+                ).toString();
                 newCmd.add(substitutionResult);
             } else {
                 newCmd.add(arg);

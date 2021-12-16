@@ -9,6 +9,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import little.horse.lib.objects.WFRun;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
@@ -75,7 +76,7 @@ public class WFRuntime
     }
 
     private void raiseWorkflowProcessingError(
-            String msg, WFEventSchema event
+            String msg, WFEventSchema event, LHFailureReason reason
     ) {
         WFEventSchema newEvent = new WFEventSchema();
         newEvent.timestamp = LHUtil.now();
@@ -86,7 +87,7 @@ public class WFRuntime
 
         WFProcessingErrorSchema err = new WFProcessingErrorSchema();
         err.message = msg;
-        err.reason = LHFailureReason.INTERNAL_LITTLEHORSE_ERROR;
+        err.reason = reason;
 
         newEvent.content = err.toString();
         WFSpec wfSpec = getWFSpec(event.wfRunGuid);
@@ -127,7 +128,8 @@ public class WFRuntime
         if (runRequest == null) {
             raiseWorkflowProcessingError(
                 "Failed to unmarshal WFRunRequest",
-                event
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
             return wfRun;
         }
@@ -147,7 +149,8 @@ public class WFRuntime
         if (wfSpec == null) {
             raiseWorkflowProcessingError(
                 "Unable to find associated WFSpec",
-                event
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
             return wfRun;
         }
@@ -183,7 +186,8 @@ public class WFRuntime
         if (trs == null) {
             raiseWorkflowProcessingError(
                 "Got invalid TaskRunStartedEvent",
-                event
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
         }
 
@@ -196,7 +200,8 @@ public class WFRuntime
         if (theTask == null) {
             raiseWorkflowProcessingError(
                 "Event said a task that doesn't exist yet was started.",
-                event
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
             return wfRun;
         }
@@ -226,13 +231,18 @@ public class WFRuntime
 
         if (task == null) {
             raiseWorkflowProcessingError(
-                "Event said a task that doesn't exist yet was started.", event
+                "Event said a task that doesn't exist yet was started.", event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
             return wfRun;
         }
 
         if (task.status != LHStatus.RUNNING) {
-            raiseWorkflowProcessingError("Tried to complete a Task that wasn't running", event);
+            raiseWorkflowProcessingError(
+                "Tried to complete a Task that wasn't running",
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+            );
         }
 
         task.status = LHStatus.COMPLETED;
@@ -245,11 +255,22 @@ public class WFRuntime
         int numTaskRunsScheduled = 0;
         WFSpec wfSpec = getWFSpec(wfRun.wfSpecGuid);
         if (wfSpec == null) {
-            raiseWorkflowProcessingError("Unable to find WFSpec", event);
+            raiseWorkflowProcessingError(
+                "Unable to find WFSpec",
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+            );
             return wfRun;
         }
         NodeSchema curNode = wfSpec.getModel().nodes.get(task.nodeName);
         for (EdgeSchema edge : curNode.outgoingEdges) {
+            try {
+                if (!WFRun.evaluateEdge(wfRun, edge.condition)) continue;
+            } catch(VarSubOrzDash exn) {
+                raiseWorkflowProcessingError(
+                    exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
+                );
+            }
             // TODO: for conditional branching, decide whether edge is active.
             numTaskRunsScheduled++;
             TaskRunSchema tr = new TaskRunSchema();
@@ -269,7 +290,11 @@ public class WFRuntime
         } else if (numTaskRunsScheduled == 1) {
             // Nothing to do.
         } else {
-            raiseWorkflowProcessingError("Unimplemented: Multiple outbound edges", event);
+            raiseWorkflowProcessingError(
+                "Unimplemented: Multiple outbound edges",
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+            );
         }
         return wfRun;
     }
@@ -285,7 +310,8 @@ public class WFRuntime
 
         if (trf == null) {
             raiseWorkflowProcessingError(
-                "Got invalid failure event " + event.toString(), event
+                "Got invalid failure event " + event.toString(), event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
             return wfRun;
         }
@@ -298,7 +324,8 @@ public class WFRuntime
         if (tr == null) {
             raiseWorkflowProcessingError(
                 "Got a reference to a failed task that doesn't exist " + event.toString(),
-                event
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
             return wfRun;
         }
