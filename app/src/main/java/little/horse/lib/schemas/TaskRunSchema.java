@@ -3,6 +3,7 @@ package little.horse.lib.schemas;
 import java.util.ArrayList;
 import java.util.Date;
 
+import little.horse.lib.LHFailureReason;
 import little.horse.lib.LHStatus;
 
 public class TaskRunSchema extends BaseSchema {
@@ -21,4 +22,7 @@ public class TaskRunSchema extends BaseSchema {
     public int returnCode;
     public Date startTime;
     public Date endTime;
+
+    public LHFailureReason failureReason;
+    public String failureMessage;
 }

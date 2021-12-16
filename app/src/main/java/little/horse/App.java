@@ -153,6 +153,7 @@ public class App {
                 exn.printStackTrace();
             }
         } else if (args.length > 0 && args[0].equals("api")) {
+            System.out.println("running the app");
             FrontendAPIApp.run();
         } else {
             String json = "{\"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";

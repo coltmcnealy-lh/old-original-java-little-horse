@@ -1,7 +1,5 @@
 package little.horse.lib;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -159,12 +157,6 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         ProcessBuilder pb = new ProcessBuilder(command);
         Process proc;
         proc = pb.start();
-        BufferedReader stdoutReader = new BufferedReader(
-            new InputStreamReader(proc.getInputStream())
-        );
-        BufferedReader stderrReader = new BufferedReader(
-            new InputStreamReader(proc.getErrorStream())
-        );
 
         if (taskDef.getModel().stdin != null) {
             proc.getOutputStream().write(taskDef.getModel().stdin.getBytes());
@@ -172,23 +164,9 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         proc.getOutputStream().close();
         proc.waitFor();
 
-        StringBuilder stdoutBuilder = new StringBuilder();
-        StringBuilder stderrBuilder = new StringBuilder();
-
-        String line = stdoutReader.readLine();
-        while (line != null) {
-            stdoutBuilder.append(line);
-            line = stdoutReader.readLine();
-        }
-        line = stderrReader.readLine();
-        while (line != null) {
-            stderrBuilder.append(line);
-            line = stderrReader.readLine();
-        }
-
         TaskRunEndedEventSchema tr = new TaskRunEndedEventSchema();
-        tr.stdout = stdoutBuilder.toString();
-        tr.stderr = stderrBuilder.toString();
+        tr.stdout = LHUtil.inputStreamToString(proc.getInputStream());
+        tr.stderr = LHUtil.inputStreamToString(proc.getErrorStream());
         tr.returncode = proc.exitValue();
         tr.nodeGuid = node.guid;
         tr.bashCommand = command;

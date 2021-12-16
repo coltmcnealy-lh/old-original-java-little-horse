@@ -3,6 +3,7 @@ package little.horse.lib;
 import java.util.ArrayList;
 import java.util.Date;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -13,9 +14,11 @@ import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunEndedEventSchema;
+import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.WFEventSchema;
+import little.horse.lib.schemas.WFProcessingErrorSchema;
 import little.horse.lib.schemas.WFRunRequestSchema;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFSpecSchema;
@@ -39,17 +42,66 @@ public class WFRuntime
         this.context = context;
     }
 
-    private Object jsonifyIfPossible(String data) {
-        try {
-            Object obj = LHUtil.mapper.readValue(data, Object.class);
-            return obj;
-        } catch(Exception exn) {
-            return data;
+    @Override
+    public void process(final Record<String, WFEventSchema> record) {
+        // First, we gotta update the WFRun.
+        String wfRunGuid = record.key();
+        WFEventSchema event = record.value();
+
+        WFRunSchema wfRun = kvStore.get(wfRunGuid);
+
+        switch (event.type) {
+            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(event, wfRun, record);
+                                    break;
+            case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record);
+                                    break;
+            case TASK_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record);
+                                    break;
+            case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record);
+                                    break;
+            case WORKFLOW_PROCESSING_FAILED: wfRun = handleWorkflowProcessingFailed(event, wfRun, record);
+                                    break;
         }
+        kvStore.put(wfRun.guid, wfRun);
+
+        actor.act(wfRun, event);
+
+        Date timestamp = (event.timestamp == null)
+            ? new Date(record.timestamp())
+            : event.timestamp;
+        context.forward(new Record<String, WFRunSchema>(
+            wfRunGuid, wfRun, timestamp.getTime()
+        ));
     }
 
-    private void raiseWorkflowProcessingError(String msg, WFEventSchema event) {
-        LHUtil.logError(msg, "\n\nOrzdash just workflowprocessingerrorred\n\n");
+    private void raiseWorkflowProcessingError(
+            String msg, WFEventSchema event
+    ) {
+        WFEventSchema newEvent = new WFEventSchema();
+        newEvent.timestamp = LHUtil.now();
+        newEvent.wfRunGuid = event.wfRunGuid;
+        newEvent.wfSpecGuid = event.wfSpecGuid;
+        newEvent.wfSpecName = event.wfSpecName;
+        newEvent.type = WFEventType.WORKFLOW_PROCESSING_FAILED;
+
+        WFProcessingErrorSchema err = new WFProcessingErrorSchema();
+        err.message = msg;
+        err.reason = LHFailureReason.INTERNAL_LITTLEHORSE_ERROR;
+
+        newEvent.content = err.toString();
+        WFSpec wfSpec = getWFSpec(event.wfRunGuid);
+        if (wfSpec == null) {
+            // TODO: we can't figure out the kafka topic now but we should still
+            // report the polluted record.
+            return;
+        }
+        ProducerRecord<String, String> record = new ProducerRecord<>(
+            wfSpec.getModel().kafkaTopic,
+            event.wfRunGuid,
+            newEvent.toString()
+        );
+
+        config.send(record);
     }
 
     private WFRunSchema handleWFRunStarted(
@@ -73,7 +125,10 @@ public class WFRuntime
         );
 
         if (runRequest == null) {
-            raiseWorkflowProcessingError("Failed to unmarshal WFRunRequest", event);
+            raiseWorkflowProcessingError(
+                "Failed to unmarshal WFRunRequest",
+                event
+            );
             return wfRun;
         }
 
@@ -90,6 +145,13 @@ public class WFRuntime
 
         // Figure out the input, and schedule the TaskRun.
         WFSpec wfSpec = this.getWFSpec(event.wfSpecGuid);
+        if (wfSpec == null) {
+            raiseWorkflowProcessingError(
+                "Unable to find associated WFSpec",
+                event
+            );
+            return wfRun;
+        }
         WFSpecSchema wfSpecSchema = wfSpec.getModel();
         NodeSchema node = wfSpecSchema.nodes.get(
             wfSpecSchema.entrypointNodeName
@@ -120,7 +182,10 @@ public class WFRuntime
             TaskRunStartedEventSchema.class
         );
         if (trs == null) {
-            raiseWorkflowProcessingError("Got invalid TaskRunStartedEvent", event);
+            raiseWorkflowProcessingError(
+                "Got invalid TaskRunStartedEvent",
+                event
+            );
         }
 
         // Need to find the task that just got started.
@@ -131,7 +196,8 @@ public class WFRuntime
         );
         if (theTask == null) {
             raiseWorkflowProcessingError(
-                "Event said a task that doesn't exist yet was started.", event
+                "Event said a task that doesn't exist yet was started.",
+                event
             );
             return wfRun;
         }
@@ -143,21 +209,6 @@ public class WFRuntime
         theTask.stdin = trs.stdin;
 
         return wfRun;
-    }
-
-    private TaskRunSchema getTaskRunFromExecutionNumber(
-            WFRunSchema wfRun,
-            int executionNumber,
-            String nodeGuid
-    ) {
-        TaskRunSchema theTask = null;
-        if (wfRun.taskRuns.size() > executionNumber) {
-            TaskRunSchema candidate = wfRun.taskRuns.get(executionNumber);
-            if (candidate.nodeGuid.equals(nodeGuid)) {
-                theTask = candidate;
-            }
-        }
-        return theTask;
     }
 
     private WFRunSchema handleTaskCompleted(
@@ -194,6 +245,10 @@ public class WFRuntime
         // Now see what we need to do from here.
         int numTaskRunsScheduled = 0;
         WFSpec wfSpec = getWFSpec(wfRun.wfSpecGuid);
+        if (wfSpec == null) {
+            raiseWorkflowProcessingError("Unable to find WFSpec", event);
+            return wfRun;
+        }
         NodeSchema curNode = wfSpec.getModel().nodes.get(task.nodeName);
         for (EdgeSchema edge : curNode.outgoingEdges) {
             // TODO: for conditional branching, decide whether edge is active.
@@ -220,56 +275,94 @@ public class WFRuntime
         return wfRun;
     }
 
-    @Override
-    public void process(final Record<String, WFEventSchema> record) {
-        // First, we gotta update the WFRun.
-        String wfRunGuid = record.key();
-        WFEventSchema event = record.value();
+    private WFRunSchema handleTaskFailed(
+            WFEventSchema event,
+            WFRunSchema wfRun,
+            final Record<String, WFEventSchema> record
+    ) {
+        TaskRunFailedEventSchema trf = BaseSchema.fromString(
+            event.content, TaskRunFailedEventSchema.class
+        );
 
-        WFRunSchema wfRun = kvStore.get(wfRunGuid);
-
-        switch (event.type) {
-            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(event, wfRun, record);
-                                    break;
-            case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record);
-                                    break;
-            case TASK_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record);
-                                    break;
-            case TASK_FAILED: break;
-            case WORKFLOW_PROCESSING_FAILED: break;
-            // case TASK_FAILED:       handleTaskFailed(event, wfRun, record);
-            //                         break;
-            // case WORKFLOW_PROCESSING_FAILED: handleWorkflowProcessingFailed(event, wfRun, record);
-            //                         break;
+        if (trf == null) {
+            raiseWorkflowProcessingError(
+                "Got invalid failure event " + event.toString(), event
+            );
+            return wfRun;
         }
-        kvStore.put(wfRun.guid, wfRun);
 
-        actor.act(wfRun, event);
+        wfRun.status = LHStatus.ERROR;
 
-        Date timestamp = (event.timestamp == null)
-            ? new Date(record.timestamp())
-            : event.timestamp;
-        context.forward(new Record<String, WFRunSchema>(
-            wfRunGuid, wfRun, timestamp.getTime()
-        ));
+        TaskRunSchema tr = getTaskRunFromExecutionNumber(
+            wfRun, trf.taskExecutionNumber, trf.nodeGuid
+        );
+        if (tr == null) {
+            raiseWorkflowProcessingError(
+                "Got a reference to a failed task that doesn't exist " + event.toString(),
+                event
+            );
+            return wfRun;
+        }
+
+        tr.returnCode = trf.returncode;
+        tr.endTime = event.timestamp;
+        tr.failureMessage = trf.message;
+        tr.failureReason = trf.reason;
+        tr.stdout = jsonifyIfPossible(trf.stdout);
+        tr.stderr = jsonifyIfPossible(trf.stderr);
+        tr.status = LHStatus.ERROR;
+
+        return wfRun;
     }
 
+    private WFRunSchema handleWorkflowProcessingFailed(
+            WFEventSchema event,
+            WFRunSchema wfRun,
+            final Record<String, WFEventSchema> record
+    ) {
+        assert (event.type == WFEventType.WORKFLOW_PROCESSING_FAILED);
+
+        WFProcessingErrorSchema errSchema = BaseSchema.fromString(
+            event.content, WFProcessingErrorSchema.class
+        );
+
+        wfRun.status = LHStatus.ERROR;
+        wfRun.errorCode = errSchema.reason;
+        wfRun.errorMessage = errSchema.message;
+        return wfRun;
+    }
+
+    // Below are a bunch of utility methods.
     private WFSpec getWFSpec(String guid) {
-        // TODO: Do some caching here
+        // TODO: Do some caching here—that's the only reason we have this.
         try {
             return WFSpec.fromIdentifier(guid, config);
         } catch (Exception exn) {
-            raiseError();
             return null;
         }
     }
-    
-    private void raiseError() {
-        System.out.println("Raising error!!");
+
+    private TaskRunSchema getTaskRunFromExecutionNumber(
+        WFRunSchema wfRun,
+        int executionNumber,
+        String nodeGuid
+    ) {
+        TaskRunSchema theTask = null;
+        if (wfRun.taskRuns.size() > executionNumber) {
+            TaskRunSchema candidate = wfRun.taskRuns.get(executionNumber);
+            if (candidate.nodeGuid.equals(nodeGuid)) {
+                theTask = candidate;
+            }
+        }
+        return theTask;
     }
 
-    // private void raiseError(String msg) {
-    //     raiseError();
-    // }
-    
+    private Object jsonifyIfPossible(String data) {
+        try {
+            Object obj = LHUtil.mapper.readValue(data, Object.class);
+            return obj;
+        } catch(Exception exn) {
+            return data;
+        }
+    }
 }
