@@ -53,11 +53,11 @@ public class LHUtil {
     }
 
     public static void log(Object... things) {
-        System.out.print(Thread.currentThread().getStackTrace()[3].getMethodName());
+        System.out.print(Thread.currentThread().getStackTrace()[2].getMethodName());
         System.out.print(" ");
-        System.out.print(Thread.currentThread().getStackTrace()[3].getFileName());
+        System.out.print(Thread.currentThread().getStackTrace()[2].getFileName());
         System.out.print(": ");
-        System.out.print(Thread.currentThread().getStackTrace()[3].getLineNumber());
+        System.out.print(Thread.currentThread().getStackTrace()[2].getLineNumber());
         System.out.print(": ");
         for (Object thing : things) {
             System.out.print(thing.toString());
@@ -67,11 +67,11 @@ public class LHUtil {
     }
 
     public static void logError(Object... things) {
-        System.out.print(Thread.currentThread().getStackTrace()[3].getMethodName());
+        System.out.print(Thread.currentThread().getStackTrace()[2].getMethodName());
         System.out.print(" ");
-        System.out.print(Thread.currentThread().getStackTrace()[3].getFileName());
+        System.out.print(Thread.currentThread().getStackTrace()[2].getFileName());
         System.out.print(": ");
-        System.out.print(Thread.currentThread().getStackTrace()[3].getLineNumber());
+        System.out.print(Thread.currentThread().getStackTrace()[2].getLineNumber());
         System.out.print(": ");
         for (Object thing : things) {
             System.out.print(thing.toString());

@@ -190,7 +190,7 @@ public class WFRuntime
 
         // Need to find the task that just got started.
         int executionNumber = trs.taskExecutionNumber;
-        LHUtil.log(Integer.valueOf(executionNumber));
+
         TaskRunSchema theTask = getTaskRunFromExecutionNumber(
             wfRun, executionNumber, trs.nodeGuid
         );

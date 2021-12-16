@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.fasterxml.jackson.databind.ser.impl.IndexedStringListSerializer;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
@@ -30,6 +30,18 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
     private Config config;
     private WFTriggerSchema trigger;
     private TaskDef taskDef;
+
+    private class VarSubOrzDash extends Exception {
+        public String varName;
+        public String jsonpath;
+        public PathNotFoundException exn;
+
+        public VarSubOrzDash(PathNotFoundException exn, String varName, String jsonpath) {
+            this.exn = exn;
+            this.varName = varName;
+            this.jsonpath = jsonpath;
+        }
+    }
 
     public TaskDaemonEventActor(
         WFSpec wfSpec,
@@ -103,11 +115,10 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         return schema.toString();
     }
 
-    private ArrayList<String> getBashCommand(WFRunSchema wfRun) {
+    private ArrayList<String> getBashCommand(WFRunSchema wfRun) throws VarSubOrzDash {
         ArrayList<String> cmd = taskDef.getModel().bashCommand;
         ArrayList<String> newCmd = new ArrayList<String>();
         Pattern p = Constants.VARIABLE_PATTERN;
-
 
         for (String arg : cmd) {
             Matcher m = p.matcher(arg);
@@ -119,9 +130,14 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 if (jsonpath == null) {
                     return null;
                 }
-
-                String result = JsonPath.parse(getContextString(wfRun)).read(jsonpath);
-                newCmd.add(result);
+                try {
+                    String result = JsonPath.parse(getContextString(wfRun)).read(jsonpath);
+                    newCmd.add(result);
+                } catch (PathNotFoundException exn) {
+                    throw new VarSubOrzDash(
+                        exn, varName, jsonpath
+                    );
+                }
             } else {
                 newCmd.add(arg);
             }
@@ -131,7 +147,37 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
     }
 
     private void doAction(WFRunSchema wfRun, int executionNumber) throws Exception {
-        ArrayList<String> command = this.getBashCommand(wfRun);
+        ArrayList<String> command;
+        try {
+            command = this.getBashCommand(wfRun);
+        } catch(VarSubOrzDash exn) {
+            exn.exn.printStackTrace();
+            String message = "Failed looking up a variable in the workflow context";
+            message += "\nVarName: " + exn.varName;
+            message += "\nJsonPath: " + exn.jsonpath;
+            message += "\nContext " + getContextString(wfRun);
+
+            TaskRunFailedEventSchema trf = new TaskRunFailedEventSchema();
+            trf.message = message;
+            trf.reason = LHFailureReason.VARIABLE_LOOKUP_ERROR;
+            trf.taskExecutionNumber = executionNumber;
+            trf.nodeGuid = node.guid;
+
+            WFEventSchema event = new WFEventSchema();
+            event.type = WFEventType.TASK_FAILED;
+            event.content = trf.toString();
+            event.timestamp = LHUtil.now();
+            event.wfRunGuid = wfRun.guid;
+            event.wfSpecGuid = wfSpec.getModel().guid;
+            event.wfSpecName = wfSpec.getModel().name;
+
+            config.send(new ProducerRecord<String, String>(
+                wfSpec.getModel().kafkaTopic,
+                wfRun.guid,
+                event.toString()
+            ));
+            return;
+        }
 
         // Mark the task as started.
         TaskRunStartedEventSchema trs = new TaskRunStartedEventSchema();
@@ -177,12 +223,12 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.bashCommand = command;
         tr.taskExecutionNumber = executionNumber;
 
-        if (success) {
+        if (!success) {
             TaskRunFailedEventSchema trf = (TaskRunFailedEventSchema) tr;
             trf.reason = LHFailureReason.TASK_FAILURE;
             trf.message = "got a nonzero exit code!";
         }
-        
+
         WFEventSchema event = new WFEventSchema();
         event.content = tr.toString();
         event.timestamp = new Date();
