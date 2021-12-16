@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.databind.ser.impl.IndexedStringListSerializer;
 import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -15,6 +16,7 @@ import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunEndedEventSchema;
+import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.WFEventSchema;
@@ -164,7 +166,10 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         proc.getOutputStream().close();
         proc.waitFor();
 
-        TaskRunEndedEventSchema tr = new TaskRunEndedEventSchema();
+        TaskRunEndedEventSchema tr;
+        boolean success = (proc.exitValue() == 0);
+        tr = success ? new TaskRunEndedEventSchema() : new TaskRunFailedEventSchema();
+
         tr.stdout = LHUtil.inputStreamToString(proc.getInputStream());
         tr.stderr = LHUtil.inputStreamToString(proc.getErrorStream());
         tr.returncode = proc.exitValue();
@@ -172,10 +177,16 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.bashCommand = command;
         tr.taskExecutionNumber = executionNumber;
 
+        if (success) {
+            TaskRunFailedEventSchema trf = (TaskRunFailedEventSchema) tr;
+            trf.reason = LHFailureReason.TASK_FAILURE;
+            trf.message = "got a nonzero exit code!";
+        }
+        
         WFEventSchema event = new WFEventSchema();
         event.content = tr.toString();
         event.timestamp = new Date();
-        event.type = WFEventType.TASK_COMPLETED;
+        event.type = success ? WFEventType.TASK_COMPLETED : WFEventType.TASK_FAILED;
         event.wfRunGuid = wfRun.guid;
         event.wfSpecGuid = wfRun.wfSpecGuid;
         event.wfSpecName = wfRun.wfSpecName;
