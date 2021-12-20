@@ -27,12 +27,9 @@ import little.horse.lib.NullWFEventActor;
 import little.horse.lib.TaskDaemonEventActor;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
-import little.horse.lib.kafkaStreamsSerdes.LHDeserializer;
 import little.horse.lib.objects.TaskDef;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.TaskDefSchema;
-import little.horse.lib.schemas.WFRunSchema;
 
 
 class FrontendAPIApp {
@@ -163,13 +160,7 @@ public class App {
             String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
             Object obj = JsonPath.parse(json).read("$.foo");
             System.out.println(obj.getClass());
-            System.out.println(((Comparable)obj).compareTo(Integer.valueOf(-100)));
-
-            // LHDeserializer<TaskDefSchema> deser = new LHDeserializer<>(
-            //     TaskDefSchema.class
-            // );
-            // System.out.println(deser.deserialize("foo", json.getBytes()));
-            // deser.close();
+            // System.out.println(((Comparable)obj).compareTo(Integer.valueOf(-100)));
 
             ArrayList<Object> thing = new ArrayList<Object>();
             NodeSchema node = new NodeSchema();
