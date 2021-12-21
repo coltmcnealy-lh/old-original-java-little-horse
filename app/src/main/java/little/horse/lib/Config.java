@@ -32,6 +32,7 @@ public class Config {
     private Properties kafkaConfig;
     private String wfSpecTopic;
     private String taskDeftopic;
+    private String externalEventDefTopic;
     private String kafkaTopicPrefix;
     private String advertisedUrl;
     private String stateDirectory;
@@ -80,6 +81,7 @@ public class Config {
 
         this.wfSpecTopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "WFSpec";
         this.taskDeftopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "TaskDef";
+        this.externalEventDefTopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "ExternalEventDef";
 
         String theURL = System.getenv(Constants.ADVERTISED_URL_KEY);
         this.advertisedUrl = (theURL == null) ? "http://localhost:5000" : theURL;
@@ -171,8 +173,16 @@ public class Config {
         return this.taskDeftopic;
     }
 
+    public String getExternalEventDefTopic() {
+        return this.externalEventDefTopic;
+    }
+
     public String getTaskDefNameKeyedTopic() {
         return this.taskDeftopic + "__nameKeyed";
+    }
+
+    public String getExternalEventDefNameKeyedTopic() {
+        return this.externalEventDefTopic + "__nameKeyed";
     }
 
     public String getWFSpecActionsTopic() {

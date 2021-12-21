@@ -18,6 +18,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.APIStreamsContext;
+import little.horse.api.ExternalEventDefTopology;
 import little.horse.api.TaskDefTopology;
 import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
@@ -43,7 +44,9 @@ class FrontendAPIApp {
             config.getWFSpecIntermediateTopic(),
             config.getTaskDefNameKeyedTopic(),
             config.getTaskDefTopic(),
-            config.getWFSpecNameKeyedTopic()
+            config.getWFSpecNameKeyedTopic(),
+            config.getExternalEventDefNameKeyedTopic(),
+            config.getExternalEventDefTopic()
         };
         for (String topicName : topics) {
             NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
@@ -66,6 +69,7 @@ class FrontendAPIApp {
 
         TaskDefTopology.addStuff(topology, config);
         WFSpecTopology.addStuff(topology, config);
+        ExternalEventDefTopology.addStuff(topology, config);
 
         WFEventProcessorActor actor = new NullWFEventActor();
         WFRunTopology.addStuff(
@@ -82,6 +86,8 @@ class FrontendAPIApp {
         context.setWFSpecGuidStoreName(Constants.WF_SPEC_GUID_STORE);
         context.setTaskDefGuidStoreName(Constants.TASK_DEF_GUID_STORE);
         context.setTaskDefNameStoreName(Constants.TASK_DEF_NAME_STORE);
+        context.setExternalEventDefNameStoreName(Constants.EXTERNAL_EVENT_DEF_NAME_STORE);
+        context.setExternalEventDefGuidStoreName(Constants.EXTERNAL_EVENT_DEF_GUID_STORE);
         context.setWFRunStoreName(Constants.WF_RUN_STORE);
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);

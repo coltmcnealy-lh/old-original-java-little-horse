@@ -24,12 +24,15 @@ public class Constants {
 
     public static String WF_SPEC_API_PATH = "wfSpec";
     public static String TASK_DEF_API_PATH = "taskDef";
+    public static String EXTERNAL_EVENT_DEF_PATH = "externalEventDef";
 
     // Should only be used by the actual API. TODO: Move this elsewhere.
     public static String TASK_DEF_GUID_STORE = "taskDefGuidStore";
     public static String TASK_DEF_NAME_STORE = "taskDefNameStore";
     public static String WF_SPEC_GUID_STORE = "wfSpecGuidStore";
     public static String WF_SPEC_NAME_STORE = "wfSpecNameStore";
+    public static String EXTERNAL_EVENT_DEF_NAME_STORE = "externalEventDefStore";
+    public static String EXTERNAL_EVENT_DEF_GUID_STORE = "externalEventDefGuidStore";
     public static String WF_RUN_STORE = "wfRunStorePlus";
 
     public static int EXPOSED_PORT = 5000;

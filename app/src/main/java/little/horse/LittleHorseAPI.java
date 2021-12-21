@@ -2,6 +2,7 @@ package little.horse;
 
 import io.javalin.Javalin;
 import little.horse.api.APIStreamsContext;
+import little.horse.api.ExternalEventDefAPI;
 import little.horse.api.TaskDefAPI;
 import little.horse.api.WFSpecAPI;
 import little.horse.api.WFRunAPI;
@@ -14,6 +15,7 @@ public class LittleHorseAPI {
     private WFSpecAPI wfSpecAPI;
     private TaskDefAPI taskDefAPI;
     private WFRunAPI wfRunAPI;
+    private ExternalEventDefAPI externalEventDefAPI;
     private APIStreamsContext streams;
 
     public LittleHorseAPI(Config config, APIStreamsContext streams) {
@@ -22,6 +24,7 @@ public class LittleHorseAPI {
         this.wfSpecAPI = new WFSpecAPI(this.config, this.streams);
         this.taskDefAPI = new TaskDefAPI(this.config, this.streams);
         this.wfRunAPI = new WFRunAPI(this.config, this.streams);
+        this.externalEventDefAPI = new ExternalEventDefAPI(config, streams);
 
         this.app = Javalin.create();
         this.app.post("/wfSpec", this.wfSpecAPI::post);
@@ -33,6 +36,9 @@ public class LittleHorseAPI {
 
         this.app.get("/wfRun/{wfRunGuid}", this.wfRunAPI::get);
         this.app.post("/wfRun/{wfSpec}", this.wfRunAPI::post);
+
+        this.app.get("/externalEventDef/{nameOrGuid}", this.externalEventDefAPI::get);
+        this.app.post("/externalEventDef", this.externalEventDefAPI::post);
     }
 
     public void cleanup() {

@@ -5,6 +5,7 @@ import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
+import little.horse.lib.schemas.ExternalEventDefSchema;
 import little.horse.lib.schemas.TaskDefSchema;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFSpecSchema;
@@ -16,10 +17,28 @@ public class APIStreamsContext {
 
     private String taskDefNameStoreName;
     private String taskDefGuidStoreName;
+    private String externalEventDefGuidStoreName;
+    private String externalEventDefNameStoreName;
     private String wfRunStoreName;
     
     public String getTaskDefNameStoreName() {
         return taskDefNameStoreName;
+    }
+
+    public String getExternalEventDefNameStoreName() {
+        return externalEventDefNameStoreName;
+    }
+
+    public String getExternalEventDefGuidStoreName() {
+        return externalEventDefGuidStoreName;
+    }
+
+    public void setExternalEventDefNameStoreName(String name) {
+        this.externalEventDefNameStoreName = name;
+    }
+
+    public void setExternalEventDefGuidStoreName(String name) {
+        this.externalEventDefGuidStoreName = name;
     }
 
     public String getWFRunStoreName() {
@@ -85,6 +104,24 @@ public class APIStreamsContext {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefGuidStoreName,
+                QueryableStoreTypes.keyValueStore()
+            )
+        );
+    }
+
+    public ReadOnlyKeyValueStore<String, ExternalEventDefSchema> getExternalEventDefNameStore() {
+        return streams.store(
+            StoreQueryParameters.fromNameAndType(
+                this.externalEventDefNameStoreName,
+                QueryableStoreTypes.keyValueStore()
+            )
+        );
+    }
+
+    public ReadOnlyKeyValueStore<String, ExternalEventDefSchema> getExternalEventDefGuidStore() {
+        return streams.store(
+            StoreQueryParameters.fromNameAndType(
+                this.externalEventDefGuidStoreName,
                 QueryableStoreTypes.keyValueStore()
             )
         );
