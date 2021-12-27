@@ -7,4 +7,5 @@ public class VariableDefinitionSchema extends BaseSchema {
     public String literalValue;
     public boolean useLatestTaskRun = true;
     public String defaultValue;
+    public WFRunMetadataEnum wfRunMetadata;
 }

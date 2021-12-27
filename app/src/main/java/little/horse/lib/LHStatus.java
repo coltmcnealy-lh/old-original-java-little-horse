@@ -5,6 +5,7 @@ public enum LHStatus {
     STARTING,
     RUNNING,
     COMPLETED,
+    WAITING_FOR_EVENT,
     STOPPED,
     ERROR,
     PENDING_REMOVAL,

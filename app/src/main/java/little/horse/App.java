@@ -173,6 +173,10 @@ public class App {
             node.guid = "asdf;";
             thing.add(node);
             System.out.println(thing.toString());
+
+            Config config = new Config();
+            System.out.println(config.getExternalEventDefTopic());
+            System.out.println(config.getExternalEventDefNameKeyedTopic());
         }
     }
 }

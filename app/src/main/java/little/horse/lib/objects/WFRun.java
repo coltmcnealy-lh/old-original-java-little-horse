@@ -1,5 +1,6 @@
 package little.horse.lib.objects;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,16 +8,23 @@ import java.util.HashMap;
 import com.jayway.jsonpath.JsonPath;
 
 import little.horse.lib.Config;
+import little.horse.lib.Constants;
 import little.horse.lib.LHLookupException;
+import little.horse.lib.LHLookupExceptionReason;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.VarSubOrzDash;
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeConditionSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.VariableDefinitionSchema;
+import little.horse.lib.schemas.WFRunMetadataEnum;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFRunVariableContexSchema;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class WFRun {
     private WFRunSchema schema;
@@ -43,16 +51,66 @@ public class WFRun {
     public static WFRunVariableContexSchema getContext(WFRunSchema wfRun) {
         WFRunVariableContexSchema schema = new WFRunVariableContexSchema();
 
-        schema.taskRuns = new HashMap<String, ArrayList<TaskRunSchema>>();
+        schema.nodeOutputs = new HashMap<String, ArrayList<TaskRunSchema>>();
         for (TaskRunSchema tr : wfRun.taskRuns) {
-            if (!schema.taskRuns.containsKey(tr.nodeName)) {
-                schema.taskRuns.put(tr.nodeName, new ArrayList<TaskRunSchema>());
+            if (!schema.nodeOutputs.containsKey(tr.nodeName)) {
+                schema.nodeOutputs.put(tr.nodeName, new ArrayList<TaskRunSchema>());
             }
-            schema.taskRuns.get(tr.nodeName).add(tr);
+            schema.nodeOutputs.get(tr.nodeName).add(tr);
         }
 
         schema.wfRunVariables = wfRun.variables;
         return schema;
+    }
+
+    public static WFRun fromGuid(String guid, Config config)
+    throws LHLookupException, LHValidationError {
+        OkHttpClient client = config.getHttpClient();
+        String url = config.getAPIUrlFor(Constants.WF_RUN_API_PATH) + "/" + guid;
+        Request request = new Request.Builder().url(url).build();
+        Response response;
+        String responseBody = null;
+
+        try {
+            response = client.newCall(request).execute();
+            responseBody = response.body().string();
+        }
+        catch (IOException exn) {
+            String err = "Got an error making request to " + url + ": " + exn.getMessage() + ".\n";
+            err += "Was trying to call URL " + url;
+
+            System.err.println(err);
+            throw new LHLookupException(exn, LHLookupExceptionReason.IO_FAILURE, err);
+        }
+
+        // Check response code.
+        if (response.code() == 404) {
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.OBJECT_NOT_FOUND,
+                "Could not find WFSpec with guid " + guid + "."
+            );
+        } else if (response.code() != 200) {
+            if (responseBody == null) {
+                responseBody = "";
+            }
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.OTHER_ERROR,
+                "API Returned an error: " + String.valueOf(response.code()) + " " + responseBody
+            );
+        }
+
+        WFRunSchema schema = BaseSchema.fromString(responseBody, WFRunSchema.class);
+        if (schema == null) {
+            throw new LHLookupException(
+                null,
+                LHLookupExceptionReason.INVALID_RESPONSE,
+                "Got an invalid response: " + responseBody
+            );
+        }
+
+        return new WFRun(schema, config);
     }
 
     public static String getContextString(WFRunSchema wfRun) {
@@ -156,7 +214,7 @@ public class WFRun {
 
         String dataToParse = null;
         if (var.nodeName != null) {
-            ArrayList<TaskRunSchema> taskRuns = context.taskRuns.get(var.nodeName);
+            ArrayList<TaskRunSchema> taskRuns = context.nodeOutputs.get(var.nodeName);
             if (taskRuns == null && var.defaultValue == null) {
                 throw new VarSubOrzDash(
                     null,
@@ -180,6 +238,14 @@ public class WFRun {
                 );
             }
             dataToParse = result.toString();
+        } else if (var.wfRunMetadata != null) {
+            if (var.wfRunMetadata == WFRunMetadataEnum.WF_RUN_GUID) {
+                return wfRun.guid;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_GUID) {
+                return wfRun.wfSpecGuid;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
+                return wfRun.wfSpecName;
+            }
         }
 
         if (dataToParse == null) {

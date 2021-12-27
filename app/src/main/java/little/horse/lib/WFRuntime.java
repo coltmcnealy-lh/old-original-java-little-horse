@@ -60,6 +60,8 @@ public class WFRuntime
                                     break;
             case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record);
                                     break;
+            case EXTERNAL_EVENT:    System.out.println("TODO");
+                                    break;
             case WORKFLOW_PROCESSING_FAILED: wfRun = handleWorkflowProcessingFailed(event, wfRun, record);
                                     break;
         }

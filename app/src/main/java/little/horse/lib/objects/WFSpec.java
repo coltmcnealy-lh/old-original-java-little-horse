@@ -9,7 +9,9 @@ import little.horse.lib.LHLookupExceptionReason;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
+import little.horse.lib.NodeType;
 import little.horse.lib.WFEventType;
+import little.horse.lib.K8sStuff.Deployment;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
@@ -77,23 +79,47 @@ public class WFSpec {
             }
 
             // Now validate that the TaskDef's actually exist
-            if (node.taskDefinitionName == null) {
-                throw new LHValidationError(
-                    "Invalid Node " + node.name + ": No taskDefinition supplied"
-                );
-            }
-            try {
-                TaskDef.fromIdentifier(node.taskDefinitionName, config);
-            } catch (LHLookupException exn) {
-                if (exn.getReason() == LHLookupExceptionReason.OBJECT_NOT_FOUND) {
-                    throw new LHValidationError(
-                        "No task definition named " + node.taskDefinitionName + " found."
-                    );
-                } else {
-                    throw new LHValidationError(
-                        "Failed looking up TaskDef " + node.taskDefinitionName
-                    );
+            if (node.nodeType == NodeType.TASK) {
+                if (node.taskDefinitionName == null) {
+                    throw new LHValidationError("Invalid Node " + node.name + ": No taskDefinition supplied");
                 }
+                try {
+                    TaskDef.fromIdentifier(node.taskDefinitionName, config);
+                } catch (LHLookupException exn) {
+                    if (exn.getReason() == LHLookupExceptionReason.OBJECT_NOT_FOUND) {
+                        throw new LHValidationError(
+                            "No task definition named " + node.taskDefinitionName + " found."
+                        );
+                    } else {
+                        throw new LHValidationError(
+                            "Failed looking up TaskDef " + node.taskDefinitionName
+                        );
+                    }
+                }
+
+            } else {
+                if (node.nodeType != NodeType.EXTERNAL_EVENT) {
+                    throw new RuntimeException("oops");
+                }
+
+                ExternalEventDef eed = null;
+                if (node.externalEventDefGuid != null) {
+                    try {
+                        eed = ExternalEventDef.fromIdentifier(node.externalEventDefGuid, config);
+                    } catch (LHLookupException exn) {
+                        throw new LHValidationError("Could not find externaleventdef " + node.externalEventDefGuid);
+                    }
+                } else if (node.externalEventDefName != null) {
+                    try {
+                        eed = ExternalEventDef.fromIdentifier(node.externalEventDefName, config);
+                    } catch (LHLookupException exn) {
+                        exn.printStackTrace();
+                        throw new LHValidationError("Could not find externaleventdef " + node.externalEventDefName);
+                    }
+                }
+
+                node.externalEventDefGuid = eed.getModel().guid;
+                node.externalEventDefName = eed.getModel().name;
             }
 
         }
@@ -292,9 +318,10 @@ public class WFSpec {
         // Finally, deploy task daemons for each of the Node's in the workflow.
         for (Node node : this.getNodes()) {
             try {
-                ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(
-                    node.getK8sDeployment()
-                ));
+                Deployment dp = node.getK8sDeployment();
+                if (dp != null) {
+                    ymlStrings.add(new ObjectMapper(new YAMLFactory()).writeValueAsString(dp));
+                }
             } catch (JsonProcessingException exn) {
                 exn.printStackTrace();
                 throw new LHDeployError("Had an orzdash");

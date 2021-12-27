@@ -64,7 +64,7 @@ public class ExternalEventDef {
             throw new LHLookupException(
                 null,
                 LHLookupExceptionReason.OBJECT_NOT_FOUND,
-                "Could not find TaskDef with identifier " + identifier + "."
+                "Could not find ExternalEventDef with identifier " + identifier + "."
             );
         } else if (response.code() != 200) {
             if (responseBody == null) {
@@ -109,7 +109,7 @@ public class ExternalEventDef {
 
     public void record() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            this.config.getTaskDefTopic(),
+            this.config.getExternalEventDefTopic(),
             schema.guid,
             this.toString()
         );

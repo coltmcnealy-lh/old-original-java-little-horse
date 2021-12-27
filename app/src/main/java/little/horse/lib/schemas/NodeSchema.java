@@ -17,6 +17,9 @@ public class NodeSchema extends BaseSchema {
 
     public HashMap<String, VariableDefinitionSchema> variables;
 
+    public String externalEventDefName;
+    public String externalEventDefGuid;
+
     // LATER: Maybe add inputVariables, which would be just an annotation
     // denoting what is going to come next.
 }

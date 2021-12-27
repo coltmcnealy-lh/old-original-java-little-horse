@@ -11,6 +11,7 @@ import little.horse.lib.Config;
 import little.horse.lib.Constants;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHUtil;
+import little.horse.lib.NodeType;
 import little.horse.lib.K8sStuff.Container;
 import little.horse.lib.K8sStuff.Deployment;
 import little.horse.lib.K8sStuff.DeploymentMetadata;
@@ -56,7 +57,20 @@ public class Node {
         return config.getTaskDaemonCommand();
     }
 
+    private ArrayList<String> getBashCommand() {
+        if (schema.nodeType == NodeType.TASK) {
+            return getTaskDaemonCommand();
+        } else if (schema.nodeType == NodeType.EXTERNAL_EVENT) {
+            throw new RuntimeException("Impossible nodetype");
+        }
+        throw new RuntimeException("Impossible nodetype");
+    }
+
     public Deployment getK8sDeployment() {
+        if (schema.nodeType != NodeType.TASK) {
+            return null;
+            // throw new RuntimeException("Shouldn't be calling getK8sDeployment for non-task nodes");
+        }
         Deployment dp = new Deployment();
         dp.metadata = new DeploymentMetadata();
         dp.spec = new DeploymentSpec();
@@ -77,7 +91,7 @@ public class Node {
         container.name = this.getK8sName();
         container.image = this.taskDef.getModel().dockerImage;
         container.imagePullPolicy = "IfNotPresent";
-        container.command = getTaskDaemonCommand();
+        container.command = getBashCommand();
         container.env = config.getBaseK8sEnv();
         container.env.add(new EnvEntry(
             Constants.KAFKA_APPLICATION_ID_KEY,

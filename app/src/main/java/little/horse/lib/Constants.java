@@ -25,6 +25,7 @@ public class Constants {
     public static String WF_SPEC_API_PATH = "wfSpec";
     public static String TASK_DEF_API_PATH = "taskDef";
     public static String EXTERNAL_EVENT_DEF_PATH = "externalEventDef";
+    public static String WF_RUN_API_PATH = "wfRun";
 
     // Should only be used by the actual API. TODO: Move this elsewhere.
     public static String TASK_DEF_GUID_STORE = "taskDefGuidStore";
