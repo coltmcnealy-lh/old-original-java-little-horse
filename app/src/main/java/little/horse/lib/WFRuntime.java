@@ -14,7 +14,7 @@ import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.TaskRunEndedEventSchema;
+import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
@@ -56,7 +56,7 @@ public class WFRuntime
                                     break;
             case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record);
                                     break;
-            case TASK_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record);
+            case NODE_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record);
                                     break;
             case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record);
                                     break;
@@ -222,10 +222,10 @@ public class WFRuntime
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record
     ) {
-        assert(event.type == WFEventType.TASK_COMPLETED);
-        TaskRunEndedEventSchema tre = BaseSchema.fromString(
+        assert(event.type == WFEventType.NODE_COMPLETED);
+        NodeCompletedEventSchema tre = BaseSchema.fromString(
             event.content,
-            TaskRunEndedEventSchema.class
+            NodeCompletedEventSchema.class
         );
         int executionNumber = tre.taskExecutionNumber;
         String nodeGuid = tre.nodeGuid;

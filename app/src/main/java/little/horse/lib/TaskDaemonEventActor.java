@@ -12,7 +12,7 @@ import little.horse.lib.objects.WFRun;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.TaskRunEndedEventSchema;
+import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.VariableDefinitionSchema;
@@ -51,10 +51,10 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
             return;
         }
 
-        TaskRunEndedEventSchema tr = null;
-        if (trigger.triggerEventType == WFEventType.TASK_COMPLETED) {
+        NodeCompletedEventSchema tr = null;
+        if (trigger.triggerEventType == WFEventType.NODE_COMPLETED) {
             tr = BaseSchema.fromString(
-                event.content, TaskRunEndedEventSchema.class
+                event.content, NodeCompletedEventSchema.class
             );
             if (tr == null) {
                 return;
@@ -175,9 +175,9 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         proc.getOutputStream().close();
         proc.waitFor();
 
-        TaskRunEndedEventSchema tr;
+        NodeCompletedEventSchema tr;
         boolean success = (proc.exitValue() == 0);
-        tr = success ? new TaskRunEndedEventSchema() : new TaskRunFailedEventSchema();
+        tr = success ? new NodeCompletedEventSchema() : new TaskRunFailedEventSchema();
 
         tr.stdout = LHUtil.inputStreamToString(proc.getInputStream());
         tr.stderr = LHUtil.inputStreamToString(proc.getErrorStream());
@@ -195,7 +195,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         WFEventSchema event = new WFEventSchema();
         event.content = tr.toString();
         event.timestamp = new Date();
-        event.type = success ? WFEventType.TASK_COMPLETED : WFEventType.TASK_FAILED;
+        event.type = success ? WFEventType.NODE_COMPLETED : WFEventType.TASK_FAILED;
         event.wfRunGuid = wfRun.guid;
         event.wfSpecGuid = wfRun.wfSpecGuid;
         event.wfSpecName = wfRun.wfSpecName;

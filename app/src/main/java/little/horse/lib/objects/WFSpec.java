@@ -161,7 +161,7 @@ public class WFSpec {
             }
             if (!found) {
                 WFTriggerSchema trigger = new WFTriggerSchema();
-                trigger.triggerEventType = WFEventType.TASK_COMPLETED;
+                trigger.triggerEventType = WFEventType.NODE_COMPLETED;
                 trigger.triggerNodeName = source.name;
                 trigger.triggerNodeGuid = source.guid;
                 sink.triggers.add(trigger);
