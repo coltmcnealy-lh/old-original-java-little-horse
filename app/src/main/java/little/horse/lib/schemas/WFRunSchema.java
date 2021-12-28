@@ -17,4 +17,6 @@ public class WFRunSchema extends BaseSchema {
 
     public LHFailureReason errorCode;
     public String errorMessage;
+
+    public HashMap<String, ArrayList<ExternalEventThingySchema>> pendingEvents;
 }

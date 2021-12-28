@@ -23,7 +23,7 @@ external_event_definition = {
 task_definition = {
     "name": "print-guid",
     "dockerImage": "little-horse-daemon",
-    "bashCommand": ["python3", "/examples/printWFRunGuid.py", "<<wfRunGuid>>"],
+    "bashCommand": ["python3", "/examples/printWfRunGuid.py", "<<wfRunGuid>>"],
 }
 
 

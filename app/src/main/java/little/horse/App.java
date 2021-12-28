@@ -24,7 +24,7 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.NullWFEventActor;
+import little.horse.lib.SystemEventActor;
 import little.horse.lib.TaskDaemonEventActor;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
@@ -71,7 +71,7 @@ class FrontendAPIApp {
         WFSpecTopology.addStuff(topology, config);
         ExternalEventDefTopology.addStuff(topology, config);
 
-        WFEventProcessorActor actor = new NullWFEventActor();
+        WFEventProcessorActor actor = new SystemEventActor();
         WFRunTopology.addStuff(
             topology,
             config,
