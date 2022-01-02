@@ -27,6 +27,18 @@ import little.horse.lib.schemas.WFRunRequestSchema;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 
+
+class ActiveEdgePackage {
+    public EdgeSchema edge;
+    public int executionNumber;
+
+    public ActiveEdgePackage(EdgeSchema edge, int executionNumber) {
+        this.edge = edge;
+        this.executionNumber = executionNumber;
+    }
+}
+
+
 public class WFRuntime
     implements Processor<String, WFEventSchema, String, WFRunSchema>
 {
@@ -53,24 +65,59 @@ public class WFRuntime
         WFEventSchema event = record.value();
 
         WFRunSchema wfRun = kvStore.get(wfRunGuid);
+        WFSpec wfSpec = null;
+        if (wfRun != null) {
+            wfSpec = getWFSpec(wfRun.wfSpecGuid);
+        }
 
-        ArrayList<TaskRunSchema> newTaskRuns = new ArrayList<TaskRunSchema>();
+        if (wfSpec == null && event.type != WFEventType.WF_RUN_STARTED) {
+            raiseWorkflowProcessingError(
+                "Unable to find WFSpec",
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+            );
+            return;
+        }
+
+        ArrayList<ActiveEdgePackage> outgoingEdges = new ArrayList<ActiveEdgePackage>();
 
         switch (event.type) {
-            case WF_RUN_STARTED:    handleWFRunStarted(event, wfRun, record, newTaskRuns);
+            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(event, wfRun, record, outgoingEdges, wfSpec);
                                     break;
-            case TASK_STARTED:      handleTaskStarted(event, wfRun, record, newTaskRuns);
+            case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record, outgoingEdges, wfSpec);
                                     break;
-            case NODE_COMPLETED:    handleTaskCompleted(event, wfRun, record, newTaskRuns);
+            case NODE_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record, outgoingEdges, wfSpec);
                                     break;
-            case TASK_FAILED:       handleTaskFailed(event, wfRun, record, newTaskRuns);
+            case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record, outgoingEdges, wfSpec);
                                     break;
-            case EXTERNAL_EVENT:    handleExternalEvent(event, wfRun, record, newTaskRuns);
+            case EXTERNAL_EVENT:    wfRun = handleExternalEvent(event, wfRun, record, outgoingEdges, wfSpec);
                                     break;
-            case WORKFLOW_PROCESSING_FAILED: handleWorkflowProcessingFailed(
-                                                    event, wfRun, record, newTaskRuns);
+            case WORKFLOW_PROCESSING_FAILED: wfRun = handleWorkflowProcessingFailed(
+                                                    event, wfRun, record, outgoingEdges, wfSpec);
                                     break;
         }
+        for (ActiveEdgePackage pkg : outgoingEdges) {
+            EdgeSchema edge = pkg.edge;
+            try {
+                if (!WFRun.evaluateEdge(wfRun, edge.condition)) continue;
+            } catch(VarSubOrzDash exn) {
+                raiseWorkflowProcessingError(
+                    exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
+                );
+            }
+            // TODO: for conditional branching, decide whether edge is active.
+            TaskRunSchema tr = new TaskRunSchema();
+            NodeSchema destNode = wfSpec.getModel().nodes.get(edge.sinkNodeName);
+            tr.nodeGuid = destNode.guid;
+            tr.nodeName = destNode.name;
+            tr.status = LHStatus.PENDING;
+            tr.wfSpecGuid = event.wfSpecGuid;
+            tr.wfRunGuid = event.wfRunGuid;
+            tr.wfSpecName = event.wfSpecName;
+            tr.executionNumber = pkg.executionNumber; // TODO: Won't work with threading.
+            wfRun.taskRuns.add(tr);
+        }
+
         kvStore.put(wfRun.guid, wfRun);
 
         actor.act(wfRun, event);
@@ -90,20 +137,20 @@ public class WFRuntime
      *    is saved as the stdout of the NodeRun.
      * 2. The WFRun has NOT reached the Node at which this ExternalEvent is caught. Here,
      *    we just store the fact that the Event has occurred for later use.
-     * In scenario 1), we will either append new tasks to newTaskRuns or we will mark the
+     * In scenario 1), we will either append new tasks to outgoingEdges or we will mark the
      * WFRun as completed.
      * @param event the WFEventSchema event to be handled. This is one event on the
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param newTaskRuns an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
-    private void handleExternalEvent(
+    private WFRunSchema handleExternalEvent(
         WFEventSchema event,
         WFRunSchema wfRun,
         final Record<String, WFEventSchema> record,
-        ArrayList<TaskRunSchema> newTaskRuns
+        ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
     ) {
         if (wfRun.pendingEvents == null) {
             wfRun.pendingEvents = new HashMap<String, ArrayList<ExternalEventThingySchema>>();
@@ -115,13 +162,13 @@ public class WFRuntime
             event.content,
             ExternalEventPayloadSchema.class
         );
-        
+
         // TODO: handle if payload is null;
-        if (payload == null) return;
+        if (payload == null) return wfRun;
 
         thingy.event = payload;
 
-        return;
+        return wfRun;
     }
 
     private void raiseWorkflowProcessingError(
@@ -155,20 +202,20 @@ public class WFRuntime
     }
 
     /**
-     * Handles a request to run a WFRun for a WFSpec. Adds the entrypoint task to `newTaskRuns`.
+     * Handles a request to run a WFRun for a WFSpec. Adds the entrypoint task to `outgoingEdges`.
      * Marks the WFRun as RUNNING.
      * @param event the WFEventSchema event to be handled. This is one event on the
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param newTaskRuns an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
-    private void handleWFRunStarted(
+    private WFRunSchema handleWFRunStarted(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<TaskRunSchema> newTaskRuns
+            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
     ) {
         assert(event.type == WFEventType.WF_RUN_STARTED);
         if (wfRun != null) {
@@ -176,9 +223,19 @@ public class WFRuntime
             // the lookup on the WFRun should be null.
             LHUtil.logError("Got a WFRun Started on guid", wfRun.guid, "already: ", wfRun);
             
+            // wfSpec should be null at this point due to weirdness.
+            if (wfSpec == null) {
+                raiseWorkflowProcessingError(
+                    "Unable to find WFSpec",
+                    event,
+                    LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+                );
+                return wfRun;
+            }
+
             // TODO: Should there be some notification / should we orzdash the actual wfRun
             // that's currently running?
-            return;
+            return wfRun;
         }
 
         WFRunRequestSchema runRequest = BaseSchema.fromString(
@@ -191,7 +248,18 @@ public class WFRuntime
                 event,
                 LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
-            return;
+            return wfRun;
+        }
+
+        // Now we finally know enough to get the wfSpec.
+        wfSpec = getWFSpec(event.wfSpecGuid);
+        if (wfSpec == null) {
+            raiseWorkflowProcessingError(
+                "Unable to find WFSpec",
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+            );
+            return wfRun;
         }
 
         LHUtil.log("Got Run Request", runRequest);
@@ -204,16 +272,6 @@ public class WFRuntime
         wfRun.status = LHStatus.RUNNING;
         wfRun.taskRuns = new ArrayList<TaskRunSchema>();
 
-        // Figure out the input, and schedule the TaskRun.
-        WFSpec wfSpec = this.getWFSpec(event.wfSpecGuid);
-        if (wfSpec == null) {
-            raiseWorkflowProcessingError(
-                "Unable to find associated WFSpec",
-                event,
-                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
-            );
-            return;
-        }
         WFSpecSchema wfSpecSchema = wfSpec.getModel();
         NodeSchema node = wfSpecSchema.nodes.get(
             wfSpecSchema.entrypointNodeName
@@ -230,24 +288,24 @@ public class WFRuntime
         wfRun.taskRuns.add(tr);
 
         LHUtil.log("Just added wfRun: ", wfRun);
-        return;
+        return wfRun;
     }
 
     /**
      * Handles an event noting that a Node has begun its processing. Marks the NodeRun as RUNNING.
-     * Should not add anything to newTaskRuns unless some weird shit happens.
+     * Should not add anything to outgoingEdges unless some weird shit happens.
      * @param event the WFEventSchema event to be handled. This is one event on the
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param newTaskRuns an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
-    private void handleTaskStarted(
+    private WFRunSchema handleTaskStarted(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<TaskRunSchema> newTaskRuns
+            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
     ) {
         assert(event.type == WFEventType.TASK_STARTED);
         TaskRunStartedEventSchema trs = BaseSchema.fromString(
@@ -274,7 +332,7 @@ public class WFRuntime
                 event,
                 LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
-            return;
+            return wfRun;
         }
 
         // Ok, now we have the task.
@@ -283,25 +341,25 @@ public class WFRuntime
         theTask.bashCommand = trs.bashCommand;
         theTask.stdin = trs.stdin;
 
-        return;
+        return wfRun;
     }
 
     /**
      * Handles an event marking a NodeRun as completed. If there are outgoing edges, the active
-     * ones are added to the newTaskRuns list. If there are none, then the wfRun is marked as
+     * ones are added to the outgoingEdges list. If there are none, then the wfRun is marked as
      * COMPLETED.
      * @param event the WFEventSchema event to be handled. This is one event on the
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param newTaskRuns an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
-    private void handleTaskCompleted(
+    private WFRunSchema handleTaskCompleted(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<TaskRunSchema> newTaskRuns
+            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
     ) {
         assert(event.type == WFEventType.NODE_COMPLETED);
         NodeCompletedEventSchema tre = BaseSchema.fromString(
@@ -317,7 +375,7 @@ public class WFRuntime
                 "Event said a task that doesn't exist yet was started.", event,
                 LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
-            return;
+            return wfRun;
         }
 
         if (task.status != LHStatus.RUNNING) {
@@ -335,70 +393,33 @@ public class WFRuntime
         task.returnCode = tre.returncode;
 
         // Now see what we need to do from here.
-        int numTaskRunsScheduled = 0;
-        WFSpec wfSpec = getWFSpec(wfRun.wfSpecGuid);
-        if (wfSpec == null) {
-            raiseWorkflowProcessingError(
-                "Unable to find WFSpec",
-                event,
-                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
-            );
-            return;
-        }
         NodeSchema curNode = wfSpec.getModel().nodes.get(task.nodeName);
         for (EdgeSchema edge : curNode.outgoingEdges) {
-            try {
-                if (!WFRun.evaluateEdge(wfRun, edge.condition)) continue;
-            } catch(VarSubOrzDash exn) {
-                raiseWorkflowProcessingError(
-                    exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
-                );
-            }
-            // TODO: for conditional branching, decide whether edge is active.
-            numTaskRunsScheduled++;
-            TaskRunSchema tr = new TaskRunSchema();
-            NodeSchema destNode = wfSpec.getModel().nodes.get(edge.sinkNodeName);
-            tr.nodeGuid = destNode.guid;
-            tr.nodeName = destNode.name;
-            tr.status = LHStatus.PENDING;
-            tr.wfSpecGuid = event.wfSpecGuid;
-            tr.wfRunGuid = event.wfRunGuid;
-            tr.wfSpecName = event.wfSpecName;
-            tr.executionNumber = task.executionNumber + 1; // TODO: Won't work with threading.
-
-            wfRun.taskRuns.add(tr);
+            outgoingEdges.add(new ActiveEdgePackage(edge, task.executionNumber + 1));
         }
-        if (numTaskRunsScheduled == 0) {
+        if (outgoingEdges.size() == 0) {
             wfRun.status = LHStatus.COMPLETED;
-        } else if (numTaskRunsScheduled == 1) {
-            // Nothing to do.
-        } else {
-            raiseWorkflowProcessingError(
-                "Unimplemented: Multiple outbound edges",
-                event,
-                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
-            );
         }
-        return;
+        return wfRun;
     }
 
     /**
      * Handles an event marking a task as failed. Depending on the error handling for the workflow
      * (in the future we may have rollbacks, retries, retries w/backoff, etc.) there may or may not
-     * be tasks appended to newTaskRuns. If there are no error-handling things to do afterwards (this
+     * be tasks appended to outgoingEdges. If there are no error-handling things to do afterwards (this
      * is the current state of the system) then the wfRun is marked as ERROR.
      * @param event the WFEventSchema event to be handled. This is one event on the
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param newTaskRuns an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
-    private void handleTaskFailed(
+    private WFRunSchema handleTaskFailed(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<TaskRunSchema> newTaskRuns
+            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
     ) {
         TaskRunFailedEventSchema trf = BaseSchema.fromString(
             event.content, TaskRunFailedEventSchema.class
@@ -409,7 +430,7 @@ public class WFRuntime
                 "Got invalid failure event " + event.toString(), event,
                 LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
-            return;
+            return wfRun;
         }
 
         wfRun.status = LHStatus.ERROR;
@@ -423,7 +444,7 @@ public class WFRuntime
                 event,
                 LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
             );
-            return;
+            return wfRun;
         }
 
         tr.returnCode = trf.returncode;
@@ -434,7 +455,7 @@ public class WFRuntime
         tr.stderr = jsonifyIfPossible(trf.stderr);
         tr.status = LHStatus.ERROR;
 
-        return;
+        return wfRun;
     }
 
     /**
@@ -446,14 +467,14 @@ public class WFRuntime
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param newTaskRuns an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
-    private void handleWorkflowProcessingFailed(
+    private WFRunSchema handleWorkflowProcessingFailed(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<TaskRunSchema> newTaskRuns
+            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
     ) {
         assert (event.type == WFEventType.WORKFLOW_PROCESSING_FAILED);
 
@@ -464,7 +485,7 @@ public class WFRuntime
         wfRun.status = LHStatus.ERROR;
         wfRun.errorCode = errSchema.reason;
         wfRun.errorMessage = errSchema.message;
-        return;
+        return wfRun;
     }
 
     // Below are a bunch of utility methods.
