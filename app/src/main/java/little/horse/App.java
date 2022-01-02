@@ -139,7 +139,7 @@ class DaemonApp {
         WFRunTopology.addStuff(topology, config, pattern, actor);
         KafkaStreams streams = new KafkaStreams(
             topology,
-            config.getStreamsConfig(config.getNodeName())
+            config.getStreamsConfig(config.getWfSpecGuid() + config.getNodeName())
         );
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
         streams.start();
