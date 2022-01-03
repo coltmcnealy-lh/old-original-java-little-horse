@@ -5,8 +5,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.jayway.jsonpath.JsonPath;
-
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -24,7 +22,6 @@ import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
-import little.horse.lib.schemas.VariableMutationOperation;
 import little.horse.lib.schemas.VariableMutationSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFProcessingErrorSchema;
@@ -196,21 +193,21 @@ public class WFRuntime
 
                 tr.endTime = event.timestamp;
                 tr.status = LHStatus.COMPLETED;
-                mutateVariables(wfRun, node.variableMutations, tr);
-
-                for (EdgeSchema edge : node.outgoingEdges) {
-                    try {
+                
+                try {
+                    mutateVariables(wfRun, node.variableMutations, tr, wfSpec);
+                    for (EdgeSchema edge : node.outgoingEdges) {
                         if (WFRun.evaluateEdge(wfRun, edge.condition)) {
                             activatedNodes.add(wfSpec.getModel().nodes.get(edge.sinkNodeName));
                         }
-                    } catch(VarSubOrzDash exn) {
-                        exn.printStackTrace();
-                        raiseWorkflowProcessingError(
-                            "Failed substituting variable on outgoing edge from node " + node.name,
-                            event,
-                            LHFailureReason.VARIABLE_LOOKUP_ERROR
-                        );
                     }
+                } catch(VarSubOrzDash exn) {
+                    exn.printStackTrace();
+                    raiseWorkflowProcessingError(
+                        "Failed substituting variable on outgoing edge from node " + node.name,
+                        event,
+                        LHFailureReason.VARIABLE_LOOKUP_ERROR
+                    );
                 }
 
             }
@@ -277,23 +274,23 @@ public class WFRuntime
                 
                 NodeSchema node = wfSpec.getModel().nodes.get(correlSchema.assignedNodeName);
                 // TODO: handle if node is null;
-
-                mutateVariables(wfRun, node.variableMutations, tr);
-
+                
+                
                 // Now we fire outgoing edges if necessary.
-                for (EdgeSchema edge : node.outgoingEdges) {
-                    try {
+                try {
+                    mutateVariables(wfRun, node.variableMutations, tr, wfSpec);
+                    for (EdgeSchema edge : node.outgoingEdges) {
                         if (WFRun.evaluateEdge(wfRun, edge.condition)) {
                             activatedNodes.add(wfSpec.getModel().nodes.get(edge.sinkNodeName));
                         }
-                    } catch(VarSubOrzDash exn) {
-                        exn.printStackTrace();
-                        raiseWorkflowProcessingError(
-                            "Failed substituting variable on outgoing edge from node " + node.name,
-                            event,
-                            LHFailureReason.VARIABLE_LOOKUP_ERROR
-                        );
                     }
+                } catch(VarSubOrzDash exn) {
+                    exn.printStackTrace();
+                    raiseWorkflowProcessingError(
+                        "Failed substituting variable on outgoing edge from node " + node.name,
+                        event,
+                        LHFailureReason.VARIABLE_LOOKUP_ERROR
+                    );
                 }
                 return wfRun;
             }
@@ -534,20 +531,20 @@ public class WFRuntime
         // Now see what we need to do from here.
         NodeSchema curNode = wfSpec.getModel().nodes.get(task.nodeName);
 
-        mutateVariables(wfRun, curNode.variableMutations, task);
-
-        for (EdgeSchema edge : curNode.outgoingEdges) {
-            try {
+        
+        try {
+            mutateVariables(wfRun, curNode.variableMutations, task, wfSpec);
+            for (EdgeSchema edge : curNode.outgoingEdges) {
                 if (WFRun.evaluateEdge(wfRun, edge.condition)) {
                     activatedNodes.add(wfSpec.getModel().nodes.get(edge.sinkNodeName));
                 }
-            } catch (VarSubOrzDash exn) {
-                raiseWorkflowProcessingError(
-                    exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
+            }
+        } catch (VarSubOrzDash exn) {
+            raiseWorkflowProcessingError(
+                exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
                 );
                 return wfRun;
             }
-        }
 
         return wfRun;
     }
@@ -640,27 +637,13 @@ public class WFRuntime
     private void mutateVariables(
         WFRunSchema wfRun,
         Map<String, VariableMutationSchema> mutations,
-        TaskRunSchema tr
-    ) {
+        TaskRunSchema tr,
+        WFSpec wfSpec
+    ) throws VarSubOrzDash {
         if (mutations == null) return;
         for (String varName : mutations.keySet()) {
             VariableMutationSchema mutation = mutations.get(varName);
-            mutateVariable(wfRun, varName, mutation, tr);
-        }
-    }
-
-    private void mutateVariable(
-        WFRunSchema wfRun,
-        String varName,
-        VariableMutationSchema mutation,
-        TaskRunSchema tr
-    ) {
-        if (mutation.operation == VariableMutationOperation.SET) {
-            String dataToParse = tr.toString();
-            Object result = JsonPath.parse(dataToParse).read(mutation.jsonPath);
-            wfRun.variables.put(varName, result);
-        } else {
-            LHUtil.log(mutation, tr, "\n\nNeed to implement this new variable mutation operation");
+            WFRun.mutateVariable(wfRun, varName, mutation, wfSpec, tr);
         }
     }
 

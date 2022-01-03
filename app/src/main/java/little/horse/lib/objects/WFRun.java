@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.jayway.jsonpath.JsonPath;
 
@@ -19,9 +21,13 @@ import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeConditionSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.VariableAssignmentSchema;
+import little.horse.lib.schemas.VariableMutationOperation;
+import little.horse.lib.schemas.VariableMutationSchema;
 import little.horse.lib.schemas.WFRunMetadataEnum;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFRunVariableContexSchema;
+import little.horse.lib.schemas.WFRunVariableDefSchema;
+import little.horse.lib.schemas.WFRunVariableTypeEnum;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -265,6 +271,60 @@ public class WFRun {
                 exn,
                 "Specified jsonpath " + var.jsonPath + " failed to resolve on " + dataToParse
             );
+        }
+    }
+
+    public static void mutateVariable(
+        WFRunSchema wfRun,
+        String varName,
+        VariableMutationSchema mutation,
+        WFSpec wfSpec,
+        TaskRunSchema tr
+    ) throws VarSubOrzDash {
+        WFRunVariableDefSchema def = wfSpec.getModel().variableDefs.get(varName);
+        String dataToParse = tr.toString();
+        Object result = JsonPath.parse(dataToParse).read(mutation.jsonPath);
+        Object original = wfRun.variables.get(varName);
+        
+        Class<?> defTypeCls = null;
+        switch (def.type) {
+            case STRING: defTypeCls = String.class; break;
+            case OBJECT: defTypeCls = Map.class; break;
+            case INT: defTypeCls = Integer.class; break;
+            case DOUBLE: defTypeCls = Double.class; break;
+            case BOOLEAN: defTypeCls = Boolean.class; break;
+            case ARRAY: defTypeCls = List.class; break;
+        }
+
+        if (mutation.operation == VariableMutationOperation.SET) {
+            // Do validation on the type.
+            if (!defTypeCls.isInstance(result)) {
+                throw new VarSubOrzDash(new Exception(),
+                    "Expected type " + def.type + " but got " + result.getClass().getName() + " substituting " +
+                    mutation.jsonPath + " on " + tr.toString()
+                );
+            }
+            wfRun.variables.put(varName, result);
+        } else if (mutation.operation == VariableMutationOperation.ADD) {
+            if (def.type == WFRunVariableTypeEnum.BOOLEAN || def.type == WFRunVariableTypeEnum.OBJECT) {
+                throw new VarSubOrzDash(null, "had an invalid wfspec. Need to catch this on wfspec validation");
+            } else if (def.type == WFRunVariableTypeEnum.STRING) {
+                String orig = (String) original;
+                orig = orig + ((String)result);
+            } else if (def.type == WFRunVariableTypeEnum.INT) {
+                Integer orig = (Integer) original;
+                orig += (Integer) result;
+            } else if (def.type == WFRunVariableTypeEnum.DOUBLE) {
+                Double orig = (Double) original;
+                orig += (Double) result;
+            } else if (def.type == WFRunVariableTypeEnum.ARRAY) {
+                @SuppressWarnings("unchecked")
+                List<Object> orig = (List<Object>) original;
+                orig.add(result);
+            }
+        
+        } else {
+            LHUtil.log(mutation, tr, "\n\nNeed to implement this new variable mutation operation");
         }
     }
 }
