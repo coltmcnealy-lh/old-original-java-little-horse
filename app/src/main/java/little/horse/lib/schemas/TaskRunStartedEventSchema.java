@@ -8,5 +8,5 @@ public class TaskRunStartedEventSchema extends BaseSchema {
     public String stdin;
     public String nodeGuid;
     public String nodeName;
-    public int taskExecutionNumber;
+    public int taskRunNumber;
 }

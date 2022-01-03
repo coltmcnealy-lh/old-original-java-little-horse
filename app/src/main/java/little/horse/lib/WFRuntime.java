@@ -28,17 +28,6 @@ import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 
 
-class ActiveEdgePackage {
-    public EdgeSchema edge;
-    public int executionNumber;
-
-    public ActiveEdgePackage(EdgeSchema edge, int executionNumber) {
-        this.edge = edge;
-        this.executionNumber = executionNumber;
-    }
-}
-
-
 public class WFRuntime
     implements Processor<String, WFEventSchema, String, WFRunSchema>
 {
@@ -78,49 +67,37 @@ public class WFRuntime
             );
             return;
         }
-
-        ArrayList<ActiveEdgePackage> outgoingEdges = new ArrayList<ActiveEdgePackage>();
+        
+        ArrayList<NodeSchema> activatedNodes = new ArrayList<NodeSchema>();
 
         switch (event.type) {
-            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(event, wfRun, record, outgoingEdges, wfSpec);
+            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record, outgoingEdges, wfSpec);
+            case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case NODE_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record, outgoingEdges, wfSpec);
+            case NODE_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record, outgoingEdges, wfSpec);
+            case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case EXTERNAL_EVENT:    wfRun = handleExternalEvent(event, wfRun, record, outgoingEdges, wfSpec);
+            case EXTERNAL_EVENT:    wfRun = handleExternalEvent(event, wfRun, record, activatedNodes, wfSpec);
                                     break;
             case WORKFLOW_PROCESSING_FAILED: wfRun = handleWorkflowProcessingFailed(
-                                                    event, wfRun, record, outgoingEdges, wfSpec);
+                                                    event, wfRun, record, activatedNodes, wfSpec);
                                     break;
         }
-        for (ActiveEdgePackage pkg : outgoingEdges) {
-            EdgeSchema edge = pkg.edge;
-            try {
-                if (!WFRun.evaluateEdge(wfRun, edge.condition)) continue;
-            } catch(VarSubOrzDash exn) {
-                raiseWorkflowProcessingError(
-                    exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
-                );
+
+        while (activatedNodes.size() > 0) {
+            ArrayList<NodeSchema> newActivatedNodes = new ArrayList<NodeSchema>();
+
+            for (NodeSchema node : activatedNodes) {
+                kvStore.put(wfRun.guid, wfRun); // TODO: Might not be necessary here.
+                processNode(node, wfRun, wfSpec, activatedNodes, event, newActivatedNodes);
             }
-            // TODO: for conditional branching, decide whether edge is active.
-            TaskRunSchema tr = new TaskRunSchema();
-            NodeSchema destNode = wfSpec.getModel().nodes.get(edge.sinkNodeName);
-            tr.nodeGuid = destNode.guid;
-            tr.nodeName = destNode.name;
-            tr.status = LHStatus.PENDING;
-            tr.wfSpecGuid = event.wfSpecGuid;
-            tr.wfRunGuid = event.wfRunGuid;
-            tr.wfSpecName = event.wfSpecName;
-            tr.executionNumber = pkg.executionNumber; // TODO: Won't work with threading.
-            wfRun.taskRuns.add(tr);
+
+            activatedNodes = newActivatedNodes;
         }
 
         kvStore.put(wfRun.guid, wfRun);
-
-        actor.act(wfRun, event);
 
         Date timestamp = (event.timestamp == null)
             ? new Date(record.timestamp())
@@ -128,6 +105,44 @@ public class WFRuntime
         context.forward(new Record<String, WFRunSchema>(
             wfRunGuid, wfRun, timestamp.getTime()
         ));
+    }
+
+    private void processNode(
+        NodeSchema node,
+        WFRunSchema wfRun,
+        WFSpec wfSpec,
+        ArrayList<NodeSchema> oldActivatedNodes,
+        WFEventSchema event,
+        ArrayList<NodeSchema> newActivatedNodes
+    ) {
+        if (node.nodeType == NodeType.TASK) {
+            // Add the taskrun thing and execute the darn task and be done with it
+            TaskRunSchema tr = new TaskRunSchema();
+            tr.nodeGuid = node.guid;
+            tr.nodeName = node.name;
+            tr.wfRunGuid = wfRun.guid;
+            tr.wfSpecGuid = wfRun.wfSpecGuid;
+            tr.wfSpecName = wfRun.wfSpecName;
+            tr.status = LHStatus.PENDING;
+            tr.number = wfRun.taskRuns.size();
+
+            // LHUtil.log("about to add this taskrun: ", tr);
+            wfRun.taskRuns.add(tr);
+
+            LHUtil.log(tr, "\n\n\n\n");
+            if (node.guid.equals(actor.getNodeGuid())) { // THIS IS WHERE THE WORK GETS DONE
+
+                actor.act(wfRun, event, tr.number);
+            }
+            return;
+        }
+
+        if (node.nodeType == NodeType.EXTERNAL_EVENT) {
+            // Two situations are possible here: the WFRun got here before the event, or
+            // the event already got here.
+
+            
+        }
     }
 
     /**
@@ -150,7 +165,7 @@ public class WFRuntime
         WFEventSchema event,
         WFRunSchema wfRun,
         final Record<String, WFEventSchema> record,
-        ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
+        ArrayList<NodeSchema> outgoingEdges, WFSpec wfSpec
     ) {
         if (wfRun.pendingEvents == null) {
             wfRun.pendingEvents = new HashMap<String, ArrayList<ExternalEventThingySchema>>();
@@ -215,14 +230,14 @@ public class WFRuntime
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
+            ArrayList<NodeSchema> activatedNodes, WFSpec wfSpec
     ) {
         assert(event.type == WFEventType.WF_RUN_STARTED);
         if (wfRun != null) {
             // It *should* be null because this is the first event in the WFRun, so
             // the lookup on the WFRun should be null.
             LHUtil.logError("Got a WFRun Started on guid", wfRun.guid, "already: ", wfRun);
-            
+
             // wfSpec should be null at this point due to weirdness.
             if (wfSpec == null) {
                 raiseWorkflowProcessingError(
@@ -262,8 +277,6 @@ public class WFRuntime
             return wfRun;
         }
 
-        LHUtil.log("Got Run Request", runRequest);
-
         wfRun = new WFRunSchema();
         wfRun.guid = record.key();
         wfRun.wfSpecGuid = event.wfSpecGuid;
@@ -277,17 +290,8 @@ public class WFRuntime
             wfSpecSchema.entrypointNodeName
         );
 
-        TaskRunSchema tr = new TaskRunSchema();
-        tr.wfSpecGuid = event.wfSpecGuid;
-        tr.wfRunGuid = event.wfRunGuid;
-        tr.wfSpecName = event.wfSpecName;
-        tr.nodeName = node.name;
-        tr.nodeGuid = node.guid;
-        tr.executionNumber = 0;
-        tr.status = LHStatus.PENDING;
-        wfRun.taskRuns.add(tr);
+        activatedNodes.add(node);
 
-        LHUtil.log("Just added wfRun: ", wfRun);
         return wfRun;
     }
 
@@ -305,7 +309,7 @@ public class WFRuntime
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
+            ArrayList<NodeSchema> outgoingEdges, WFSpec wfSpec
     ) {
         assert(event.type == WFEventType.TASK_STARTED);
         TaskRunStartedEventSchema trs = BaseSchema.fromString(
@@ -321,10 +325,10 @@ public class WFRuntime
         }
 
         // Need to find the task that just got started.
-        int executionNumber = trs.taskExecutionNumber;
+        // int executionNumber = trs.taskExecutionNumber;
 
-        TaskRunSchema theTask = getTaskRunFromExecutionNumber(
-            wfRun, executionNumber, trs.nodeGuid
+        TaskRunSchema theTask = getTaskRunFromGuid(
+            wfRun, trs.taskRunNumber
         );
         if (theTask == null) {
             raiseWorkflowProcessingError(
@@ -352,23 +356,21 @@ public class WFRuntime
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param activatedNodes an empty list of `NodeSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
     private WFRunSchema handleTaskCompleted(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
+            ArrayList<NodeSchema> activatedNodes, WFSpec wfSpec
     ) {
         assert(event.type == WFEventType.NODE_COMPLETED);
         NodeCompletedEventSchema tre = BaseSchema.fromString(
             event.content,
             NodeCompletedEventSchema.class
         );
-        int executionNumber = tre.taskExecutionNumber;
-        String nodeGuid = tre.nodeGuid;
-        TaskRunSchema task = getTaskRunFromExecutionNumber(wfRun, executionNumber, nodeGuid);
+        TaskRunSchema task = getTaskRunFromGuid(wfRun, tre.taskRunNumber);
 
         if (task == null) {
             raiseWorkflowProcessingError(
@@ -395,9 +397,20 @@ public class WFRuntime
         // Now see what we need to do from here.
         NodeSchema curNode = wfSpec.getModel().nodes.get(task.nodeName);
         for (EdgeSchema edge : curNode.outgoingEdges) {
-            outgoingEdges.add(new ActiveEdgePackage(edge, task.executionNumber + 1));
+            try {
+                if (WFRun.evaluateEdge(wfRun, edge.condition)) {
+                    activatedNodes.add(wfSpec.getModel().nodes.get(edge.sinkNodeName));
+                }
+            } catch (VarSubOrzDash exn) {
+                raiseWorkflowProcessingError(
+                    exn.message, event, LHFailureReason.VARIABLE_LOOKUP_ERROR
+                );
+                return wfRun;
+            }
         }
-        if (outgoingEdges.size() == 0) {
+        
+        // TODO: this needs to change to support events
+        if (activatedNodes.size() == 0) {
             wfRun.status = LHStatus.COMPLETED;
         }
         return wfRun;
@@ -412,14 +425,14 @@ public class WFRuntime
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param activatedNodes an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
     private WFRunSchema handleTaskFailed(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
+            ArrayList<NodeSchema> activatedNodes, WFSpec wfSpec
     ) {
         TaskRunFailedEventSchema trf = BaseSchema.fromString(
             event.content, TaskRunFailedEventSchema.class
@@ -435,8 +448,8 @@ public class WFRuntime
 
         wfRun.status = LHStatus.ERROR;
 
-        TaskRunSchema tr = getTaskRunFromExecutionNumber(
-            wfRun, trf.taskExecutionNumber, trf.nodeGuid
+        TaskRunSchema tr = getTaskRunFromGuid(
+            wfRun, trf.taskRunNumber
         );
         if (tr == null) {
             raiseWorkflowProcessingError(
@@ -467,14 +480,14 @@ public class WFRuntime
      * event log.
      * @param wfRun the WFRunSchema to which `event` pertains.
      * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
+     * @param activatedNodes an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
      * that are scheduled due to the logging of this event.
      */
     private WFRunSchema handleWorkflowProcessingFailed(
             WFEventSchema event,
             WFRunSchema wfRun,
             final Record<String, WFEventSchema> record,
-            ArrayList<ActiveEdgePackage> outgoingEdges, WFSpec wfSpec
+            ArrayList<NodeSchema> activatedNodes, WFSpec wfSpec
     ) {
         assert (event.type == WFEventType.WORKFLOW_PROCESSING_FAILED);
 
@@ -498,19 +511,11 @@ public class WFRuntime
         }
     }
 
-    private TaskRunSchema getTaskRunFromExecutionNumber(
+    private TaskRunSchema getTaskRunFromGuid(
         WFRunSchema wfRun,
-        int executionNumber,
-        String nodeGuid
+        int number
     ) {
-        TaskRunSchema theTask = null;
-        if (wfRun.taskRuns.size() > executionNumber) {
-            TaskRunSchema candidate = wfRun.taskRuns.get(executionNumber);
-            if (candidate.nodeGuid.equals(nodeGuid)) {
-                theTask = candidate;
-            }
-        }
-        return theTask;
+        return wfRun.taskRuns.get(number);
     }
 
     private Object jsonifyIfPossible(String data) {

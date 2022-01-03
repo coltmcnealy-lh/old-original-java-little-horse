@@ -7,12 +7,13 @@ import little.horse.lib.LHFailureReason;
 import little.horse.lib.LHStatus;
 
 public class TaskRunSchema extends BaseSchema {
+    public int number;
     public String wfRunGuid;
     public String wfSpecGuid;
     public String wfSpecName;
     public String nodeName;
     public String nodeGuid;
-    public int executionNumber;
+    // public int executionNumber;
     public LHStatus status;
     public ArrayList<String> bashCommand;
     public String dockerImage;

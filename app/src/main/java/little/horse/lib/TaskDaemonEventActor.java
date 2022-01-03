@@ -27,6 +27,10 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
     private WFTriggerSchema trigger;
     private TaskDef taskDef;
 
+    public String getNodeGuid() {
+        return node.guid;
+    }
+
     public TaskDaemonEventActor(
         WFSpec wfSpec,
         NodeSchema node,
@@ -42,7 +46,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         this.trigger = this.node.triggers.get(0);
     }
 
-    public void act(WFRunSchema wfRun, WFEventSchema event) {
+    public void act(WFRunSchema wfRun, WFEventSchema event, int taskRunNumber) {
         // Need to figure out if it triggers our trigger. Two possibilities:
         // 1. We're the entrypoint node, so watch out for the WF_RUN_STARTED event.
         // 2. We're not entrypoint, so we watch out for completed tasks of the upstream
@@ -64,11 +68,10 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 return;
             }
         }
-        int newExecutionNumber = (tr == null) ? 0 : tr.taskExecutionNumber + 1;
 
         Thread thread = new Thread(() -> {
             try {
-                this.doAction(wfRun, newExecutionNumber);
+                this.doAction(wfRun, taskRunNumber);
             } catch(Exception exn) {
                 exn.printStackTrace();
             }
@@ -111,7 +114,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         return newCmd;
     }
 
-    private void doAction(WFRunSchema wfRun, int executionNumber) throws Exception {
+    private void doAction(WFRunSchema wfRun, int taskRunNumber) throws Exception {
         ArrayList<String> command;
         try {
             command = this.getBashCommand(wfRun);
@@ -123,7 +126,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
             TaskRunFailedEventSchema trf = new TaskRunFailedEventSchema();
             trf.message = message;
             trf.reason = LHFailureReason.VARIABLE_LOOKUP_ERROR;
-            trf.taskExecutionNumber = executionNumber;
+            trf.taskRunNumber = taskRunNumber;
             trf.nodeGuid = node.guid;
 
             WFEventSchema event = new WFEventSchema();
@@ -147,7 +150,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         trs.stdin = null;
         trs.nodeName = node.name;
         trs.nodeGuid = node.guid;
-        trs.taskExecutionNumber = executionNumber;
+        trs.taskRunNumber = taskRunNumber;
         trs.bashCommand = command;
 
         WFEventSchema taskStartedEvent = new WFEventSchema();
@@ -184,7 +187,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.returncode = proc.exitValue();
         tr.nodeGuid = node.guid;
         tr.bashCommand = command;
-        tr.taskExecutionNumber = executionNumber;
+        tr.taskRunNumber = taskRunNumber;
 
         if (!success) {
             TaskRunFailedEventSchema trf = (TaskRunFailedEventSchema) tr;
