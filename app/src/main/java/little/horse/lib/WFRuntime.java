@@ -97,6 +97,18 @@ public class WFRuntime
             activatedNodes = newActivatedNodes;
         }
 
+        if (wfRun.status == LHStatus.RUNNING) {
+            boolean allDone = true;
+            for (TaskRunSchema tr : wfRun.taskRuns) {
+                if (tr.status != LHStatus.COMPLETED) {
+                    allDone = false;
+                }
+            }
+            if (allDone) {
+                wfRun.status = LHStatus.COMPLETED;
+            }
+        }
+
         kvStore.put(wfRun.guid, wfRun);
 
         Date timestamp = (event.timestamp == null)
@@ -510,11 +522,7 @@ public class WFRuntime
                 return wfRun;
             }
         }
-        
-        // TODO: this needs to change to support events
-        if (activatedNodes.size() == 0) {
-            wfRun.status = LHStatus.COMPLETED;
-        }
+
         return wfRun;
     }
 
