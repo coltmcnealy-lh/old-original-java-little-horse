@@ -3,6 +3,9 @@ package little.horse.lib;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
+
+import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.processor.api.Processor;
@@ -21,7 +24,8 @@ import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
-import little.horse.lib.schemas.VariableAssignmentSchema;
+import little.horse.lib.schemas.VariableMutationOperation;
+import little.horse.lib.schemas.VariableMutationSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFProcessingErrorSchema;
 import little.horse.lib.schemas.WFRunRequestSchema;
@@ -142,8 +146,6 @@ public class WFRuntime
 
             // LHUtil.log("about to add this taskrun: ", tr);
             wfRun.taskRuns.add(tr);
-
-            LHUtil.log(tr, "\n\n\n\n");
             if (node.guid.equals(actor.getNodeGuid())) { // THIS IS WHERE THE WORK GETS DONE
 
                 actor.act(wfRun, event, tr.number);
@@ -194,6 +196,7 @@ public class WFRuntime
 
                 tr.endTime = event.timestamp;
                 tr.status = LHStatus.COMPLETED;
+                mutateVariables(wfRun, node.variableMutations, tr);
 
                 for (EdgeSchema edge : node.outgoingEdges) {
                     try {
@@ -271,8 +274,11 @@ public class WFRuntime
                 tr.endTime = new Date(record.timestamp());
                 tr.status = LHStatus.COMPLETED;
 
+                
                 NodeSchema node = wfSpec.getModel().nodes.get(correlSchema.assignedNodeName);
                 // TODO: handle if node is null;
+
+                mutateVariables(wfRun, node.variableMutations, tr);
 
                 // Now we fire outgoing edges if necessary.
                 for (EdgeSchema edge : node.outgoingEdges) {
@@ -524,9 +530,12 @@ public class WFRuntime
         task.stderr = jsonifyIfPossible(tre.stderr);
         task.stdout = jsonifyIfPossible(tre.stdout);
         task.returnCode = tre.returncode;
-
+        
         // Now see what we need to do from here.
         NodeSchema curNode = wfSpec.getModel().nodes.get(task.nodeName);
+
+        mutateVariables(wfRun, curNode.variableMutations, task);
+
         for (EdgeSchema edge : curNode.outgoingEdges) {
             try {
                 if (WFRun.evaluateEdge(wfRun, edge.condition)) {
@@ -626,6 +635,33 @@ public class WFRuntime
         wfRun.errorCode = errSchema.reason;
         wfRun.errorMessage = errSchema.message;
         return wfRun;
+    }
+
+    private void mutateVariables(
+        WFRunSchema wfRun,
+        Map<String, VariableMutationSchema> mutations,
+        TaskRunSchema tr
+    ) {
+        if (mutations == null) return;
+        for (String varName : mutations.keySet()) {
+            VariableMutationSchema mutation = mutations.get(varName);
+            mutateVariable(wfRun, varName, mutation, tr);
+        }
+    }
+
+    private void mutateVariable(
+        WFRunSchema wfRun,
+        String varName,
+        VariableMutationSchema mutation,
+        TaskRunSchema tr
+    ) {
+        if (mutation.operation == VariableMutationOperation.SET) {
+            String dataToParse = tr.toString();
+            Object result = JsonPath.parse(dataToParse).read(mutation.jsonPath);
+            wfRun.variables.put(varName, result);
+        } else {
+            LHUtil.log(mutation, tr, "\n\nNeed to implement this new variable mutation operation");
+        }
     }
 
     // Below are a bunch of utility methods.

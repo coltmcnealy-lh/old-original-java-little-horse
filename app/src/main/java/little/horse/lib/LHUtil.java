@@ -61,7 +61,7 @@ public class LHUtil {
         System.out.print(Thread.currentThread().getStackTrace()[2].getLineNumber());
         System.out.print(": ");
         for (Object thing : things) {
-            System.out.print(thing.toString());
+            System.out.print(thing == null ? "null" : thing.toString());
             System.out.print(" ");
         }
         System.out.println();
@@ -75,7 +75,7 @@ public class LHUtil {
         System.out.print(Thread.currentThread().getStackTrace()[2].getLineNumber());
         System.out.print(": ");
         for (Object thing : things) {
-            System.out.print(thing.toString());
+            System.out.print(thing == null ? "null" : thing.toString());
             System.out.print(" ");
         }
         System.out.println();

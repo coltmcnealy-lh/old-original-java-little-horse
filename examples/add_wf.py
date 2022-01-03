@@ -34,6 +34,9 @@ wf_definition = {
     "variableDefs": {
         "name": {
             "type": "STRING"
+        },
+        "thething": {
+            "type": "STRING",
         }
     },
     "nodes": {
@@ -53,6 +56,12 @@ wf_definition = {
                 "personNameSecondTask": {
                     "nodeName": "firstNode",
                     "jsonPath": "$.stdout.person"
+                }
+            },
+            "variableMutations": {
+                "thething": {
+                    "operation": "SET",
+                    "jsonPath": "$.stdout.secondPerson"
                 }
             }
         }
