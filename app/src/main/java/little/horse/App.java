@@ -174,9 +174,9 @@ public class App {
             thing.add(node);
             System.out.println(thing.toString());
 
-            Config config = new Config();
-            System.out.println(config.getExternalEventDefTopic());
-            System.out.println(config.getExternalEventDefNameKeyedTopic());
+            System.out.println("\n\n\n\n\n\n\n");
+
+            
         }
     }
 }

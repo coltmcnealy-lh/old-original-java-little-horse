@@ -14,4 +14,6 @@ public class WFSpecSchema extends BaseSchema {
     public String kafkaTopic;
     public String entrypointNodeName;
     public LHStatus desiredStatus;
+
+    public HashMap<String, WFRunVariableDefSchema> variableDefs;
 }

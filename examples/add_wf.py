@@ -31,6 +31,11 @@ task_definition2 = {
 
 wf_definition = {
     "name": "my-wf",
+    "variableDefs": {
+        "name": {
+            "type": "STRING"
+        }
+    },
     "nodes": {
         "firstNode": {
             "nodeType": "TASK",

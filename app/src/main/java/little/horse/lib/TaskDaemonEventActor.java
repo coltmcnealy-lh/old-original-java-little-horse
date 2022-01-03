@@ -15,7 +15,7 @@ import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
-import little.horse.lib.schemas.VariableDefinitionSchema;
+import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFTriggerSchema;
@@ -93,7 +93,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 String varName = arg.substring(2, arg.length() - 2); // hackityhack
                 
                 // Now we gotta make sure that the varName is actually in the wfRun
-                VariableDefinitionSchema var = node.variables.get(varName);
+                VariableAssignmentSchema var = node.variables.get(varName);
 
                 if (var == null) {
                     throw new VarSubOrzDash(

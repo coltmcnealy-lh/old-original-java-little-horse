@@ -15,7 +15,7 @@ public class NodeSchema extends BaseSchema {
     public ArrayList<WFTriggerSchema> triggers;
     public ArrayList<EdgeSchema> outgoingEdges;
 
-    public HashMap<String, VariableDefinitionSchema> variables;
+    public HashMap<String, VariableAssignmentSchema> variables;
 
     public String externalEventDefName;
     public String externalEventDefGuid;

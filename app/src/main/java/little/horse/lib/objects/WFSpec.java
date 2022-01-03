@@ -15,6 +15,7 @@ import little.horse.lib.K8sStuff.Deployment;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 import little.horse.lib.schemas.WFTriggerSchema;
 import okhttp3.OkHttpClient;
@@ -94,6 +95,25 @@ public class WFSpec {
                         throw new LHValidationError(
                             "Failed looking up TaskDef " + node.taskDefinitionName
                         );
+                    }
+                }
+
+                if (node.variables != null) {
+                    for (String varName : node.variables.keySet()) {
+                        VariableAssignmentSchema var = node.variables.get(varName);
+
+                        if (var.wfRunVariableName != null) {
+                            if (schema.variableDefs == null) {
+                                throw new LHValidationError(
+                                    "Need to provide VariableDef since it's used on node " + node.name + " for variable " + varName
+                                );
+                            }
+                            if (schema.variableDefs.get(var.wfRunVariableName) == null) {
+                                throw new LHValidationError(
+                                    "Referenced nonexistent wfrunvariable " + var.wfRunVariableName
+                                );
+                            }
+                        }
                     }
                 }
 

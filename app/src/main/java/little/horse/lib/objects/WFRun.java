@@ -18,7 +18,7 @@ import little.horse.lib.VarSubOrzDash;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeConditionSchema;
 import little.horse.lib.schemas.TaskRunSchema;
-import little.horse.lib.schemas.VariableDefinitionSchema;
+import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFRunMetadataEnum;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFRunVariableContexSchema;
@@ -201,7 +201,7 @@ public class WFRun {
     }
 
     public static Object getVariableSubstitution(
-            WFRunSchema wfRun, VariableDefinitionSchema var
+            WFRunSchema wfRun, VariableAssignmentSchema var
     ) throws VarSubOrzDash {
 
         WFRunVariableContexSchema context = getContext(wfRun);
