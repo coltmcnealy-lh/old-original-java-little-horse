@@ -21,10 +21,12 @@ import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
+import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFProcessingErrorSchema;
 import little.horse.lib.schemas.WFRunRequestSchema;
 import little.horse.lib.schemas.WFRunSchema;
+import little.horse.lib.schemas.WFRunVariableDefSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 
 
@@ -395,9 +397,24 @@ public class WFRuntime
         wfRun.guid = record.key();
         wfRun.wfSpecGuid = event.wfSpecGuid;
         wfRun.wfSpecName = event.wfSpecName;
-        wfRun.variables = runRequest.variables;
         wfRun.status = LHStatus.RUNNING;
         wfRun.taskRuns = new ArrayList<TaskRunSchema>();
+        
+        wfRun.variables = runRequest.variables;
+        wfRun.variables = new HashMap<String, Object>();
+        if (runRequest.variables == null) {
+            runRequest.variables = new HashMap<String, Object>();
+        }
+        for (String varName: wfSpec.getModel().variableDefs.keySet()) {
+            WFRunVariableDefSchema varDef = wfSpec.getModel().variableDefs.get(varName);
+
+            Object result = runRequest.variables.get(varName);
+            if (result != null) {
+                wfRun.variables.put(varName, result);
+            } else {
+                wfRun.variables.put(varName, varDef.defaultValue);
+            }
+        }
 
         WFSpecSchema wfSpecSchema = wfSpec.getModel();
         NodeSchema node = wfSpecSchema.nodes.get(

@@ -13,7 +13,6 @@ public class WFRunSchema extends BaseSchema {
     public ArrayList<TaskRunSchema> taskRuns;
     public LHStatus status;
     public HashMap<String, Object> variables;
-    public HashMap<String, Object> inputVariables;
 
     public LHFailureReason errorCode;
     public String errorMessage;
