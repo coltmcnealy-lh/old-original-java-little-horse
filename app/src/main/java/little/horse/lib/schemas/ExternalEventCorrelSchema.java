@@ -1,8 +1,8 @@
 package little.horse.lib.schemas;
 
-public class ExternalEventThingySchema extends BaseSchema {
+public class ExternalEventCorrelSchema extends BaseSchema {
     public ExternalEventPayloadSchema event;
-    public String assignedTaskRunGuid;
+    public int assignedTaskRunExecutionNumber;
     public String assignedNodeName;
     public String assignedNodeGuid;
 }

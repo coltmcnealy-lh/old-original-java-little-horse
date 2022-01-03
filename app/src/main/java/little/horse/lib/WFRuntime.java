@@ -15,7 +15,7 @@ import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.ExternalEventPayloadSchema;
-import little.horse.lib.schemas.ExternalEventThingySchema;
+import little.horse.lib.schemas.ExternalEventCorrelSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
@@ -113,7 +113,7 @@ public class WFRuntime
         WFSpec wfSpec,
         ArrayList<NodeSchema> oldActivatedNodes,
         WFEventSchema event,
-        ArrayList<NodeSchema> newActivatedNodes
+        ArrayList<NodeSchema> activatedNodes
     ) {
         if (node.nodeType == NodeType.TASK) {
             // Add the taskrun thing and execute the darn task and be done with it
@@ -141,7 +141,66 @@ public class WFRuntime
             // Two situations are possible here: the WFRun got here before the event, or
             // the event already got here.
 
-            
+            if (wfRun.pendingEvents == null) {
+                wfRun.pendingEvents = new HashMap<String, ArrayList<ExternalEventCorrelSchema>>();
+            }
+
+            TaskRunSchema tr = new TaskRunSchema();
+            tr.nodeGuid = node.guid;
+            tr.nodeName = node.name;
+            tr.wfRunGuid = wfRun.guid;
+            tr.wfSpecGuid = wfRun.wfSpecGuid;
+            tr.wfSpecName = wfRun.wfSpecName;
+            tr.number = wfRun.taskRuns.size();
+
+            wfRun.taskRuns.add(tr);
+
+            // Check wfRun.pendingEvents to see if there's one waiting.
+            ArrayList<ExternalEventCorrelSchema> relevantEvents = wfRun.pendingEvents.get(node.externalEventDefName);
+            if (relevantEvents == null) {
+                relevantEvents = new ArrayList<ExternalEventCorrelSchema>();
+                wfRun.pendingEvents.put(node.externalEventDefName, relevantEvents);
+            }
+
+            ExternalEventCorrelSchema correlSchema = null;
+            for (ExternalEventCorrelSchema candidate : relevantEvents) {
+                if (candidate.event != null && candidate.assignedNodeGuid == null) {
+                    correlSchema = candidate;
+                }
+            }
+
+            if (correlSchema == null) {
+                correlSchema = new ExternalEventCorrelSchema();
+                relevantEvents.add(correlSchema);
+
+                tr.startTime = event.timestamp;
+                tr.status = LHStatus.WAITING_FOR_EVENT;
+            } else {
+                // TODO: We need to close out the taskRun and fire off outbound edges.
+
+                tr.endTime = event.timestamp;
+                tr.status = LHStatus.COMPLETED;
+
+                for (EdgeSchema edge : node.outgoingEdges) {
+                    try {
+                        if (WFRun.evaluateEdge(wfRun, edge.condition)) {
+                            activatedNodes.add(wfSpec.getModel().nodes.get(edge.sinkNodeName));
+                        }
+                    } catch(VarSubOrzDash exn) {
+                        exn.printStackTrace();
+                        raiseWorkflowProcessingError(
+                            "Failed substituting variable on outgoing edge from node " + node.name,
+                            event,
+                            LHFailureReason.VARIABLE_LOOKUP_ERROR
+                        );
+                    }
+                }
+
+            }
+
+            correlSchema.assignedNodeGuid = node.guid;
+            correlSchema.assignedNodeName = node.name;
+            correlSchema.assignedTaskRunExecutionNumber = tr.number;
         }
     }
 
@@ -165,23 +224,66 @@ public class WFRuntime
         WFEventSchema event,
         WFRunSchema wfRun,
         final Record<String, WFEventSchema> record,
-        ArrayList<NodeSchema> outgoingEdges, WFSpec wfSpec
+        ArrayList<NodeSchema> activatedNodes, WFSpec wfSpec
     ) {
-        if (wfRun.pendingEvents == null) {
-            wfRun.pendingEvents = new HashMap<String, ArrayList<ExternalEventThingySchema>>();
-        }
-
-        ExternalEventThingySchema thingy = new ExternalEventThingySchema();
-
         ExternalEventPayloadSchema payload = BaseSchema.fromString(
             event.content,
             ExternalEventPayloadSchema.class
         );
 
-        // TODO: handle if payload is null;
-        if (payload == null) return wfRun;
+        if (payload == null) {
+            raiseWorkflowProcessingError("invalid event", event, LHFailureReason.INVALID_WF_SPEC_ERROR);
+            return wfRun;
+        }
 
-        thingy.event = payload;
+        if (wfRun.pendingEvents == null) {
+            wfRun.pendingEvents = new HashMap<String, ArrayList<ExternalEventCorrelSchema>>();
+        }
+
+        ArrayList<ExternalEventCorrelSchema> relevantCorrels = wfRun.pendingEvents.get(payload.externalEventDefName);
+
+        if (relevantCorrels == null) {
+            wfRun.pendingEvents.put(payload.externalEventDefName, new ArrayList<ExternalEventCorrelSchema>());
+        }
+
+        for (ExternalEventCorrelSchema correlSchema : wfRun.pendingEvents.get(payload.externalEventDefName)) {
+            // Now we look to see if the wfRun has already got here and is waiting.
+            if (correlSchema.assignedNodeGuid != null && correlSchema.event == null) {
+                correlSchema.event = payload;
+
+                // Now we need to complete the NodeRun.
+                TaskRunSchema tr = getTaskRunFromGuid(wfRun, correlSchema.assignedTaskRunExecutionNumber);
+                tr.stdout = payload.content;
+                tr.endTime = new Date(record.timestamp());
+                tr.status = LHStatus.COMPLETED;
+
+                NodeSchema node = wfSpec.getModel().nodes.get(correlSchema.assignedNodeName);
+                // TODO: handle if node is null;
+
+                // Now we fire outgoing edges if necessary.
+                for (EdgeSchema edge : node.outgoingEdges) {
+                    try {
+                        if (WFRun.evaluateEdge(wfRun, edge.condition)) {
+                            activatedNodes.add(wfSpec.getModel().nodes.get(edge.sinkNodeName));
+                        }
+                    } catch(VarSubOrzDash exn) {
+                        exn.printStackTrace();
+                        raiseWorkflowProcessingError(
+                            "Failed substituting variable on outgoing edge from node " + node.name,
+                            event,
+                            LHFailureReason.VARIABLE_LOOKUP_ERROR
+                        );
+                    }
+                }
+                return wfRun;
+            }
+        }
+
+        // if we get this far, then we know that the event got here before the wfRun.
+        // That means we just have to store the event for later processing in processNode.
+        ExternalEventCorrelSchema schema = new ExternalEventCorrelSchema();
+        schema.event = payload;
+        wfRun.pendingEvents.get(payload.externalEventDefName).add(schema);
 
         return wfRun;
     }

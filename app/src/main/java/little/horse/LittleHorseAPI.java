@@ -40,7 +40,7 @@ public class LittleHorseAPI {
         this.app.get("/externalEventDef/{nameOrGuid}", this.externalEventDefAPI::get);
         this.app.post("/externalEventDef", this.externalEventDefAPI::post);
 
-        this.app.post("/externalEvent/{wfRunGuid}", this.externalEventDefAPI::postEvent);
+        this.app.post("/externalEvent/{externalEventDefID}/{wfRunGuid}", this.externalEventDefAPI::postEvent);
     }
 
     public void cleanup() {
