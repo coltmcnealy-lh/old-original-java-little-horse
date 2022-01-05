@@ -16,4 +16,6 @@ public class WFSpecSchema extends BaseSchema {
     public LHStatus desiredStatus;
 
     public HashMap<String, WFRunVariableDefSchema> variableDefs;
+
+    public ArrayList<SignalHandlerSpecSchema> signalHandlers;
 }

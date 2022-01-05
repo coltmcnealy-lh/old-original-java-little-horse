@@ -15,6 +15,7 @@ import little.horse.lib.K8sStuff.Deployment;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.SignalHandlerSpecSchema;
 import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 import little.horse.lib.schemas.WFTriggerSchema;
@@ -216,6 +217,43 @@ public class WFSpec {
             throw new LHValidationError("No entrypoint node provided!");
         }
         schema.entrypointNodeName = entrypoint.name;
+
+        for (SignalHandlerSpecSchema handler : schema.signalHandlers) {
+            ExternalEventDef eed = null;
+            if (handler.externalEventDefGuid != null) {
+                try {
+                    eed = ExternalEventDef.fromIdentifier(handler.externalEventDefGuid, config);
+                } catch (LHLookupException exn) {
+                    throw new LHValidationError("Could not find externaleventdef " + handler.externalEventDefGuid);
+                }
+            } else if (handler.externalEventDefName != null) {
+                try {
+                    eed = ExternalEventDef.fromIdentifier(handler.externalEventDefName, config);
+                } catch (LHLookupException exn) {
+                    exn.printStackTrace();
+                    throw new LHValidationError("Could not find externaleventdef " + handler.externalEventDefName);
+                }
+            }
+            handler.externalEventDefGuid = eed.getModel().guid;
+            handler.externalEventDefName = eed.getModel().name;
+
+            WFSpec handlerSpec = null;
+            try {
+                if (handler.wfSpecGuid != null) {
+                    handlerSpec = WFSpec.fromIdentifier(handler.wfSpecGuid, config);
+                } else {
+                    handlerSpec = WFSpec.fromIdentifier(handler.wfSpecName, config);
+                }
+            } catch (LHLookupException exn){
+                exn.printStackTrace();
+                throw new LHValidationError(
+                    "couldn't find designated wfSpec on signalHandler for event " + eed.getModel().name +
+                    " and the wfSpec name is " + handler.wfSpecName + " " + handler.wfSpecGuid
+                );
+            }
+            handler.wfSpecGuid = handlerSpec.getModel().guid;
+            handler.wfSpecName = handlerSpec.getModel().name;
+        }
 
         this.schema = schema;
         this.config = config;

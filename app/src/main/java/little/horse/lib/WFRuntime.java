@@ -18,6 +18,7 @@ import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.ExternalEventPayloadSchema;
 import little.horse.lib.schemas.ExternalEventCorrelSchema;
 import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.SignalHandlerSpecSchema;
 import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
@@ -74,15 +75,20 @@ public class WFRuntime
         ArrayList<NodeSchema> activatedNodes = new ArrayList<NodeSchema>();
 
         switch (event.type) {
-            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(event, wfRun, record, activatedNodes, wfSpec);
+            case WF_RUN_STARTED:    wfRun = handleWFRunStarted(
+                                        event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case TASK_STARTED:      wfRun = handleTaskStarted(event, wfRun, record, activatedNodes, wfSpec);
+            case TASK_STARTED:      wfRun = handleTaskStarted(
+                event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case NODE_COMPLETED:    wfRun = handleTaskCompleted(event, wfRun, record, activatedNodes, wfSpec);
+            case NODE_COMPLETED:    wfRun = handleTaskCompleted(
+                                        event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case TASK_FAILED:       wfRun = handleTaskFailed(event, wfRun, record, activatedNodes, wfSpec);
+            case TASK_FAILED:       wfRun = handleTaskFailed(
+                                        event, wfRun, record, activatedNodes, wfSpec);
                                     break;
-            case EXTERNAL_EVENT:    wfRun = handleExternalEvent(event, wfRun, record, activatedNodes, wfSpec);
+            case EXTERNAL_EVENT:    wfRun = handleExternalEvent(
+                                        event, wfRun, record, activatedNodes, wfSpec);
                                     break;
             case WORKFLOW_PROCESSING_FAILED: wfRun = handleWorkflowProcessingFailed(
                                                     event, wfRun, record, activatedNodes, wfSpec);
@@ -169,7 +175,9 @@ public class WFRuntime
             wfRun.taskRuns.add(tr);
 
             // Check wfRun.pendingEvents to see if there's one waiting.
-            ArrayList<ExternalEventCorrelSchema> relevantEvents = wfRun.pendingEvents.get(node.externalEventDefName);
+            ArrayList<ExternalEventCorrelSchema> relevantEvents = wfRun.pendingEvents.get(
+                node.externalEventDefName
+            );
             if (relevantEvents == null) {
                 relevantEvents = new ArrayList<ExternalEventCorrelSchema>();
                 wfRun.pendingEvents.put(node.externalEventDefName, relevantEvents);
@@ -218,22 +226,6 @@ public class WFRuntime
         }
     }
 
-    /**
-     * Handles an incoming External Event. There are two scenarios here:
-     * 1. The WFRun has reached the Node at which this ExternalEvent is caught. In this
-     *    scenario, the NodeRun is marked as COMPLETED and the payload of the ExternalEvent
-     *    is saved as the stdout of the NodeRun.
-     * 2. The WFRun has NOT reached the Node at which this ExternalEvent is caught. Here,
-     *    we just store the fact that the Event has occurred for later use.
-     * In scenario 1), we will either append new tasks to outgoingEdges or we will mark the
-     * WFRun as completed.
-     * @param event the WFEventSchema event to be handled. This is one event on the
-     * event log.
-     * @param wfRun the WFRunSchema to which `event` pertains.
-     * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
-     * that are scheduled due to the logging of this event.
-     */
     private WFRunSchema handleExternalEvent(
         WFEventSchema event,
         WFRunSchema wfRun,
@@ -246,27 +238,58 @@ public class WFRuntime
         );
 
         if (payload == null) {
-            raiseWorkflowProcessingError("invalid event", event, LHFailureReason.INVALID_WF_SPEC_ERROR);
+            raiseWorkflowProcessingError(
+                "invalid event", event, LHFailureReason.INVALID_WF_SPEC_ERROR
+            );
             return wfRun;
         }
 
+        // determine whether to handle this event as an interrupt or to delegate it to a node.
+
+        SignalHandlerSpecSchema relevantHandler = null;
+        for (SignalHandlerSpecSchema handler: wfSpec.getModel().signalHandlers) {
+            if (handler.externalEventDefGuid.equals(payload.externalEventDefGuid)) {
+                relevantHandler = handler;
+                break;
+            }
+        }
+
+        if (relevantHandler != null) {
+            // Then we check to see if we have any PENDING or RUNNING taskRuns.
+
+            // If no PENDING or RUNNING taskRuns, we then mark the wfRun as INTERRUPTED and
+            // kick off the signalhandler workflow. We also add it to the interrupt stack.
+
+            // if there is a PENDING or RUNNING taskRun, we mark the wfRun as PENDING_INTERRUPT
+            // and put the signalHandler on the stack of interrupts.
+        }
+
+        // If we got this far, then we know we're supposed to match the externalEvent to
+        // a specific node (i.e. there's no signalhandler for it.)
         if (wfRun.pendingEvents == null) {
             wfRun.pendingEvents = new HashMap<String, ArrayList<ExternalEventCorrelSchema>>();
         }
 
-        ArrayList<ExternalEventCorrelSchema> relevantCorrels = wfRun.pendingEvents.get(payload.externalEventDefName);
+        ArrayList<ExternalEventCorrelSchema> relevantCorrels = wfRun.pendingEvents.get(
+            payload.externalEventDefName);
 
         if (relevantCorrels == null) {
-            wfRun.pendingEvents.put(payload.externalEventDefName, new ArrayList<ExternalEventCorrelSchema>());
+            wfRun.pendingEvents.put(
+                payload.externalEventDefName, new ArrayList<ExternalEventCorrelSchema>()
+            );
         }
 
-        for (ExternalEventCorrelSchema correlSchema : wfRun.pendingEvents.get(payload.externalEventDefName)) {
+        for (ExternalEventCorrelSchema correlSchema :
+            wfRun.pendingEvents.get(payload.externalEventDefName)
+        ) {
             // Now we look to see if the wfRun has already got here and is waiting.
             if (correlSchema.assignedNodeGuid != null && correlSchema.event == null) {
                 correlSchema.event = payload;
 
                 // Now we need to complete the NodeRun.
-                TaskRunSchema tr = getTaskRunFromGuid(wfRun, correlSchema.assignedTaskRunExecutionNumber);
+                TaskRunSchema tr = getTaskRunFromGuid(
+                    wfRun, correlSchema.assignedTaskRunExecutionNumber
+                );
                 tr.stdout = payload.content;
                 tr.endTime = new Date(record.timestamp());
                 tr.status = LHStatus.COMPLETED;
@@ -335,16 +358,6 @@ public class WFRuntime
         config.send(record);
     }
 
-    /**
-     * Handles a request to run a WFRun for a WFSpec. Adds the entrypoint task to `outgoingEdges`.
-     * Marks the WFRun as RUNNING.
-     * @param event the WFEventSchema event to be handled. This is one event on the
-     * event log.
-     * @param wfRun the WFRunSchema to which `event` pertains.
-     * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
-     * that are scheduled due to the logging of this event.
-     */
     private WFRunSchema handleWFRunStarted(
             WFEventSchema event,
             WFRunSchema wfRun,
@@ -429,16 +442,6 @@ public class WFRuntime
         return wfRun;
     }
 
-    /**
-     * Handles an event noting that a Node has begun its processing. Marks the NodeRun as RUNNING.
-     * Should not add anything to outgoingEdges unless some weird shit happens.
-     * @param event the WFEventSchema event to be handled. This is one event on the
-     * event log.
-     * @param wfRun the WFRunSchema to which `event` pertains.
-     * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param outgoingEdges an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
-     * that are scheduled due to the logging of this event.
-     */
     private WFRunSchema handleTaskStarted(
             WFEventSchema event,
             WFRunSchema wfRun,
@@ -482,17 +485,6 @@ public class WFRuntime
         return wfRun;
     }
 
-    /**
-     * Handles an event marking a NodeRun as completed. If there are outgoing edges, the active
-     * ones are added to the outgoingEdges list. If there are none, then the wfRun is marked as
-     * COMPLETED.
-     * @param event the WFEventSchema event to be handled. This is one event on the
-     * event log.
-     * @param wfRun the WFRunSchema to which `event` pertains.
-     * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param activatedNodes an empty list of `NodeSchema` that will be filled by all new TaskRun's
-     * that are scheduled due to the logging of this event.
-     */
     private WFRunSchema handleTaskCompleted(
             WFEventSchema event,
             WFRunSchema wfRun,
@@ -549,18 +541,6 @@ public class WFRuntime
         return wfRun;
     }
 
-    /**
-     * Handles an event marking a task as failed. Depending on the error handling for the workflow
-     * (in the future we may have rollbacks, retries, retries w/backoff, etc.) there may or may not
-     * be tasks appended to outgoingEdges. If there are no error-handling things to do afterwards (this
-     * is the current state of the system) then the wfRun is marked as ERROR.
-     * @param event the WFEventSchema event to be handled. This is one event on the
-     * event log.
-     * @param wfRun the WFRunSchema to which `event` pertains.
-     * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param activatedNodes an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
-     * that are scheduled due to the logging of this event.
-     */
     private WFRunSchema handleTaskFailed(
             WFEventSchema event,
             WFRunSchema wfRun,
@@ -604,18 +584,6 @@ public class WFRuntime
         return wfRun;
     }
 
-    /**
-     * Handles an event saying that there was an internal error (likely caused by a bug or an
-     * invalid WFSpec) making it impossible to determine what to do for the wfRun. Currently
-     * just marks the wfRun as ERROR and terminates it. In the future, it may handle rollbacks
-     * of SAGA transactions, etc.
-     * @param event the WFEventSchema event to be handled. This is one event on the
-     * event log.
-     * @param wfRun the WFRunSchema to which `event` pertains.
-     * @param record the KafkaStreams `processor.api.Record` that `event` came from.
-     * @param activatedNodes an empty list of `TaskRunSchema` that will be filled by all new TaskRun's
-     * that are scheduled due to the logging of this event.
-     */
     private WFRunSchema handleWorkflowProcessingFailed(
             WFEventSchema event,
             WFRunSchema wfRun,
