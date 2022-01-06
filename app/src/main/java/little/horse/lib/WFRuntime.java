@@ -79,7 +79,7 @@ public class WFRuntime
                                         event, wfRun, record, activatedNodes, wfSpec);
                                     break;
             case TASK_STARTED:      wfRun = handleTaskStarted(
-                event, wfRun, record, activatedNodes, wfSpec);
+                                        event, wfRun, record, activatedNodes, wfSpec);
                                     break;
             case NODE_COMPLETED:    wfRun = handleTaskCompleted(
                                         event, wfRun, record, activatedNodes, wfSpec);
