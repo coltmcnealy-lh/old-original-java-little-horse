@@ -8,19 +8,22 @@ import little.horse.lib.LHStatus;
 
 public class TaskRunSchema extends BaseSchema {
     public int number;
-    public String wfRunGuid;
     public String wfSpecGuid;
     public String wfSpecName;
+    public int tokenNumber;
+
     public String nodeName;
     public String nodeGuid;
-    // public int executionNumber;
-    public LHStatus status;
-    public ArrayList<String> bashCommand;
+
     public String dockerImage;
+    public ArrayList<String> bashCommand;
     public Object stdin;
+    
+    public LHStatus status;
     public Object stdout;
     public Object stderr;
     public int returnCode;
+
     public Date startTime;
     public Date endTime;
 

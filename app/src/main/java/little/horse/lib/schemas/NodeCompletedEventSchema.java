@@ -3,6 +3,7 @@ package little.horse.lib.schemas;
 import java.util.ArrayList;
 
 public class NodeCompletedEventSchema extends BaseSchema {
+    public int tokenNumber;
     public int taskRunNumber;
     public String stdout;
     public String stderr;

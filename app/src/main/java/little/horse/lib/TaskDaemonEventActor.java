@@ -46,28 +46,29 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         this.trigger = this.node.triggers.get(0);
     }
 
-    public void act(WFRunSchema wfRun, WFEventSchema event, int taskRunNumber) {
+    public void act(WFRunSchema wfRun, int taskRunNumber) {
         // Need to figure out if it triggers our trigger. Two possibilities:
         // 1. We're the entrypoint node, so watch out for the WF_RUN_STARTED event.
         // 2. We're not entrypoint, so we watch out for completed tasks of the upstream
         //    nodes.
-        if (trigger.triggerEventType != event.type) {
-            return;
-        }
 
-        NodeCompletedEventSchema tr = null;
-        if (trigger.triggerEventType == WFEventType.NODE_COMPLETED) {
-            tr = BaseSchema.fromString(
-                event.content, NodeCompletedEventSchema.class
-            );
-            if (tr == null) {
-                return;
-            }
-            // Then we gotta make sure we only process the right node's outputs.
-            if (!tr.nodeGuid.equals(trigger.triggerNodeGuid)) {
-                return;
-            }
-        }
+        // if (trigger.triggerEventType != event.type) {
+        //     return;
+        // }
+
+        // NodeCompletedEventSchema tr = null;
+        // if (trigger.triggerEventType == WFEventType.NODE_COMPLETED) {
+        //     tr = BaseSchema.fromString(
+        //         event.content, NodeCompletedEventSchema.class
+        //     );
+        //     if (tr == null) {
+        //         return;
+        //     }
+        //     // Then we gotta make sure we only process the right node's outputs.
+        //     if (!tr.nodeGuid.equals(trigger.triggerNodeGuid)) {
+        //         return;
+        //     }
+        // }
 
         Thread thread = new Thread(() -> {
             try {

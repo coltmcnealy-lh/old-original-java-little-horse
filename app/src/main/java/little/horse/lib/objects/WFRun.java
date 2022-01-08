@@ -142,6 +142,10 @@ public class WFRun {
         );
     }
 
+    public static WFRunSchema newSchemaFromRunRequest() {
+        return null;
+    }
+
     public WFRun(WFRunSchema schema, Config config, WFSpec wfSpec) {
         this.config = config;
         this.schema = schema;
@@ -300,14 +304,19 @@ public class WFRun {
             // Do validation on the type.
             if (!defTypeCls.isInstance(result)) {
                 throw new VarSubOrzDash(new Exception(),
-                    "Expected type " + def.type + " but got " + result.getClass().getName() + " substituting " +
-                    mutation.jsonPath + " on " + tr.toString()
+                    "Expected type " + def.type + " but got " + result.getClass().getName() +
+                    " substituting " + mutation.jsonPath + " on " + tr.toString()
                 );
             }
             wfRun.variables.put(varName, result);
         } else if (mutation.operation == VariableMutationOperation.ADD) {
-            if (def.type == WFRunVariableTypeEnum.BOOLEAN || def.type == WFRunVariableTypeEnum.OBJECT) {
-                throw new VarSubOrzDash(null, "had an invalid wfspec. Need to catch this on wfspec validation");
+            if (def.type == WFRunVariableTypeEnum.BOOLEAN ||
+                def.type == WFRunVariableTypeEnum.OBJECT
+            ) {
+                throw new VarSubOrzDash(
+                    null,
+                    "had an invalid wfspec. Need to catch this on wfspec validation"
+                );
             } else if (def.type == WFRunVariableTypeEnum.STRING) {
                 String orig = (String) original;
                 orig = orig + ((String)result);

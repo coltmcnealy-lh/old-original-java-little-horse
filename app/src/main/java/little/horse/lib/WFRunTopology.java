@@ -11,6 +11,7 @@ import org.apache.kafka.streams.state.Stores;
 import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
+import little.horse.lib.wfRuntime.WFRuntime;
 
 
 public class WFRunTopology {
