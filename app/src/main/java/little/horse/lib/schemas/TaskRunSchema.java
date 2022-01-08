@@ -15,7 +15,6 @@ public class TaskRunSchema extends BaseSchema {
     public String nodeName;
     public String nodeGuid;
 
-    public String dockerImage;
     public ArrayList<String> bashCommand;
     public Object stdin;
     

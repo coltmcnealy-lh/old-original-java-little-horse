@@ -31,14 +31,20 @@ task_definition2 = {
 
 wf_definition = {
     "name": "my-wf",
+
     "variableDefs": {
         "name": {
             "type": "STRING"
         },
         "thething": {
             "type": "STRING",
+        },
+        "counter": {
+            "type": "INT",
+            "defaultValue": 0,
         }
     },
+    "entrypointNodeName": "firstNode",
     "nodes": {
         "firstNode": {
             "nodeType": "TASK",
@@ -62,6 +68,10 @@ wf_definition = {
                 "thething": {
                     "operation": "SET",
                     "jsonPath": "$.stdout.secondPerson"
+                },
+                "counter": {
+                    "operation": "ADD",
+                    "literalValue": 1
                 }
             }
         }
@@ -69,7 +79,21 @@ wf_definition = {
     "edges": [{
         "sourceNodeName": "firstNode",
         "sinkNodeName": "secondNode"
-    }]
+    },
+    {
+        "sourceNodeName": "secondNode",
+        "sinkNodeName": "firstNode",
+        "condition": {
+            "leftSide": {
+                "wfRunVariableName": "counter"
+            },
+            "rightSide": {
+                "literalValue": 500
+            },
+            "comparator": "LESS_THAN",
+        }
+    }
+    ]
 }
 
 
@@ -78,7 +102,7 @@ print_prettily(create_task_def_response)
 create_task_def_response = requests.post(f"{URL}/taskDef", json=task_definition2)
 print_prettily(create_task_def_response)
 
-time.sleep(2)
+time.sleep(0.1)
 create_wf_response = requests.post(f"{URL}/wfSpec", json=wf_definition)
 print_prettily(create_wf_response)
 

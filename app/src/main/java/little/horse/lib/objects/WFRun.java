@@ -184,14 +184,15 @@ public class WFRun {
     ) throws VarSubOrzDash {
         if (condition == null) return true;
         Object lhs = getVariableSubstitution(wfRun, condition.leftSide, token);
+        LHUtil.log("LHS is ", lhs, lhs.getClass());
         Object rhs = getVariableSubstitution(wfRun, condition.rightSide, token);
         switch (condition.comparator) {
             case LESS_THAN: return compare(lhs, rhs) < 0;
             case LESS_THAN_EQ: return compare(lhs, rhs) <= 0;
             case GREATER_THAN: return compare(lhs, rhs) > 0;
             case GRREATER_THAN_EQ: return compare(lhs, rhs) >= 0;
-            case EQUALS: return compare(lhs, rhs) == 0;
-            case NOT_EQUALS: return compare(lhs, rhs) != 0;
+            case EQUALS: return lhs != null && lhs.equals(rhs);
+            case NOT_EQUALS: return lhs != null && !lhs.equals(rhs);
             case IN: return contains(lhs, rhs);
             case NOT_IN: return !contains(lhs, rhs);
             default: return false;
@@ -220,10 +221,16 @@ public class WFRun {
 
     @SuppressWarnings("all") // lol
     private static int compare(Object left, Object right) throws VarSubOrzDash {
+
+        LHUtil.log("Left class: ", left.getClass());
+        LHUtil.log("right class: ", right.getClass());
         try {
+            LHUtil.log("Comparing", left, "to", right);
             int result = ((Comparable) left).compareTo((Comparable) right);
+            LHUtil.log("got:", result);
             return result;
         } catch(Exception exn) {
+            LHUtil.logError(exn.getMessage());
             throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
         }
     }
@@ -234,13 +241,14 @@ public class WFRun {
 
         WFRunVariableContexSchema context = getContext(wfRun, token);
         if (var.literalValue != null) {
+            LHUtil.log("returning literalvalue: ", var.literalValue.getClass());
             return var.literalValue;
         }
 
         // at this point, the thing must either come from a previous taskRun or
         // from a wfRunVariable.
 
-        String dataToParse = null;
+        Object dataToParse = null;
         if (var.nodeName != null) {
             ArrayList<TaskRunSchema> taskRuns = context.nodeOutputs.get(var.nodeName);
             if (taskRuns == null && var.defaultValue == null) {
@@ -265,7 +273,7 @@ public class WFRun {
                     "No variable named " + var.wfRunVariableName + " in context."
                 );
             }
-            dataToParse = result.toString();
+            dataToParse = result;
         } else if (var.wfRunMetadata != null) {
             if (var.wfRunMetadata == WFRunMetadataEnum.WF_RUN_GUID) {
                 return wfRun.guid;
@@ -287,7 +295,7 @@ public class WFRun {
         }
 
         try {
-            return JsonPath.parse(dataToParse).read(var.jsonPath);
+            return JsonPath.parse(dataToParse.toString()).read(var.jsonPath);
         } catch(Exception exn) {
             throw new VarSubOrzDash(
                 exn,
@@ -305,7 +313,12 @@ public class WFRun {
     ) throws VarSubOrzDash {
         WFRunVariableDefSchema def = wfSpec.getModel().variableDefs.get(varName);
         String dataToParse = tr.toString();
-        Object result = JsonPath.parse(dataToParse).read(mutation.jsonPath);
+        Object result;
+        if (mutation.jsonPath != null) {
+            result = JsonPath.parse(dataToParse).read(mutation.jsonPath);
+        } else {
+            result = mutation.literalValue;
+        }
         Object original = wfRun.variables.get(varName);
         
         Class<?> defTypeCls = null;
@@ -338,16 +351,20 @@ public class WFRun {
             } else if (def.type == WFRunVariableTypeEnum.STRING) {
                 String orig = (String) original;
                 orig = orig + ((String)result);
+                wfRun.variables.put(varName, orig);
             } else if (def.type == WFRunVariableTypeEnum.INT) {
                 Integer orig = (Integer) original;
                 orig += (Integer) result;
+                wfRun.variables.put(varName, orig);
             } else if (def.type == WFRunVariableTypeEnum.DOUBLE) {
                 Double orig = (Double) original;
                 orig += (Double) result;
+                wfRun.variables.put(varName, orig);
             } else if (def.type == WFRunVariableTypeEnum.ARRAY) {
                 @SuppressWarnings("unchecked")
                 List<Object> orig = (List<Object>) original;
                 orig.add(result);
+                wfRun.variables.put(varName, orig);
             }
         
         } else {

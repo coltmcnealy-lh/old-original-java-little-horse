@@ -191,33 +191,35 @@ public class WFSpec {
 
         // Lastly, find the (supposedly exactly one) node which has zero input topics, and
         // deem that node the entrypoint.
-        NodeSchema entrypoint = null;
-        for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
-            NodeSchema node = pair.getValue();
-            if (node.triggers.size() == 0) {
-                entrypoint = node;
+        if (schema.entrypointNodeName == null) {
+            NodeSchema entrypoint = null;
+            for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
+                NodeSchema node = pair.getValue();
+                if (node.triggers.size() == 0) {
+                    entrypoint = node;
 
-                WFTriggerSchema trigger = new WFTriggerSchema();
-                trigger.triggerEventType = WFEventType.WF_RUN_STARTED;
-                node.triggers.add(trigger);
+                    WFTriggerSchema trigger = new WFTriggerSchema();
+                    trigger.triggerEventType = WFEventType.WF_RUN_STARTED;
+                    node.triggers.add(trigger);
 
-            } else if (node.triggers.size() == 1 &&
-                node.triggers.get(0).triggerEventType == WFEventType.WF_RUN_STARTED
-            ) {
-                if (entrypoint != null) {
-                    throw new LHValidationError(
-                        "Invalid WFSpec: More than one node without incoming edges."
-                    );
+                } else if (node.triggers.size() == 1 &&
+                    node.triggers.get(0).triggerEventType == WFEventType.WF_RUN_STARTED
+                ) {
+                    if (entrypoint != null) {
+                        throw new LHValidationError(
+                            "Invalid WFSpec: More than one node without incoming edges."
+                        );
+                    }
+                    entrypoint = node;
                 }
-                entrypoint = node;
+            } // for node in schema.nodes
+
+            if (entrypoint == null) {
+                throw new LHValidationError("No entrypoint node provided!");
             }
-        } // for node in schema.nodes
-
-        if (entrypoint == null) {
-            throw new LHValidationError("No entrypoint node provided!");
+            schema.entrypointNodeName = entrypoint.name;
         }
-        schema.entrypointNodeName = entrypoint.name;
-
+        
         if (schema.signalHandlers == null) {
             schema.signalHandlers = new ArrayList<SignalHandlerSpecSchema>();
         }

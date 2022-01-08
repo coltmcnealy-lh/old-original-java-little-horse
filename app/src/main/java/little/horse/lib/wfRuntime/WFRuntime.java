@@ -48,10 +48,12 @@ public class WFRuntime
     private KeyValueStore<String, WFRunSchema> kvStore;
     private WFEventProcessorActor actor;
     private Config config;
+    private HashMap<String, WFSpec> wfspecs;
 
     public WFRuntime(WFEventProcessorActor actor, Config config) {
         this.actor = actor;
         this.config = config;
+        this.wfspecs = new HashMap<String, WFSpec>();
     }
 
     @Override
@@ -188,7 +190,6 @@ public class WFRuntime
         WFEventSchema wfEvent
     ) {
         if (tokenToAdvance.status != WFRunStatus.RUNNING) {
-            LHUtil.log("Skipping token ", tokenToAdvance, " Not RUNNING.");
             return;
         }
 
@@ -395,9 +396,14 @@ public class WFRuntime
 
     // Below are a bunch of utility methods.
     private WFSpec getWFSpec(String guid) {
+        if (wfspecs.get(guid) != null) {
+            return wfspecs.get(guid);
+        }
         // TODO: Do some caching here—that's the only reason we have this.
         try {
-            return WFSpec.fromIdentifier(guid, config);
+            WFSpec result = WFSpec.fromIdentifier(guid, config);
+            wfspecs.put(guid, result);
+            return result;
         } catch (Exception exn) {
             return null;
         }
