@@ -218,6 +218,9 @@ public class WFSpec {
         }
         schema.entrypointNodeName = entrypoint.name;
 
+        if (schema.signalHandlers == null) {
+            schema.signalHandlers = new ArrayList<SignalHandlerSpecSchema>();
+        }
         for (SignalHandlerSpecSchema handler : schema.signalHandlers) {
             ExternalEventDef eed = null;
             if (handler.externalEventDefGuid != null) {

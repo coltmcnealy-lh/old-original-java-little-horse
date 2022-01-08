@@ -13,7 +13,6 @@ import little.horse.lib.Config;
 import little.horse.lib.Constants;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHLookupExceptionReason;
-import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.VarSubOrzDash;
@@ -28,6 +27,8 @@ import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFRunVariableContexSchema;
 import little.horse.lib.schemas.WFRunVariableDefSchema;
 import little.horse.lib.schemas.WFRunVariableTypeEnum;
+import little.horse.lib.schemas.WFTokenSchema;
+import little.horse.lib.wfRuntime.WFRunStatus;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -50,19 +51,36 @@ public class WFRun {
         }
 
         if (schema.status == null) {
-            schema.status = LHStatus.PENDING;
+            schema.status = WFRunStatus.RUNNING;
         }
     }
 
-    public static WFRunVariableContexSchema getContext(WFRunSchema wfRun) {
+    public static WFRunVariableContexSchema getContext(WFRunSchema wfRun, WFTokenSchema token) {
         WFRunVariableContexSchema schema = new WFRunVariableContexSchema();
 
+        Integer tokenNumber = token == null ? null : token.tokenNumber;
+
         schema.nodeOutputs = new HashMap<String, ArrayList<TaskRunSchema>>();
-        for (TaskRunSchema tr : wfRun.taskRuns) {
-            if (!schema.nodeOutputs.containsKey(tr.nodeName)) {
-                schema.nodeOutputs.put(tr.nodeName, new ArrayList<TaskRunSchema>());
+        for (WFTokenSchema tok : wfRun.tokens) {
+            if (tok.tokenNumber == tokenNumber) {
+                // Skip it for now and come back later to ensure that this token is last.
+                continue;
             }
-            schema.nodeOutputs.get(tr.nodeName).add(tr);
+            for (TaskRunSchema tr : tok.taskRuns) {
+                if (!schema.nodeOutputs.containsKey(tr.nodeName)) {
+                    schema.nodeOutputs.put(tr.nodeName, new ArrayList<TaskRunSchema>());
+                }
+                schema.nodeOutputs.get(tr.nodeName).add(tr);
+            }
+        }
+
+        if (tokenNumber != null) {
+            for (TaskRunSchema tr : token.taskRuns) {
+                if (!schema.nodeOutputs.containsKey(tr.nodeName)) {
+                    schema.nodeOutputs.put(tr.nodeName, new ArrayList<TaskRunSchema>());
+                }
+                schema.nodeOutputs.get(tr.nodeName).add(tr);
+            }
         }
 
         schema.wfRunVariables = wfRun.variables;
@@ -119,8 +137,8 @@ public class WFRun {
         return new WFRun(schema, config);
     }
 
-    public static String getContextString(WFRunSchema wfRun) {
-        WFRunVariableContexSchema schema = WFRun.getContext(wfRun);
+    public static String getContextString(WFRunSchema wfRun, WFTokenSchema token) {
+        WFRunVariableContexSchema schema = WFRun.getContext(wfRun, token);
         return schema.toString();
     }
 
@@ -162,11 +180,11 @@ public class WFRun {
     }
 
     public static boolean evaluateEdge(
-        WFRunSchema wfRun, EdgeConditionSchema condition
+        WFRunSchema wfRun, EdgeConditionSchema condition, WFTokenSchema token
     ) throws VarSubOrzDash {
         if (condition == null) return true;
-        Object lhs = getVariableSubstitution(wfRun, condition.leftSide);
-        Object rhs = getVariableSubstitution(wfRun, condition.rightSide);
+        Object lhs = getVariableSubstitution(wfRun, condition.leftSide, token);
+        Object rhs = getVariableSubstitution(wfRun, condition.rightSide, token);
         switch (condition.comparator) {
             case LESS_THAN: return compare(lhs, rhs) < 0;
             case LESS_THAN_EQ: return compare(lhs, rhs) <= 0;
@@ -211,10 +229,10 @@ public class WFRun {
     }
 
     public static Object getVariableSubstitution(
-            WFRunSchema wfRun, VariableAssignmentSchema var
+            WFRunSchema wfRun, VariableAssignmentSchema var, WFTokenSchema token
     ) throws VarSubOrzDash {
 
-        WFRunVariableContexSchema context = getContext(wfRun);
+        WFRunVariableContexSchema context = getContext(wfRun, token);
         if (var.literalValue != null) {
             return var.literalValue;
         }

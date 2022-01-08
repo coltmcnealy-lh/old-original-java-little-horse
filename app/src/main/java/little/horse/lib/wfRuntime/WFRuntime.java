@@ -1,6 +1,7 @@
 package little.horse.lib.wfRuntime;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -25,13 +26,19 @@ import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.ExternalEventCorrelSchema;
+import little.horse.lib.schemas.ExternalEventPayloadSchema;
+import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.VariableMutationSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFProcessingErrorSchema;
+import little.horse.lib.schemas.WFRunRequestSchema;
 import little.horse.lib.schemas.WFRunSchema;
+import little.horse.lib.schemas.WFRunVariableDefSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 import little.horse.lib.schemas.WFTokenSchema;
 
 
@@ -72,7 +79,8 @@ public class WFRuntime
         }
 
         if (wfRun == null) {
-            wfRun = WFRunSchema.handleWFRunStarted(event, wfRun, record, wfSpec);
+            wfRun = handleWFRunStarted(event, wfRun, record, wfSpec);
+            wfSpec = getWFSpec(wfRun.wfSpecGuid);
         } else {
             updateTaskRunsOrEvents(event, wfRun, record, wfSpec);
         }
@@ -97,7 +105,7 @@ public class WFRuntime
 
     public static WFTokenSchema getTokenToAdvance(WFRunSchema wfRun, Set<String> alreadySeen) {
         for (WFTokenSchema token: wfRun.tokens) {
-            String key = token.tokenNumber.toString() + "__" + String.valueOf(
+            String key = String.valueOf(token.tokenNumber) + "__" + String.valueOf(
                 token.taskRuns.size()
             );
             if (!alreadySeen.contains(key)) {
@@ -116,6 +124,9 @@ public class WFRuntime
                 LHUtil.log("WTF?");
                 continue;
             }
+            if (token.upNext == null) {
+                token.upNext = new ArrayList<TaskRunSchema>();
+            }
             TaskRunSchema lastTr = token.taskRuns.get(token.taskRuns.size() - 1);
             if (token.status == WFRunStatus.COMPLETED) {
                 // As of now, a COMPLETED token is final.
@@ -124,7 +135,7 @@ public class WFRuntime
             } else if (token.status == WFRunStatus.RUNNING) {
                 // If there are no pending taskruns and the last one executed was COMPLETED,
                 // then the token is now completed.
-                if (token.unscheduledNodes == null || token.unscheduledNodes.size() == 0) {
+                if (token.upNext == null || token.upNext.size() == 0) {
                     if (lastTr.status == LHStatus.COMPLETED) {
                         token.status = WFRunStatus.COMPLETED;
                     }
@@ -181,7 +192,7 @@ public class WFRuntime
             return;
         }
 
-        ArrayList<TaskRunSchema> nextUp = tokenToAdvance.unscheduledNodes;
+        ArrayList<TaskRunSchema> nextUp = tokenToAdvance.upNext;
         if (nextUp == null || nextUp.size() == 0) {
             // Nothing to do here.
 
@@ -189,7 +200,7 @@ public class WFRuntime
             // Then there's only one taskRun to schedule.
             TaskRunSchema tr = nextUp.get(0);
             NodeSchema node = wfSpec.getModel().nodes.get(tr.nodeName);
-            
+
             if (node.nodeType == NodeType.TASK) {
                 tr.status = LHStatus.SCHEDULED;
                 tokenToAdvance.taskRuns.add(tr);
@@ -199,7 +210,7 @@ public class WFRuntime
                 // The task has been scheduled (either by this node, two lines above, or
                 // by the node that is supposed to run that task). Therefore, nothing is
                 // up next until the task completes or times out.
-                tokenToAdvance.unscheduledNodes = null;
+                tokenToAdvance.upNext = null;
 
             } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
                 if (tr.startTime == null) {
@@ -245,7 +256,7 @@ public class WFRuntime
 
         } else {
             // Then we gotta terminate the token and add two child tokens.
-            tokenToAdvance.unscheduledNodes = null; // CRUCIAL.
+            tokenToAdvance.upNext = null; // CRUCIAL.
             LHUtil.log("TODO: Actually write the thing that splits tokens off.");
         }
     }
@@ -256,6 +267,8 @@ public class WFRuntime
     ) {
         if (event.type == WFEventType.WF_RUN_STARTED) {
             LHUtil.log("this shouldn't be possible");
+
+        // Task Started //// Task Started //// Task Started //// Task Started //
         } else if (event.type == WFEventType.TASK_STARTED) {
             // Find the relevant task run and mark it started.
             TaskRunStartedEventSchema trs = BaseSchema.fromString(
@@ -270,20 +283,8 @@ public class WFRuntime
                 );
             }
 
-            // Need to find the task that just got started.
-            // int executionNumber = trs.taskExecutionNumber;
-
-            TaskRunSchema theTask = getTaskRunFromGuid(
-                wfRun, trs.taskRunNumber
-            );
-            if (theTask == null) {
-                raiseWorkflowProcessingError(
-                    "Event said a task that doesn't exist yet was started.",
-                    event,
-                    LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
-                );
-                return wfRun;
-            }
+            WFTokenSchema token = wfRun.tokens.get(trs.tokenNumber);
+            TaskRunSchema theTask = token.taskRuns.get(trs.taskRunNumber);
 
             // Ok, now we have the task.
             theTask.status = LHStatus.RUNNING;
@@ -291,17 +292,107 @@ public class WFRuntime
             theTask.bashCommand = trs.bashCommand;
             theTask.stdin = trs.stdin;
 
+        // Task Completed //// Task Completed //// Task Completed //// Task Completed //
         } else if (event.type == WFEventType.NODE_COMPLETED) {
+            NodeCompletedEventSchema tre = BaseSchema.fromString(
+                event.content,
+                NodeCompletedEventSchema.class
+            );
+            WFTokenSchema token = wfRun.tokens.get(tre.tokenNumber);
+            TaskRunSchema task = token.taskRuns.get(tre.taskRunNumber);
+            NodeSchema node = spec.getModel().nodes.get(task.nodeName);
+            if (token.upNext == null) {
+                token.upNext = new ArrayList<TaskRunSchema>();
+            }
 
+            if (task.status != LHStatus.RUNNING) {
+                LHUtil.log("WTF how is it possible to complete Task that hasn't started?");
+                }
+            if (token.upNext != null && token.upNext.size() > 0) {
+                LHUtil.log("How is there something in 'up next' when a task is running?");
+            }
+
+            task.status = LHStatus.COMPLETED;
+            task.endTime = event.timestamp;
+            task.stderr = jsonifyIfPossible(tre.stderr);
+            task.stdout = jsonifyIfPossible(tre.stdout);
+            task.returnCode = tre.returncode;
+
+            try {
+                mutateVariables(wfRun, node.variableMutations, task, spec);
+                appendActivatedNodes(wfRun, node, token);
+            } catch(VarSubOrzDash exn) {
+                exn.printStackTrace();
+                raiseWorkflowProcessingError(
+                    "Failed substituting variable on outgoing edge from node " + node.name,
+                    event,
+                    LHFailureReason.VARIABLE_LOOKUP_ERROR
+                );
+            }
+
+        // EXTERNAL EVENT //// EXTERNAL EVENT //// EXTERNAL EVENT //// EXTERNAL EVENT //
         } else if (event.type == WFEventType.EXTERNAL_EVENT) {
+            // Just add it to pendingEvents.
+            ExternalEventPayloadSchema payload = BaseSchema.fromString(
+                event.content,
+                ExternalEventPayloadSchema.class
+            );
+
+            if (isSignal(payload, spec, wfRun)) {
+                // This means we need to interrupt the workflow.
+                // TODO: Do that later.
+
+            } else {
+                // Then just append it to pendingEvents.
+                ExternalEventCorrelSchema schema = new ExternalEventCorrelSchema();
+                schema.event = payload;
+                if (wfRun.pendingEvents == null) {
+                    wfRun.pendingEvents = new HashMap<
+                        String, ArrayList<ExternalEventCorrelSchema>
+                    >();
+                }
+                if (wfRun.pendingEvents.get(payload.externalEventDefName) == null) {
+                    wfRun.pendingEvents.put(
+                        payload.externalEventDefGuid,
+                        new ArrayList<ExternalEventCorrelSchema>()
+                    );
+                }
+                wfRun.pendingEvents.get(payload.externalEventDefName).add(schema);
+
+            }
 
         } else if (event.type == WFEventType.WORKFLOW_PROCESSING_FAILED) {
-
+            LHUtil.log("here we are in wfprocessing failed");
         } else if (event.type == WFEventType.TASK_FAILED) {
+            TaskRunFailedEventSchema trf = BaseSchema.fromString(
+                event.content, TaskRunFailedEventSchema.class
+            );
 
+            WFTokenSchema token = wfRun.tokens.get(trf.tokenNumber);
+            TaskRunSchema tr = token.taskRuns.get(trf.taskRunNumber);
+
+            if (token.upNext != null && token.upNext.size() > 0) {
+                LHUtil.log("How is there something in 'up next' when a task is running?");
+            }
+
+            // When we do automatic retries, this is where we handle that.
+            token.status = WFRunStatus.HALTED;
+
+            tr.returnCode = trf.returncode;
+            tr.endTime = event.timestamp;
+            tr.failureMessage = trf.message;
+            tr.failureReason = trf.reason;
+            tr.stdout = jsonifyIfPossible(trf.stdout);
+            tr.stderr = jsonifyIfPossible(trf.stderr);
+            tr.status = LHStatus.ERROR;
         }
     }
     
+    private boolean isSignal(ExternalEventPayloadSchema payload, WFSpec spec, WFRunSchema wfRun) {
+        // TODO: when we support interrupts, this will have to do something smart.
+        return false;
+    }
+
     // Below are a bunch of utility methods.
     private WFSpec getWFSpec(String guid) {
         // TODO: Do some caching here—that's the only reason we have this.
@@ -375,20 +466,97 @@ public class WFRuntime
     private void appendActivatedNodes(
         WFRunSchema wfRun, NodeSchema node, WFTokenSchema token
     ) throws VarSubOrzDash {
-
+        WFSpec spec = getWFSpec(wfRun.wfSpecGuid);
         for (EdgeSchema edge : node.outgoingEdges) {
-            if (WFRun.evaluateEdge(wfRun, edge.condition)) {
+            if (WFRun.evaluateEdge(wfRun, edge.condition, token)) {
                 TaskRunSchema task = new TaskRunSchema();
+                NodeSchema newNode = spec.getModel().nodes.get(edge.sinkNodeName);
                 task.status = LHStatus.PENDING;
-                task.nodeGuid = node.guid;
-                task.nodeName = node.name;
+                task.nodeGuid = newNode.guid;
+                task.nodeName = newNode.name;
                 task.wfSpecGuid = wfRun.wfSpecGuid;
                 task.wfSpecName = wfRun.wfSpecName;
                 task.number = token.taskRuns.size();
                 task.tokenNumber = token.tokenNumber;
 
-                token.unscheduledNodes.add(task);
+                token.upNext.add(task);
             }
         }
+    }
+
+    private Object jsonifyIfPossible(String data) {
+        try {
+            Object obj = LHUtil.mapper.readValue(data, Object.class);
+            return obj;
+        } catch(Exception exn) {
+            return data;
+        }
+    }
+
+    public WFRunSchema handleWFRunStarted(
+        WFEventSchema event,
+        WFRunSchema wfRun,
+        final Record<String, WFEventSchema> record,
+        WFSpec wfSpec
+    ) {
+        WFRunRequestSchema runRequest = BaseSchema.fromString(
+            event.content, WFRunRequestSchema.class
+        );
+
+        wfSpec = getWFSpec(event.wfSpecGuid);
+        if (wfSpec == null) {
+            raiseWorkflowProcessingError(
+                "Unable to find WFSpec",
+                event,
+                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
+            );
+            return wfRun;
+        }
+
+        wfRun = new WFRunSchema();
+        wfRun.guid = record.key();
+        wfRun.wfSpecGuid = event.wfSpecGuid;
+        wfRun.wfSpecName = event.wfSpecName;
+        wfRun.status = WFRunStatus.RUNNING;
+        wfRun.tokens = new ArrayList<WFTokenSchema>();
+        
+        WFTokenSchema token = new WFTokenSchema();
+        token.tokenNumber = 0;
+        token.status = WFRunStatus.RUNNING;
+        token.taskRuns = new ArrayList<TaskRunSchema>();
+
+        WFSpecSchema wfSpecSchema = wfSpec.getModel();
+        NodeSchema node = wfSpecSchema.nodes.get(
+            wfSpecSchema.entrypointNodeName
+        );
+        TaskRunSchema tr = new TaskRunSchema();
+        tr.status = LHStatus.PENDING;
+        tr.tokenNumber = 0;
+        tr.number = 0;
+        tr.nodeGuid = node.guid;
+        tr.nodeName = node.name;
+        // token.taskRuns.add(tr);
+        token.upNext = new ArrayList<TaskRunSchema>();
+        token.upNext.add(tr);
+
+        wfRun.tokens.add(token);
+        
+        wfRun.variables = runRequest.variables;
+        wfRun.variables = new HashMap<String, Object>();
+        if (runRequest.variables == null) {
+            runRequest.variables = new HashMap<String, Object>();
+        }
+        for (String varName: wfSpec.getModel().variableDefs.keySet()) {
+            WFRunVariableDefSchema varDef = wfSpec.getModel().variableDefs.get(varName);
+
+            Object result = runRequest.variables.get(varName);
+            if (result != null) {
+                wfRun.variables.put(varName, result);
+            } else {
+                wfRun.variables.put(varName, varDef.defaultValue);
+            }
+        }
+
+        return wfRun;
     }
 }

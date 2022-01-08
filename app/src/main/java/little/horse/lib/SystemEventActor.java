@@ -1,6 +1,5 @@
 package little.horse.lib;
 
-import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
 
 public class SystemEventActor implements WFEventProcessorActor {
@@ -8,6 +7,6 @@ public class SystemEventActor implements WFEventProcessorActor {
         return null;
     }
 
-    public void act(WFRunSchema wfRun, WFEventSchema event, int taskRunNumber) {
+    public void act(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) {
     }
 }

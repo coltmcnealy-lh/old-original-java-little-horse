@@ -10,7 +10,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import little.horse.lib.objects.TaskDef;
 import little.horse.lib.objects.WFRun;
 import little.horse.lib.objects.WFSpec;
-import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.NodeCompletedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
@@ -18,13 +17,12 @@ import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFTriggerSchema;
+import little.horse.lib.schemas.WFTokenSchema;
 
 public class TaskDaemonEventActor implements WFEventProcessorActor {
     private WFSpec wfSpec;
     private NodeSchema node;
     private Config config;
-    private WFTriggerSchema trigger;
     private TaskDef taskDef;
 
     public String getNodeGuid() {
@@ -41,38 +39,13 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         this.node = node;
         this.config = config;
         this.taskDef = taskDef;
-
-        // TODO: Figure out what to do for multiple incoming sources.
-        this.trigger = this.node.triggers.get(0);
     }
 
-    public void act(WFRunSchema wfRun, int taskRunNumber) {
-        // Need to figure out if it triggers our trigger. Two possibilities:
-        // 1. We're the entrypoint node, so watch out for the WF_RUN_STARTED event.
-        // 2. We're not entrypoint, so we watch out for completed tasks of the upstream
-        //    nodes.
-
-        // if (trigger.triggerEventType != event.type) {
-        //     return;
-        // }
-
-        // NodeCompletedEventSchema tr = null;
-        // if (trigger.triggerEventType == WFEventType.NODE_COMPLETED) {
-        //     tr = BaseSchema.fromString(
-        //         event.content, NodeCompletedEventSchema.class
-        //     );
-        //     if (tr == null) {
-        //         return;
-        //     }
-        //     // Then we gotta make sure we only process the right node's outputs.
-        //     if (!tr.nodeGuid.equals(trigger.triggerNodeGuid)) {
-        //         return;
-        //     }
-        // }
+    public void act(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) {
 
         Thread thread = new Thread(() -> {
             try {
-                this.doAction(wfRun, taskRunNumber);
+                this.doAction(wfRun, tokenNumber, taskRunNumber);
             } catch(Exception exn) {
                 exn.printStackTrace();
             }
@@ -81,7 +54,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         thread.start();
     }
 
-    private ArrayList<String> getBashCommand(WFRunSchema wfRun)
+    private ArrayList<String> getBashCommand(WFRunSchema wfRun, WFTokenSchema token)
         throws VarSubOrzDash
     {
         ArrayList<String> cmd = taskDef.getModel().bashCommand;
@@ -104,7 +77,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 }
 
                 String substitutionResult = WFRun.getVariableSubstitution(
-                    wfRun, var
+                    wfRun, var, token
                 ).toString();
                 newCmd.add(substitutionResult);
             } else {
@@ -115,10 +88,11 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         return newCmd;
     }
 
-    private void doAction(WFRunSchema wfRun, int taskRunNumber) throws Exception {
+    private void doAction(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) throws Exception {
         ArrayList<String> command;
+        WFTokenSchema token = wfRun.tokens.get(tokenNumber);
         try {
-            command = this.getBashCommand(wfRun);
+            command = this.getBashCommand(wfRun, token);
         } catch(VarSubOrzDash exn) {
             exn.exn.printStackTrace();
             String message = "Failed looking up a variable in the workflow context\n";
@@ -152,6 +126,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         trs.nodeName = node.name;
         trs.nodeGuid = node.guid;
         trs.taskRunNumber = taskRunNumber;
+        trs.tokenNumber = tokenNumber;
         trs.bashCommand = command;
 
         WFEventSchema taskStartedEvent = new WFEventSchema();
@@ -189,6 +164,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.nodeGuid = node.guid;
         tr.bashCommand = command;
         tr.taskRunNumber = taskRunNumber;
+        tr.tokenNumber = tokenNumber;
 
         if (!success) {
             TaskRunFailedEventSchema trf = (TaskRunFailedEventSchema) tr;

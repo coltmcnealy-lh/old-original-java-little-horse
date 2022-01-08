@@ -42,15 +42,6 @@ public class WFRunSchema extends BaseSchema {
         return false;
     }
 
-    public static WFRunSchema handleWFRunStarted(
-        WFEventSchema event,
-        WFRunSchema wfRun,
-        final Record<String, WFEventSchema> record,
-        WFSpec wfSpec
-    ) {
-        return null;
-    }
-
     public void addNewToken(TaskRunSchema rootTaskRun, WFTokenSchema parent) {
         // TODO
         LHUtil.log("here in addNewToken");
