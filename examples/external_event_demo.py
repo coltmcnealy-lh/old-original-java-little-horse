@@ -29,25 +29,30 @@ task_definition = {
 
 wf_definition = {
     "name": "my-wf",
-    "nodes": {
-        "firstNode": {
-            "nodeType": "TASK",
-            "taskDefinitionName": "print-guid",
-            "variables": {
-                "wfRunGuid": {
-                    "wfRunMetadata": "WF_RUN_GUID"
-                }
-            }
-        },
-        "secondNode": {
-            "nodeType": "EXTERNAL_EVENT",
-            "externalEventDefName": "demo-eev",
-        },
-    },
-    "edges": [{
-        "sourceNodeName": "firstNode",
-        "sinkNodeName": "secondNode",
-    }]
+    "entrypointThreadName": "foobarbaz",
+    "threadSpecs": {
+        "foobarbaz": {
+            "nodes": {
+                "firstNode": {
+                    "nodeType": "TASK",
+                    "taskDefinitionName": "print-guid",
+                    "variables": {
+                        "wfRunGuid": {
+                            "wfRunMetadata": "WF_RUN_GUID"
+                        }
+                    }
+                },
+                "secondNode": {
+                    "nodeType": "EXTERNAL_EVENT",
+                    "externalEventDefName": "demo-eev",
+                },
+            },
+            "edges": [{
+                "sourceNodeName": "firstNode",
+                "sinkNodeName": "secondNode",
+            }]
+        }
+    }
 }
 
 

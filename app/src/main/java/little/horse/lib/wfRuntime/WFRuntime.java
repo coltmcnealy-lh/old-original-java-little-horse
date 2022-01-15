@@ -243,9 +243,16 @@ public class WFRuntime
                 if (correlSchema != null) {
                     tr.endTime = wfEvent.timestamp;
                     tr.status = LHStatus.COMPLETED;
+                    tr.stdout = jsonifyIfPossible(wfEvent.content);
+                    correlSchema.assignedNodeGuid = node.guid;
+                    correlSchema.assignedNodeName = node.name;
+                    correlSchema.assignedTaskRunExecutionNumber = tr.number;
+                    correlSchema.assignedThreadID = tr.threadID;
 
                     try {
                         mutateVariables(wfRun, node.variableMutations, tr, wfSpec);
+                        thread.taskRuns.add(tr);
+                        thread.upNext = new ArrayList<TaskRunSchema>();
                         appendActivatedNodes(wfRun, node, thread);
                     } catch(VarSubOrzDash exn) {
                         exn.printStackTrace();
@@ -534,8 +541,12 @@ public class WFRuntime
         wfRun.guid = record.key();
         wfRun.wfSpecGuid = event.wfSpecGuid;
         wfRun.wfSpecName = event.wfSpecName;
+        LHUtil.log("event", event, "\nguid", wfRun.wfSpecGuid, "name", wfRun.wfSpecName);
         wfRun.status = WFRunStatus.RUNNING;
         wfRun.threadRuns = new ArrayList<ThreadRunSchema>();
+        wfRun.correlatedEvents = new HashMap<
+            String, ArrayList<ExternalEventCorrelSchema>
+        >();
 
         // lookup threadspec and add here
         ThreadRunSchema token = new ThreadRunSchema();
@@ -559,6 +570,8 @@ public class WFRuntime
         tr.number = 0;
         tr.nodeGuid = node.guid;
         tr.nodeName = node.name;
+        tr.wfSpecGuid = wfRun.wfSpecGuid;
+        tr.wfSpecName = wfRun.wfSpecName;
         // token.taskRuns.add(tr);
         token.upNext = new ArrayList<TaskRunSchema>();
         token.upNext.add(tr);

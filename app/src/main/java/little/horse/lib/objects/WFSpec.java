@@ -16,6 +16,7 @@ import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
 
 import little.horse.lib.schemas.ThreadSpecSchema;
+import little.horse.lib.schemas.WFRunVariableDefSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -25,6 +26,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -162,6 +164,10 @@ public class WFSpec {
 
     private void cleanupThreadSpec(ThreadSpecSchema spec, String name) throws LHValidationError {
         spec.name = name;
+        
+        if (spec.variableDefs == null) {
+            spec.variableDefs = new HashMap<String, WFRunVariableDefSchema>();
+        }
 
         for (Map.Entry<String, NodeSchema> pair: spec.nodes.entrySet()) {
             // clean up the node (i.e. give it a guid if it doesn't have one, etc), validate that

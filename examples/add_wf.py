@@ -41,6 +41,10 @@ wf_definition = {
                 "secondName": {
                     "type": "STRING",
                 },
+                "counter": {
+                    "type": "INT",
+                    "defaultValue": 0,
+                }
             },
             "entrypointNodeName": "firstNode",
             "nodes": {
@@ -57,6 +61,10 @@ wf_definition = {
                             "operation": "SET",
                             "jsonPath": "$.stdout.person"
                         },
+                        "counter": {
+                            "operation": "ADD",
+                            "literalValue": 1,
+                        }
                     }
                 },
                 "secondNode": {
@@ -73,19 +81,19 @@ wf_definition = {
                 "sourceNodeName": "firstNode",
                 "sinkNodeName": "secondNode"
             },
-            # {
-            #     "sourceNodeName": "secondNode",
-            #     "sinkNodeName": "firstNode",
-            #     "condition": {
-            #         "leftSide": {
-            #             "wfRunVariableName": "counter"
-            #         },
-            #         "rightSide": {
-            #             "literalValue": 500
-            #         },
-            #         "comparator": "LESS_THAN",
-            #     }
-            # }
+            {
+                "sourceNodeName": "secondNode",
+                "sinkNodeName": "firstNode",
+                "condition": {
+                    "leftSide": {
+                        "wfRunVariableName": "counter"
+                    },
+                    "rightSide": {
+                        "literalValue": 5
+                    },
+                    "comparator": "LESS_THAN",
+                }
+            }
             ]
         }
     }
