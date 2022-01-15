@@ -41,11 +41,11 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         this.taskDef = taskDef;
     }
 
-    public void act(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) {
+    public void act(WFRunSchema wfRun, int threadNumber, int taskRunNumber) {
 
         Thread thread = new Thread(() -> {
             try {
-                this.doAction(wfRun, tokenNumber, taskRunNumber);
+                this.doAction(wfRun, threadNumber, taskRunNumber);
             } catch(Exception exn) {
                 exn.printStackTrace();
             }
@@ -54,7 +54,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         thread.start();
     }
 
-    private ArrayList<String> getBashCommand(WFRunSchema wfRun, ThreadRunSchema token)
+    private ArrayList<String> getBashCommand(WFRunSchema wfRun, ThreadRunSchema thread)
         throws VarSubOrzDash
     {
         ArrayList<String> cmd = taskDef.getModel().bashCommand;
@@ -77,7 +77,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
                 }
 
                 String substitutionResult = WFRun.getVariableSubstitution(
-                    wfRun, var, token
+                    wfRun, var, thread
                 ).toString();
                 newCmd.add(substitutionResult);
             } else {
@@ -88,11 +88,11 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         return newCmd;
     }
 
-    private void doAction(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) throws Exception {
+    private void doAction(WFRunSchema wfRun, int threadNumber, int taskRunNumber) throws Exception {
         ArrayList<String> command;
-        ThreadRunSchema token = wfRun.threadRuns.get(tokenNumber);
+        ThreadRunSchema thread = wfRun.threadRuns.get(threadNumber);
         try {
-            command = this.getBashCommand(wfRun, token);
+            command = this.getBashCommand(wfRun, thread);
         } catch(VarSubOrzDash exn) {
             exn.exn.printStackTrace();
             String message = "Failed looking up a variable in the workflow context\n";
@@ -126,7 +126,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         trs.nodeName = node.name;
         trs.nodeGuid = node.guid;
         trs.taskRunNumber = taskRunNumber;
-        trs.tokenNumber = tokenNumber;
+        trs.threadID = threadNumber;
         trs.bashCommand = command;
 
         WFEventSchema taskStartedEvent = new WFEventSchema();
@@ -164,7 +164,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         tr.nodeGuid = node.guid;
         tr.bashCommand = command;
         tr.taskRunNumber = taskRunNumber;
-        tr.tokenNumber = tokenNumber;
+        tr.threadID = threadNumber;
 
         if (!success) {
             TaskRunFailedEventSchema trf = (TaskRunFailedEventSchema) tr;

@@ -9,7 +9,7 @@ public class WFEventSchema extends BaseSchema {
     public String wfSpecName;
     public String wfRunGuid;
     public Date timestamp;
-    public int wfTokenNumber;
+    public int threadID;
 
     public WFEventType type;
 

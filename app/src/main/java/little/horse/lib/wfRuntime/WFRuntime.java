@@ -96,24 +96,24 @@ public class WFRuntime
 
         updateStatuses(wfRun);
         HashSet<String> alreadySeen = new HashSet<String>();
-        ThreadRunSchema tokenToAdvance = getTokenToAdvance(wfRun, alreadySeen);
-        while (tokenToAdvance != null) {
-            advanceThread(wfRun, tokenToAdvance, wfSpec, event);
+        ThreadRunSchema threadToAdvance = getThreadToAdvance(wfRun, alreadySeen);
+        while (threadToAdvance != null) {
+            advanceThread(wfRun, threadToAdvance, wfSpec, event);
             updateStatuses(wfRun);
-            tokenToAdvance = getTokenToAdvance(wfRun, alreadySeen);
+            threadToAdvance = getThreadToAdvance(wfRun, alreadySeen);
         }
 
         kvStore.put(wfRun.guid, wfRun);
     }
 
-    public static ThreadRunSchema getTokenToAdvance(WFRunSchema wfRun, Set<String> alreadySeen) {
-        for (ThreadRunSchema token: wfRun.threadRuns) {
-            String key = String.valueOf(token.id) + "__" + String.valueOf(
-                token.taskRuns.size()
+    public static ThreadRunSchema getThreadToAdvance(WFRunSchema wfRun, Set<String> alreadySeen) {
+        for (ThreadRunSchema thread: wfRun.threadRuns) {
+            String key = String.valueOf(thread.id) + "__" + String.valueOf(
+                thread.taskRuns.size()
             );
             if (!alreadySeen.contains(key)) {
                 alreadySeen.add(key);
-                return token;
+                return thread;
             }
         }
 
@@ -122,48 +122,48 @@ public class WFRuntime
 
     private void updateStatuses(WFRunSchema wfRun) {
 
-        for (ThreadRunSchema token: wfRun.threadRuns) {
-            if (token.taskRuns.size() == 0) {
+        for (ThreadRunSchema thread: wfRun.threadRuns) {
+            if (thread.taskRuns.size() == 0) {
                 LHUtil.log("WTF?");
                 continue;
             }
-            if (token.upNext == null) {
-                token.upNext = new ArrayList<TaskRunSchema>();
+            if (thread.upNext == null) {
+                thread.upNext = new ArrayList<TaskRunSchema>();
             }
-            TaskRunSchema lastTr = token.taskRuns.get(token.taskRuns.size() - 1);
-            if (token.status == WFRunStatus.COMPLETED) {
-                // As of now, a COMPLETED token is final.
+            TaskRunSchema lastTr = thread.taskRuns.get(thread.taskRuns.size() - 1);
+            if (thread.status == WFRunStatus.COMPLETED) {
+                // As of now, a COMPLETED thread is final.
                 continue;
 
-            } else if (token.status == WFRunStatus.RUNNING) {
+            } else if (thread.status == WFRunStatus.RUNNING) {
                 // If there are no pending taskruns and the last one executed was COMPLETED,
-                // then the token is now completed.
-                if (token.upNext == null || token.upNext.size() == 0) {
+                // then the thread is now completed.
+                if (thread.upNext == null || thread.upNext.size() == 0) {
                     if (lastTr.status == LHStatus.COMPLETED) {
-                        token.status = WFRunStatus.COMPLETED;
+                        thread.status = WFRunStatus.COMPLETED;
                     }
                 } else if (lastTr.status == LHStatus.ERROR) {
-                    token.status = WFRunStatus.HALTED;
+                    thread.status = WFRunStatus.HALTED;
                 }
 
-            } else if (token.status == WFRunStatus.HALTED) {
+            } else if (thread.status == WFRunStatus.HALTED) {
                 // This shouldn't really be possible I don't think
-                LHUtil.log("What? How are we getting here when the token is already halted?");
-            } else if (token.status == WFRunStatus.HALTING) {
+                LHUtil.log("What? How are we getting here when the thread is already halted?");
+            } else if (thread.status == WFRunStatus.HALTING) {
                 // Well we just gotta see if the last task run is done.
                 if (lastTr.status == LHStatus.COMPLETED || lastTr.status == LHStatus.ERROR) {
-                    token.status = WFRunStatus.HALTED;
+                    thread.status = WFRunStatus.HALTED;
                 }
             }
         }
 
         if (wfRun.status == WFRunStatus.HALTING) {
             boolean allHalted = true;
-            for (ThreadRunSchema token: wfRun.threadRuns) {
-                if (token.status == WFRunStatus.HALTING) {
+            for (ThreadRunSchema thread: wfRun.threadRuns) {
+                if (thread.status == WFRunStatus.HALTING) {
                     allHalted = false;
-                } else if (token.status == WFRunStatus.RUNNING) {
-                    LHUtil.log("WTF how is the token RUNNING while wfRun is HALTING?");
+                } else if (thread.status == WFRunStatus.RUNNING) {
+                    LHUtil.log("WTF how is the thread RUNNING while wfRun is HALTING?");
                 }
             }
             if (allHalted) {
@@ -171,11 +171,11 @@ public class WFRuntime
             }
         } else if (wfRun.status == WFRunStatus.RUNNING) {
             boolean allCompleted = true;
-            for (ThreadRunSchema token: wfRun.threadRuns) {
-                if (token.status == WFRunStatus.RUNNING) {
+            for (ThreadRunSchema thread: wfRun.threadRuns) {
+                if (thread.status == WFRunStatus.RUNNING) {
                     allCompleted = false;
-                } else if (token.status != WFRunStatus.COMPLETED) {
-                    LHUtil.log("WTF is this? Got a halted or halting token but wfrun is running");
+                } else if (thread.status != WFRunStatus.COMPLETED) {
+                    LHUtil.log("WTF is this? Got a halted or halting thread but wfrun is running");
                 }
             }
             if (allCompleted) {
@@ -233,7 +233,7 @@ public class WFRuntime
 
                 ExternalEventCorrelSchema correlSchema = null;
                 for (ExternalEventCorrelSchema candidate : relevantEvents) {
-                    // In the future, we may want to add the ability to signal a specific Token
+                    // In the future, we may want to add the ability to signal a specific thread
                     // rather than the whole wfRun. We would do that here.
                     if (candidate.event != null && candidate.assignedNodeGuid == null) {
                         correlSchema = candidate;
@@ -268,9 +268,9 @@ public class WFRuntime
             }
 
         } else {
-            // Then we gotta terminate the token and add two child tokens.
+            // Then we gotta terminate the thread and add two child threads.
             thread.upNext = null; // CRUCIAL.
-            LHUtil.log("TODO: Actually write the thing that splits tokens off.");
+            LHUtil.log("TODO: Actually write the thing that splits threads off.");
         }
     }
 
@@ -296,8 +296,8 @@ public class WFRuntime
                 );
             }
 
-            ThreadRunSchema token = wfRun.threadRuns.get(trs.tokenNumber);
-            TaskRunSchema theTask = token.taskRuns.get(trs.taskRunNumber);
+            ThreadRunSchema thread = wfRun.threadRuns.get(trs.threadID);
+            TaskRunSchema theTask = thread.taskRuns.get(trs.taskRunNumber);
 
             // Ok, now we have the task.
             theTask.status = LHStatus.RUNNING;
@@ -311,7 +311,7 @@ public class WFRuntime
                 event.content,
                 NodeCompletedEventSchema.class
             );
-            ThreadRunSchema thread = wfRun.threadRuns.get(tre.tokenNumber);
+            ThreadRunSchema thread = wfRun.threadRuns.get(tre.threadID);
             ThreadSpecSchema threadSpec = spec.getModel().threadSpecs.get(
                 thread.threadSpecName
             );
@@ -384,15 +384,15 @@ public class WFRuntime
                 event.content, TaskRunFailedEventSchema.class
             );
 
-            ThreadRunSchema token = wfRun.threadRuns.get(trf.tokenNumber);
-            TaskRunSchema tr = token.taskRuns.get(trf.taskRunNumber);
+            ThreadRunSchema thread = wfRun.threadRuns.get(trf.threadID);
+            TaskRunSchema tr = thread.taskRuns.get(trf.taskRunNumber);
 
-            if (token.upNext != null && token.upNext.size() > 0) {
+            if (thread.upNext != null && thread.upNext.size() > 0) {
                 LHUtil.log("How is there something in 'up next' when a task is running?");
             }
 
             // When we do automatic retries, this is where we handle that.
-            token.status = WFRunStatus.HALTED;
+            thread.status = WFRunStatus.HALTED;
 
             tr.returnCode = trf.returncode;
             tr.endTime = event.timestamp;
@@ -456,8 +456,8 @@ public class WFRuntime
 
     private boolean shouldHalt(WFRunSchema wfRun, WFEventSchema event) {
         // In the future there may be some more things added to the WFSpec which says "certain
-        // tasks can fail without stopping the whole world" or "if this token fails, kill the
-        // whole workflow, but if that token fails, just let the other ones keep going."
+        // tasks can fail without stopping the whole world" or "if this thread fails, kill the
+        // whole workflow, but if that thread fails, just let the other ones keep going."
         // That logic should live here.
         return (
             event.type == WFEventType.WORKFLOW_PROCESSING_FAILED ||
@@ -549,16 +549,16 @@ public class WFRuntime
         >();
 
         // lookup threadspec and add here
-        ThreadRunSchema token = new ThreadRunSchema();
-        token.id = 0;
-        token.status = WFRunStatus.RUNNING;
-        token.taskRuns = new ArrayList<TaskRunSchema>();
+        ThreadRunSchema thread = new ThreadRunSchema();
+        thread.id = 0;
+        thread.status = WFRunStatus.RUNNING;
+        thread.taskRuns = new ArrayList<TaskRunSchema>();
         WFSpecSchema wfSpecSchema = wfSpec.getModel();
 
         ThreadSpecSchema entrypointThread = wfSpecSchema.threadSpecs.get(
             wfSpecSchema.entrypointThreadName
         );
-        token.threadSpecName = entrypointThread.name;
+        thread.threadSpecName = entrypointThread.name;
 
         NodeSchema node = entrypointThread.nodes.get(
             entrypointThread.entrypointNodeName
@@ -572,14 +572,13 @@ public class WFRuntime
         tr.nodeName = node.name;
         tr.wfSpecGuid = wfRun.wfSpecGuid;
         tr.wfSpecName = wfRun.wfSpecName;
-        // token.taskRuns.add(tr);
-        token.upNext = new ArrayList<TaskRunSchema>();
-        token.upNext.add(tr);
+        thread.upNext = new ArrayList<TaskRunSchema>();
+        thread.upNext.add(tr);
 
-        wfRun.threadRuns.add(token);
+        wfRun.threadRuns.add(thread);
 
-        token.variables = runRequest.variables;
-        token.variables = new HashMap<String, Object>();
+        thread.variables = runRequest.variables;
+        thread.variables = new HashMap<String, Object>();
         if (runRequest.variables == null) {
             runRequest.variables = new HashMap<String, Object>();
         }
@@ -588,9 +587,9 @@ public class WFRuntime
 
             Object result = runRequest.variables.get(varName);
             if (result != null) {
-                token.variables.put(varName, result);
+                thread.variables.put(varName, result);
             } else {
-                token.variables.put(varName, varDef.defaultValue);
+                thread.variables.put(varName, varDef.defaultValue);
             }
         }
 

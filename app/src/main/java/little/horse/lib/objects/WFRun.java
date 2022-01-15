@@ -143,12 +143,12 @@ public class WFRun {
     }
 
     public static boolean evaluateEdge(
-        WFRunSchema wfRun, EdgeConditionSchema condition, ThreadRunSchema token
+        WFRunSchema wfRun, EdgeConditionSchema condition, ThreadRunSchema thread
     ) throws VarSubOrzDash {
         if (condition == null) return true;
-        Object lhs = getVariableSubstitution(wfRun, condition.leftSide, token);
+        Object lhs = getVariableSubstitution(wfRun, condition.leftSide, thread);
         LHUtil.log("LHS is ", lhs, lhs.getClass());
-        Object rhs = getVariableSubstitution(wfRun, condition.rightSide, token);
+        Object rhs = getVariableSubstitution(wfRun, condition.rightSide, thread);
         switch (condition.comparator) {
             case LESS_THAN: return compare(lhs, rhs) < 0;
             case LESS_THAN_EQ: return compare(lhs, rhs) <= 0;
@@ -228,9 +228,9 @@ public class WFRun {
                 return wfRun.wfSpecGuid;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
                 return wfRun.wfSpecName;
-            } else if (var.wfRunMetadata == WFRunMetadataEnum.TOKEN_GUID) {
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_GUID) {
                 return String.valueOf(thread.id) + "-"+ wfRun.guid;
-            } else if (var.wfRunMetadata == WFRunMetadataEnum.TOKEN_ID) {
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_ID) {
                 return Integer.valueOf(thread.id);
             }
         }

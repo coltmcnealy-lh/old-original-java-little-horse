@@ -7,6 +7,6 @@ public class SystemEventActor implements WFEventProcessorActor {
         return null;
     }
 
-    public void act(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) {
+    public void act(WFRunSchema wfRun, int threadNumber, int taskRunNumber) {
     }
 }
