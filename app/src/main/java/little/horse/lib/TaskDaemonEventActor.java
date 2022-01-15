@@ -17,7 +17,7 @@ import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.VariableAssignmentSchema;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFTokenSchema;
+import little.horse.lib.schemas.ThreadRunSchema;
 
 public class TaskDaemonEventActor implements WFEventProcessorActor {
     private WFSpec wfSpec;
@@ -54,7 +54,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         thread.start();
     }
 
-    private ArrayList<String> getBashCommand(WFRunSchema wfRun, WFTokenSchema token)
+    private ArrayList<String> getBashCommand(WFRunSchema wfRun, ThreadRunSchema token)
         throws VarSubOrzDash
     {
         ArrayList<String> cmd = taskDef.getModel().bashCommand;
@@ -90,7 +90,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
 
     private void doAction(WFRunSchema wfRun, int tokenNumber, int taskRunNumber) throws Exception {
         ArrayList<String> command;
-        WFTokenSchema token = wfRun.tokens.get(tokenNumber);
+        ThreadRunSchema token = wfRun.threadRuns.get(tokenNumber);
         try {
             command = this.getBashCommand(wfRun, token);
         } catch(VarSubOrzDash exn) {

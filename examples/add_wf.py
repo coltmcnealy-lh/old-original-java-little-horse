@@ -31,69 +31,64 @@ task_definition2 = {
 
 wf_definition = {
     "name": "my-wf",
-
-    "variableDefs": {
-        "name": {
-            "type": "STRING"
-        },
-        "thething": {
-            "type": "STRING",
-        },
-        "counter": {
-            "type": "INT",
-            "defaultValue": 0,
-        }
-    },
-    "entrypointNodeName": "firstNode",
-    "nodes": {
-        "firstNode": {
-            "nodeType": "TASK",
-            "taskDefinitionName": "task1",
-            "variables": {
-                "personName": {
-                    "wfRunVariableName": "name"
-                }
-            }
-        },
-        "secondNode": {
-            "nodeType": "TASK",
-            "taskDefinitionName": "task2",
-            "variables": {
-                "personNameSecondTask": {
-                    "nodeName": "firstNode",
-                    "jsonPath": "$.stdout.person"
-                }
-            },
-            "variableMutations": {
-                "thething": {
-                    "operation": "SET",
-                    "jsonPath": "$.stdout.secondPerson"
+    "entrypointThreadName": "entrypointThread",
+    "threadSpecs": {
+        "entrypointThread": {
+            "variableDefs": {
+                "name": {
+                    "type": "STRING"
                 },
-                "counter": {
-                    "operation": "ADD",
-                    "literalValue": 1
+                "secondName": {
+                    "type": "STRING",
+                },
+            },
+            "entrypointNodeName": "firstNode",
+            "nodes": {
+                "firstNode": {
+                    "nodeType": "TASK",
+                    "taskDefinitionName": "task1",
+                    "variables": {
+                        "personName": {
+                            "wfRunVariableName": "name"
+                        }
+                    },
+                    "variableMutations": {
+                        "secondName": {
+                            "operation": "SET",
+                            "jsonPath": "$.stdout.person"
+                        },
+                    }
+                },
+                "secondNode": {
+                    "nodeType": "TASK",
+                    "taskDefinitionName": "task2",
+                    "variables": {
+                        "personNameSecondTask": {
+                            "wfRunVariableName": "secondName",
+                        }
+                    },
                 }
-            }
-        }
-    },
-    "edges": [{
-        "sourceNodeName": "firstNode",
-        "sinkNodeName": "secondNode"
-    },
-    {
-        "sourceNodeName": "secondNode",
-        "sinkNodeName": "firstNode",
-        "condition": {
-            "leftSide": {
-                "wfRunVariableName": "counter"
             },
-            "rightSide": {
-                "literalValue": 500
+            "edges": [{
+                "sourceNodeName": "firstNode",
+                "sinkNodeName": "secondNode"
             },
-            "comparator": "LESS_THAN",
+            # {
+            #     "sourceNodeName": "secondNode",
+            #     "sinkNodeName": "firstNode",
+            #     "condition": {
+            #         "leftSide": {
+            #             "wfRunVariableName": "counter"
+            #         },
+            #         "rightSide": {
+            #             "literalValue": 500
+            #         },
+            #         "comparator": "LESS_THAN",
+            #     }
+            # }
+            ]
         }
     }
-    ]
 }
 
 

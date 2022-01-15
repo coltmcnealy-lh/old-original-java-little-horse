@@ -10,7 +10,7 @@ public class TaskRunSchema extends BaseSchema {
     public int number;
     public String wfSpecGuid;
     public String wfSpecName;
-    public int tokenNumber;
+    public int threadID;
 
     public String nodeName;
     public String nodeGuid;

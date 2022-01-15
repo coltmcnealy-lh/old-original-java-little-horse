@@ -45,6 +45,7 @@ public class Config {
     private String collectorImage;
     private String wfSpecGuid;
     private String wfNodeName;
+    private String threadSpecName;
 
     public Config() {
         // TODO: Make this more readable
@@ -126,6 +127,7 @@ public class Config {
 
         this.wfSpecGuid = System.getenv(Constants.WF_SPEC_GUID_KEY);
         this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
+        this.threadSpecName = System.getenv(Constants.THREAD_SPEC_NAME_KEY);
     }
 
     public void createKafkaTopic(NewTopic topic) {
@@ -290,6 +292,10 @@ public class Config {
 
     public String getNodeName() {
         return this.wfNodeName;
+    }
+
+    public String getThreadSpecName() {
+        return this.threadSpecName;
     }
 
     public KafkaConsumer<String, WFRunSchema> getWFRunConsumer(

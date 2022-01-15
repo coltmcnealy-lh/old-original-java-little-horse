@@ -82,8 +82,8 @@ public class Node {
         dp.metadata.namespace = this.wfSpec.getNamespace();
         dp.metadata.labels.put("app", this.getK8sName());
         dp.metadata.labels.put("littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid);
-        dp.metadata.labels.put("littlehorse.io/NodeGuid", this.schema.guid);
-        dp.metadata.labels.put("littlehorse.io/NodeName", this.schema.name);
+        dp.metadata.labels.put("littlehorse.io/nodeGuid", this.schema.guid);
+        dp.metadata.labels.put("littlehorse.io/nodeName", this.schema.name);
         dp.metadata.labels.put("littlehorse.io/wfSpecName", this.wfSpec.getModel().name);
         dp.metadata.labels.put("littlehorse.io/active", "true");
 
@@ -105,6 +105,10 @@ public class Node {
             Constants.NODE_NAME_KEY,
             schema.name
         ));
+        container.env.add(new EnvEntry(
+            Constants.THREAD_SPEC_NAME_KEY,
+            schema.threadSpecName
+        ));
 
         Template template = new Template();
         template.metadata = new DeploymentMetadata();
@@ -113,10 +117,13 @@ public class Node {
         template.metadata.namespace = this.wfSpec.getNamespace();
         template.metadata.labels.put("app", this.getK8sName());
         template.metadata.labels.put("littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid);
-        template.metadata.labels.put("littlehorse.io/NodeGuid", this.schema.guid);
-        template.metadata.labels.put("littlehorse.io/NodeName", this.schema.name);
+        template.metadata.labels.put("littlehorse.io/nodeGuid", this.schema.guid);
+        template.metadata.labels.put("littlehorse.io/nodeName", this.schema.name);
         template.metadata.labels.put("littlehorse.io/wfSpecName", this.wfSpec.getModel().name);
         template.metadata.labels.put("littlehorse.io/active", "true");
+        template.metadata.labels.put(
+            "littlehorse.io/threadSpecName", this.schema.threadSpecName
+        );
 
         template.spec = new PodSpec();
         template.spec.containers = new ArrayList<Container>();
@@ -127,10 +134,17 @@ public class Node {
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
         dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid);
-        dp.spec.selector.matchLabels.put("littlehorse.io/NodeGuid", this.schema.guid);
-        dp.spec.selector.matchLabels.put("littlehorse.io/NodeName", this.schema.name);
-        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecName", this.wfSpec.getModel().name);
+        dp.spec.selector.matchLabels.put(
+            "littlehorse.io/wfSpecGuid", this.wfSpec.getModel().guid
+        );
+        dp.spec.selector.matchLabels.put("littlehorse.io/nodeGuid", this.schema.guid);
+        dp.spec.selector.matchLabels.put("littlehorse.io/nodeName", this.schema.name);
+        dp.spec.selector.matchLabels.put(
+            "littlehorse.io/threadSpecName", this.schema.threadSpecName
+        );
+        dp.spec.selector.matchLabels.put(
+            "littlehorse.io/wfSpecName", this.wfSpec.getModel().name
+        );
 
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         try {

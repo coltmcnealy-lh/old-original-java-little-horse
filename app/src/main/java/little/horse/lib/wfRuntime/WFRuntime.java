@@ -39,7 +39,8 @@ import little.horse.lib.schemas.WFRunRequestSchema;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFRunVariableDefSchema;
 import little.horse.lib.schemas.WFSpecSchema;
-import little.horse.lib.schemas.WFTokenSchema;
+import little.horse.lib.schemas.ThreadRunSchema;
+import little.horse.lib.schemas.ThreadSpecSchema;
 
 
 public class WFRuntime
@@ -95,9 +96,9 @@ public class WFRuntime
 
         updateStatuses(wfRun);
         HashSet<String> alreadySeen = new HashSet<String>();
-        WFTokenSchema tokenToAdvance = getTokenToAdvance(wfRun, alreadySeen);
+        ThreadRunSchema tokenToAdvance = getTokenToAdvance(wfRun, alreadySeen);
         while (tokenToAdvance != null) {
-            advanceToken(wfRun, tokenToAdvance, wfSpec, event);
+            advanceThread(wfRun, tokenToAdvance, wfSpec, event);
             updateStatuses(wfRun);
             tokenToAdvance = getTokenToAdvance(wfRun, alreadySeen);
         }
@@ -105,9 +106,9 @@ public class WFRuntime
         kvStore.put(wfRun.guid, wfRun);
     }
 
-    public static WFTokenSchema getTokenToAdvance(WFRunSchema wfRun, Set<String> alreadySeen) {
-        for (WFTokenSchema token: wfRun.tokens) {
-            String key = String.valueOf(token.tokenNumber) + "__" + String.valueOf(
+    public static ThreadRunSchema getTokenToAdvance(WFRunSchema wfRun, Set<String> alreadySeen) {
+        for (ThreadRunSchema token: wfRun.threadRuns) {
+            String key = String.valueOf(token.id) + "__" + String.valueOf(
                 token.taskRuns.size()
             );
             if (!alreadySeen.contains(key)) {
@@ -121,7 +122,7 @@ public class WFRuntime
 
     private void updateStatuses(WFRunSchema wfRun) {
 
-        for (WFTokenSchema token: wfRun.tokens) {
+        for (ThreadRunSchema token: wfRun.threadRuns) {
             if (token.taskRuns.size() == 0) {
                 LHUtil.log("WTF?");
                 continue;
@@ -158,7 +159,7 @@ public class WFRuntime
 
         if (wfRun.status == WFRunStatus.HALTING) {
             boolean allHalted = true;
-            for (WFTokenSchema token: wfRun.tokens) {
+            for (ThreadRunSchema token: wfRun.threadRuns) {
                 if (token.status == WFRunStatus.HALTING) {
                     allHalted = false;
                 } else if (token.status == WFRunStatus.RUNNING) {
@@ -170,7 +171,7 @@ public class WFRuntime
             }
         } else if (wfRun.status == WFRunStatus.RUNNING) {
             boolean allCompleted = true;
-            for (WFTokenSchema token: wfRun.tokens) {
+            for (ThreadRunSchema token: wfRun.threadRuns) {
                 if (token.status == WFRunStatus.RUNNING) {
                     allCompleted = false;
                 } else if (token.status != WFRunStatus.COMPLETED) {
@@ -183,47 +184,51 @@ public class WFRuntime
         }
     }
 
-    private void advanceToken(
+    private void advanceThread(
         WFRunSchema wfRun,
-        WFTokenSchema tokenToAdvance,
+        ThreadRunSchema thread,
         WFSpec wfSpec,
         WFEventSchema wfEvent
     ) {
-        if (tokenToAdvance.status != WFRunStatus.RUNNING) {
+        if (thread.status != WFRunStatus.RUNNING) {
             return;
         }
 
-        ArrayList<TaskRunSchema> nextUp = tokenToAdvance.upNext;
+        ThreadSpecSchema threadSpec = wfSpec.getModel().threadSpecs.get(
+            thread.threadSpecName
+        );
+
+        ArrayList<TaskRunSchema> nextUp = thread.upNext;
         if (nextUp == null || nextUp.size() == 0) {
             // Nothing to do here.
 
         } else if (nextUp.size() == 1) {
             // Then there's only one taskRun to schedule.
             TaskRunSchema tr = nextUp.get(0);
-            NodeSchema node = wfSpec.getModel().nodes.get(tr.nodeName);
+            NodeSchema node = threadSpec.nodes.get(tr.nodeName);
 
             if (node.nodeType == NodeType.TASK) {
                 tr.status = LHStatus.SCHEDULED;
-                tokenToAdvance.taskRuns.add(tr);
+                thread.taskRuns.add(tr);
                 if (node.guid.equals(actor.getNodeGuid())) {
-                    actor.act(wfRun, tokenToAdvance.tokenNumber, tr.number);
+                    actor.act(wfRun, thread.id, tr.number);
                 }
                 // The task has been scheduled (either by this node, two lines above, or
                 // by the node that is supposed to run that task). Therefore, nothing is
                 // up next until the task completes or times out.
-                tokenToAdvance.upNext = null;
+                thread.upNext = null;
 
             } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
                 if (tr.startTime == null) {
                     tr.startTime = wfEvent.timestamp;
                 }
 
-                ArrayList<ExternalEventCorrelSchema> relevantEvents = wfRun.pendingEvents.get(
+                ArrayList<ExternalEventCorrelSchema> relevantEvents = wfRun.correlatedEvents.get(
                     node.externalEventDefName
                 );
                 if (relevantEvents == null) {
                     relevantEvents = new ArrayList<ExternalEventCorrelSchema>();
-                    wfRun.pendingEvents.put(node.externalEventDefName, relevantEvents);
+                    wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
                 }
 
                 ExternalEventCorrelSchema correlSchema = null;
@@ -241,7 +246,7 @@ public class WFRuntime
 
                     try {
                         mutateVariables(wfRun, node.variableMutations, tr, wfSpec);
-                        appendActivatedNodes(wfRun, node, tokenToAdvance);
+                        appendActivatedNodes(wfRun, node, thread);
                     } catch(VarSubOrzDash exn) {
                         exn.printStackTrace();
                         raiseWorkflowProcessingError(
@@ -257,7 +262,7 @@ public class WFRuntime
 
         } else {
             // Then we gotta terminate the token and add two child tokens.
-            tokenToAdvance.upNext = null; // CRUCIAL.
+            thread.upNext = null; // CRUCIAL.
             LHUtil.log("TODO: Actually write the thing that splits tokens off.");
         }
     }
@@ -284,7 +289,7 @@ public class WFRuntime
                 );
             }
 
-            WFTokenSchema token = wfRun.tokens.get(trs.tokenNumber);
+            ThreadRunSchema token = wfRun.threadRuns.get(trs.tokenNumber);
             TaskRunSchema theTask = token.taskRuns.get(trs.taskRunNumber);
 
             // Ok, now we have the task.
@@ -299,17 +304,20 @@ public class WFRuntime
                 event.content,
                 NodeCompletedEventSchema.class
             );
-            WFTokenSchema token = wfRun.tokens.get(tre.tokenNumber);
-            TaskRunSchema task = token.taskRuns.get(tre.taskRunNumber);
-            NodeSchema node = spec.getModel().nodes.get(task.nodeName);
-            if (token.upNext == null) {
-                token.upNext = new ArrayList<TaskRunSchema>();
+            ThreadRunSchema thread = wfRun.threadRuns.get(tre.tokenNumber);
+            ThreadSpecSchema threadSpec = spec.getModel().threadSpecs.get(
+                thread.threadSpecName
+            );
+            TaskRunSchema task = thread.taskRuns.get(tre.taskRunNumber);
+            NodeSchema node = threadSpec.nodes.get(task.nodeName);
+            if (thread.upNext == null) {
+                thread.upNext = new ArrayList<TaskRunSchema>();
             }
 
             if (task.status != LHStatus.RUNNING) {
                 LHUtil.log("WTF how is it possible to complete Task that hasn't started?");
                 }
-            if (token.upNext != null && token.upNext.size() > 0) {
+            if (thread.upNext != null && thread.upNext.size() > 0) {
                 LHUtil.log("How is there something in 'up next' when a task is running?");
             }
 
@@ -321,7 +329,7 @@ public class WFRuntime
 
             try {
                 mutateVariables(wfRun, node.variableMutations, task, spec);
-                appendActivatedNodes(wfRun, node, token);
+                appendActivatedNodes(wfRun, node, thread);
             } catch(VarSubOrzDash exn) {
                 exn.printStackTrace();
                 raiseWorkflowProcessingError(
@@ -347,18 +355,18 @@ public class WFRuntime
                 // Then just append it to pendingEvents.
                 ExternalEventCorrelSchema schema = new ExternalEventCorrelSchema();
                 schema.event = payload;
-                if (wfRun.pendingEvents == null) {
-                    wfRun.pendingEvents = new HashMap<
+                if (wfRun.correlatedEvents == null) {
+                    wfRun.correlatedEvents = new HashMap<
                         String, ArrayList<ExternalEventCorrelSchema>
                     >();
                 }
-                if (wfRun.pendingEvents.get(payload.externalEventDefName) == null) {
-                    wfRun.pendingEvents.put(
+                if (wfRun.correlatedEvents.get(payload.externalEventDefName) == null) {
+                    wfRun.correlatedEvents.put(
                         payload.externalEventDefGuid,
                         new ArrayList<ExternalEventCorrelSchema>()
                     );
                 }
-                wfRun.pendingEvents.get(payload.externalEventDefName).add(schema);
+                wfRun.correlatedEvents.get(payload.externalEventDefName).add(schema);
 
             }
 
@@ -369,7 +377,7 @@ public class WFRuntime
                 event.content, TaskRunFailedEventSchema.class
             );
 
-            WFTokenSchema token = wfRun.tokens.get(trf.tokenNumber);
+            ThreadRunSchema token = wfRun.threadRuns.get(trf.tokenNumber);
             TaskRunSchema tr = token.taskRuns.get(trf.taskRunNumber);
 
             if (token.upNext != null && token.upNext.size() > 0) {
@@ -470,22 +478,25 @@ public class WFRuntime
     }
 
     private void appendActivatedNodes(
-        WFRunSchema wfRun, NodeSchema node, WFTokenSchema token
+        WFRunSchema wfRun, NodeSchema node, ThreadRunSchema thread
     ) throws VarSubOrzDash {
         WFSpec spec = getWFSpec(wfRun.wfSpecGuid);
+        ThreadSpecSchema threadSpec = spec.getModel().threadSpecs.get(
+            thread.threadSpecName
+        );
         for (EdgeSchema edge : node.outgoingEdges) {
-            if (WFRun.evaluateEdge(wfRun, edge.condition, token)) {
+            if (WFRun.evaluateEdge(wfRun, edge.condition, thread)) {
                 TaskRunSchema task = new TaskRunSchema();
-                NodeSchema newNode = spec.getModel().nodes.get(edge.sinkNodeName);
+                NodeSchema newNode = threadSpec.nodes.get(edge.sinkNodeName);
                 task.status = LHStatus.PENDING;
                 task.nodeGuid = newNode.guid;
                 task.nodeName = newNode.name;
                 task.wfSpecGuid = wfRun.wfSpecGuid;
                 task.wfSpecName = wfRun.wfSpecName;
-                task.number = token.taskRuns.size();
-                task.tokenNumber = token.tokenNumber;
+                task.number = thread.taskRuns.size();
+                task.threadID = thread.id;
 
-                token.upNext.add(task);
+                thread.upNext.add(task);
             }
         }
     }
@@ -524,20 +535,27 @@ public class WFRuntime
         wfRun.wfSpecGuid = event.wfSpecGuid;
         wfRun.wfSpecName = event.wfSpecName;
         wfRun.status = WFRunStatus.RUNNING;
-        wfRun.tokens = new ArrayList<WFTokenSchema>();
-        
-        WFTokenSchema token = new WFTokenSchema();
-        token.tokenNumber = 0;
+        wfRun.threadRuns = new ArrayList<ThreadRunSchema>();
+
+        // lookup threadspec and add here
+        ThreadRunSchema token = new ThreadRunSchema();
+        token.id = 0;
         token.status = WFRunStatus.RUNNING;
         token.taskRuns = new ArrayList<TaskRunSchema>();
-
         WFSpecSchema wfSpecSchema = wfSpec.getModel();
-        NodeSchema node = wfSpecSchema.nodes.get(
-            wfSpecSchema.entrypointNodeName
+
+        ThreadSpecSchema entrypointThread = wfSpecSchema.threadSpecs.get(
+            wfSpecSchema.entrypointThreadName
         );
+        token.threadSpecName = entrypointThread.name;
+
+        NodeSchema node = entrypointThread.nodes.get(
+            entrypointThread.entrypointNodeName
+        );
+
         TaskRunSchema tr = new TaskRunSchema();
         tr.status = LHStatus.PENDING;
-        tr.tokenNumber = 0;
+        tr.threadID = 0;
         tr.number = 0;
         tr.nodeGuid = node.guid;
         tr.nodeName = node.name;
@@ -545,21 +563,21 @@ public class WFRuntime
         token.upNext = new ArrayList<TaskRunSchema>();
         token.upNext.add(tr);
 
-        wfRun.tokens.add(token);
-        
-        wfRun.variables = runRequest.variables;
-        wfRun.variables = new HashMap<String, Object>();
+        wfRun.threadRuns.add(token);
+
+        token.variables = runRequest.variables;
+        token.variables = new HashMap<String, Object>();
         if (runRequest.variables == null) {
             runRequest.variables = new HashMap<String, Object>();
         }
-        for (String varName: wfSpec.getModel().variableDefs.keySet()) {
-            WFRunVariableDefSchema varDef = wfSpec.getModel().variableDefs.get(varName);
+        for (String varName: entrypointThread.variableDefs.keySet()) {
+            WFRunVariableDefSchema varDef = entrypointThread.variableDefs.get(varName);
 
             Object result = runRequest.variables.get(varName);
             if (result != null) {
-                wfRun.variables.put(varName, result);
+                token.variables.put(varName, result);
             } else {
-                wfRun.variables.put(varName, varDef.defaultValue);
+                token.variables.put(varName, varDef.defaultValue);
             }
         }
 

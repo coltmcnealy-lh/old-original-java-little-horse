@@ -10,10 +10,11 @@ public class NodeSchema extends BaseSchema {
     public NodeType nodeType;
     public String taskDefinitionName;
     public String wfSpecGuid;
+    public String threadSpecName;
     public String guid;
 
-    public ArrayList<WFTriggerSchema> triggers;
     public ArrayList<EdgeSchema> outgoingEdges;
+    public ArrayList<EdgeSchema> incomingEdges;
 
     public HashMap<String, VariableAssignmentSchema> variables;
 
@@ -21,7 +22,4 @@ public class NodeSchema extends BaseSchema {
     public String externalEventDefGuid;
 
     public HashMap<String, VariableMutationSchema> variableMutations;
-
-    // LATER: Maybe add inputVariables, which would be just an annotation
-    // denoting what is going to come next.
 }

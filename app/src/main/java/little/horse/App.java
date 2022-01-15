@@ -31,6 +31,7 @@ import little.horse.lib.WFRunTopology;
 import little.horse.lib.objects.TaskDef;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.ThreadSpecSchema;
 
 
 class FrontendAPIApp {
@@ -122,8 +123,11 @@ class DaemonApp {
         // just need to set up the topology and run it.
 
         WFSpec wfSpec = WFSpec.fromIdentifier(config.getWfSpecGuid(), config);
+        ThreadSpecSchema thread = wfSpec.getModel().threadSpecs.get(
+            config.getThreadSpecName()
+        );
+        NodeSchema node = thread.nodes.get(config.getNodeName());
 
-        NodeSchema node = wfSpec.getModel().nodes.get(config.getNodeName());
         TaskDef td = TaskDef.fromIdentifier(node.taskDefinitionName, config);
 
         WFEventProcessorActor actor = new TaskDaemonEventActor(

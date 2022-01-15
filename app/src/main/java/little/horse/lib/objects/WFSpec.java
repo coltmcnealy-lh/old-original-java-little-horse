@@ -10,15 +10,13 @@ import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.LHValidationError;
 import little.horse.lib.NodeType;
-import little.horse.lib.WFEventType;
 import little.horse.lib.K8sStuff.Deployment;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.SignalHandlerSpecSchema;
-import little.horse.lib.schemas.VariableAssignmentSchema;
+
+import little.horse.lib.schemas.ThreadSpecSchema;
 import little.horse.lib.schemas.WFSpecSchema;
-import little.horse.lib.schemas.WFTriggerSchema;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -42,7 +40,151 @@ public class WFSpec {
     private WFSpecSchema schema;
     private String k8sName;
 
+    private void cleanupTaskNode(NodeSchema node) throws LHValidationError {
+        if (node.taskDefinitionName == null) {
+            throw new LHValidationError(
+                "Invalid Node " + node.name + ": No taskDefinition supplied"
+            );
+        }
+        try {
+            TaskDef.fromIdentifier(node.taskDefinitionName, config);
+        } catch (LHLookupException exn) {
+            if (exn.getReason() == LHLookupExceptionReason.OBJECT_NOT_FOUND) {
+                throw new LHValidationError(
+                    "No taskDef named " + node.taskDefinitionName + " found."
+                );
+            } else {
+                throw new LHValidationError(
+                    "Failed looking up TaskDef " + node.taskDefinitionName
+                );
+            }
+        }
+    }
+
+    private void cleanupExternalEventNode(NodeSchema node) throws LHValidationError {
+        ExternalEventDef eed = null;
+            if (node.externalEventDefGuid != null) {
+            try {
+                eed = ExternalEventDef.fromIdentifier(
+                    node.externalEventDefGuid, config
+                );
+            } catch (LHLookupException exn) {
+                throw new LHValidationError(
+                    "Could not find externaleventdef " + node.externalEventDefGuid
+                );
+            }
+        } else if (node.externalEventDefName != null) {
+            try {
+                eed = ExternalEventDef.fromIdentifier(
+                    node.externalEventDefName, config
+                );
+            } catch (LHLookupException exn) {
+                exn.printStackTrace();
+                throw new LHValidationError(
+                    "Could not find externaleventdef " + node.externalEventDefName
+                );
+            }
+        }
+
+        node.externalEventDefGuid = eed.getModel().guid;
+        node.externalEventDefName = eed.getModel().name;
+    }
+
+    private void cleanupNode(String name, NodeSchema node, ThreadSpecSchema thread)
+    throws LHValidationError {
+        node.threadSpecName = thread.name;
+        node.wfSpecGuid = schema.guid;
+        if (node.guid == null) {
+            node.guid = LHUtil.generateGuid();
+        }
+        
+        if (node.name == null) {
+            node.name = name;
+        } else if (!node.name.equals(name)) {
+            throw new LHValidationError(
+                "Node name didn't match for node " + name
+            );
+        }
+
+        if (node.outgoingEdges == null) {
+            node.outgoingEdges = new ArrayList<EdgeSchema>();
+        }
+        if (node.incomingEdges == null) {
+            node.incomingEdges = new ArrayList<EdgeSchema>();
+        }
+
+        if (node.nodeType == NodeType.TASK) {
+            cleanupTaskNode(node);
+        } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
+            cleanupExternalEventNode(node);
+        }
+
+    }
+
+    private void cleanupEdge(EdgeSchema edge, ThreadSpecSchema thread) {
+        edge.wfSpecGuid = schema.guid;
+        if (edge.guid == null) {
+            edge.guid = LHUtil.generateGuid();
+        }
+        NodeSchema source = thread.nodes.get(edge.sourceNodeName);
+        NodeSchema sink = thread.nodes.get(edge.sinkNodeName);
+        edge.sourceNodeGuid = source.guid;
+        edge.sinkNodeGuid = sink.guid;
+
+        boolean alreadyHasEdge = false;
+        for (EdgeSchema candidate : source.outgoingEdges) {
+            if (candidate.sinkNodeName.equals(sink.name)) {
+                alreadyHasEdge = true;
+                break;
+            }
+        }
+        if (!alreadyHasEdge) {
+            source.outgoingEdges.add(edge);
+            sink.incomingEdges.add(edge);
+        }
+    }
+
+    private String calculateEntrypointNode(ThreadSpecSchema thread) throws LHValidationError {
+        NodeSchema entrypoint = null;
+        for (Map.Entry<String, NodeSchema> pair: thread.nodes.entrySet()) {
+            NodeSchema node = pair.getValue();
+            if (node.incomingEdges.size() == 0) {
+                if (entrypoint != null) {
+                    throw new LHValidationError(
+                        "Invalid WFSpec: More than one node without incoming edges."
+                        );
+                    }
+                entrypoint = node;
+            }
+        }
+        return entrypoint.name;
+    }
+
+    private void cleanupThreadSpec(ThreadSpecSchema spec, String name) throws LHValidationError {
+        spec.name = name;
+
+        for (Map.Entry<String, NodeSchema> pair: spec.nodes.entrySet()) {
+            // clean up the node (i.e. give it a guid if it doesn't have one, etc), validate that
+            // its taskdef exist
+            cleanupNode(pair.getKey(), pair.getValue(), spec);
+        }
+
+        if (spec.edges == null) {
+            spec.edges = new ArrayList<EdgeSchema>();
+        }
+        for (EdgeSchema edge : spec.edges) {
+            cleanupEdge(edge, spec);
+        }
+
+        // Lastly, assign the entrypoint node
+        if (spec.entrypointNodeName == null) {
+            spec.entrypointNodeName = calculateEntrypointNode(spec);
+        }
+    }
+
     public WFSpec(WFSpecSchema schema, Config config) throws LHValidationError {
+        this.config = config;
+        this.schema = schema;
         // TODO (hard): do some validation that we don't have a 409.
         if (schema.guid == null) {
             schema.guid = LHUtil.generateGuid();
@@ -60,208 +202,10 @@ public class WFSpec {
             schema.desiredStatus = LHStatus.RUNNING;
         }
 
-        for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
-            NodeSchema node = pair.getValue();
-            if (node.triggers == null) {
-                node.triggers = new ArrayList<WFTriggerSchema>();
-            }
-            node.wfSpecGuid = schema.guid;
-            if (node.guid == null) {
-                node.guid = LHUtil.generateGuid();
-            }
-            
-            if (node.name == null) {
-                node.name = pair.getKey();
-            } else if (!node.name.equals(pair.getKey())) {
-                throw new LHValidationError("Node name didn't match for node " + pair.getKey());
-            }
-
-            if (node.outgoingEdges == null) {
-                node.outgoingEdges = new ArrayList<EdgeSchema>();
-            }
-
-            // Now validate that the TaskDef's actually exist
-            if (node.nodeType == NodeType.TASK) {
-                if (node.taskDefinitionName == null) {
-                    throw new LHValidationError("Invalid Node " + node.name + ": No taskDefinition supplied");
-                }
-                try {
-                    TaskDef.fromIdentifier(node.taskDefinitionName, config);
-                } catch (LHLookupException exn) {
-                    if (exn.getReason() == LHLookupExceptionReason.OBJECT_NOT_FOUND) {
-                        throw new LHValidationError(
-                            "No task definition named " + node.taskDefinitionName + " found."
-                        );
-                    } else {
-                        throw new LHValidationError(
-                            "Failed looking up TaskDef " + node.taskDefinitionName
-                        );
-                    }
-                }
-
-                if (node.variables != null) {
-                    for (String varName : node.variables.keySet()) {
-                        VariableAssignmentSchema var = node.variables.get(varName);
-
-                        if (var.wfRunVariableName != null) {
-                            if (schema.variableDefs == null) {
-                                throw new LHValidationError(
-                                    "Need to provide VariableDef since it's used on node " + node.name + " for variable " + varName
-                                );
-                            }
-                            if (schema.variableDefs.get(var.wfRunVariableName) == null) {
-                                throw new LHValidationError(
-                                    "Referenced nonexistent wfrunvariable " + var.wfRunVariableName
-                                );
-                            }
-                        }
-                    }
-                }
-
-            } else {
-                if (node.nodeType != NodeType.EXTERNAL_EVENT) {
-                    throw new RuntimeException("oops");
-                }
-
-                ExternalEventDef eed = null;
-                if (node.externalEventDefGuid != null) {
-                    try {
-                        eed = ExternalEventDef.fromIdentifier(node.externalEventDefGuid, config);
-                    } catch (LHLookupException exn) {
-                        throw new LHValidationError("Could not find externaleventdef " + node.externalEventDefGuid);
-                    }
-                } else if (node.externalEventDefName != null) {
-                    try {
-                        eed = ExternalEventDef.fromIdentifier(node.externalEventDefName, config);
-                    } catch (LHLookupException exn) {
-                        exn.printStackTrace();
-                        throw new LHValidationError("Could not find externaleventdef " + node.externalEventDefName);
-                    }
-                }
-
-                node.externalEventDefGuid = eed.getModel().guid;
-                node.externalEventDefName = eed.getModel().name;
-            }
-
+        for (Map.Entry<String, ThreadSpecSchema> pair: schema.threadSpecs.entrySet()) {
+            cleanupThreadSpec(pair.getValue(), pair.getKey());
         }
 
-        if (schema.edges == null) {
-            schema.edges = new ArrayList<EdgeSchema>();
-        }
-        // TODO: Some error handling here if bad spec provided.
-        for (EdgeSchema edge : schema.edges) {
-            edge.wfSpecGuid = schema.guid;
-            if (edge.guid == null) {
-                edge.guid = LHUtil.generateGuid();
-            }
-            NodeSchema source = schema.nodes.get(edge.sourceNodeName);
-            NodeSchema sink = schema.nodes.get(edge.sinkNodeName);
-            edge.sourceNodeGuid = source.guid;
-            edge.sinkNodeGuid = sink.guid;
-
-            boolean alreadyHasEdge = false;
-            for (EdgeSchema candidate : source.outgoingEdges) {
-                if (candidate.sinkNodeName.equals(sink.name)) {
-                    alreadyHasEdge = true;
-                    break;
-                }
-            }
-            if (!alreadyHasEdge) {
-                source.outgoingEdges.add(edge);
-            }
-
-            // Add a WFTrigger to the triggers list.
-            boolean found = false;
-            for (WFTriggerSchema trigger : sink.triggers) {
-                if (trigger.triggerNodeGuid.equals(source.guid) || 
-                    trigger.triggerNodeName.equals(source.name)
-                ) {
-                    // TODO: if found is already true, raise a big stink.
-                    found = true;
-                }
-            }
-            if (!found) {
-                WFTriggerSchema trigger = new WFTriggerSchema();
-                trigger.triggerEventType = WFEventType.NODE_COMPLETED;
-                trigger.triggerNodeName = source.name;
-                trigger.triggerNodeGuid = source.guid;
-                sink.triggers.add(trigger);
-            }
-        }
-
-        // Lastly, find the (supposedly exactly one) node which has zero input topics, and
-        // deem that node the entrypoint.
-        if (schema.entrypointNodeName == null) {
-            NodeSchema entrypoint = null;
-            for (Map.Entry<String, NodeSchema> pair: schema.nodes.entrySet()) {
-                NodeSchema node = pair.getValue();
-                if (node.triggers.size() == 0) {
-                    entrypoint = node;
-
-                    WFTriggerSchema trigger = new WFTriggerSchema();
-                    trigger.triggerEventType = WFEventType.WF_RUN_STARTED;
-                    node.triggers.add(trigger);
-
-                } else if (node.triggers.size() == 1 &&
-                    node.triggers.get(0).triggerEventType == WFEventType.WF_RUN_STARTED
-                ) {
-                    if (entrypoint != null) {
-                        throw new LHValidationError(
-                            "Invalid WFSpec: More than one node without incoming edges."
-                        );
-                    }
-                    entrypoint = node;
-                }
-            } // for node in schema.nodes
-
-            if (entrypoint == null) {
-                throw new LHValidationError("No entrypoint node provided!");
-            }
-            schema.entrypointNodeName = entrypoint.name;
-        }
-        
-        if (schema.signalHandlers == null) {
-            schema.signalHandlers = new ArrayList<SignalHandlerSpecSchema>();
-        }
-        for (SignalHandlerSpecSchema handler : schema.signalHandlers) {
-            ExternalEventDef eed = null;
-            if (handler.externalEventDefGuid != null) {
-                try {
-                    eed = ExternalEventDef.fromIdentifier(handler.externalEventDefGuid, config);
-                } catch (LHLookupException exn) {
-                    throw new LHValidationError("Could not find externaleventdef " + handler.externalEventDefGuid);
-                }
-            } else if (handler.externalEventDefName != null) {
-                try {
-                    eed = ExternalEventDef.fromIdentifier(handler.externalEventDefName, config);
-                } catch (LHLookupException exn) {
-                    exn.printStackTrace();
-                    throw new LHValidationError("Could not find externaleventdef " + handler.externalEventDefName);
-                }
-            }
-            handler.externalEventDefGuid = eed.getModel().guid;
-            handler.externalEventDefName = eed.getModel().name;
-
-            WFSpec handlerSpec = null;
-            try {
-                if (handler.wfSpecGuid != null) {
-                    handlerSpec = WFSpec.fromIdentifier(handler.wfSpecGuid, config);
-                } else {
-                    handlerSpec = WFSpec.fromIdentifier(handler.wfSpecName, config);
-                }
-            } catch (LHLookupException exn){
-                exn.printStackTrace();
-                throw new LHValidationError(
-                    "couldn't find designated wfSpec on signalHandler for event " + eed.getModel().name +
-                    " and the wfSpec name is " + handler.wfSpecName + " " + handler.wfSpecGuid
-                );
-            }
-            handler.wfSpecGuid = handlerSpec.getModel().guid;
-            handler.wfSpecName = handlerSpec.getModel().name;
-        }
-
-        this.schema = schema;
-        this.config = config;
         this.k8sName = LHUtil.toValidK8sName(
             this.schema.name + "-" + LHUtil.digestify(schema.guid)
         );
@@ -352,12 +296,18 @@ public class WFSpec {
 
     public ArrayList<Node> getNodes() {
         ArrayList<Node> list = new ArrayList<Node>();
-        for (Map.Entry<String, NodeSchema> entry : schema.nodes.entrySet()) {
-            try {
-                list.add(new Node(entry.getValue(), this, config));
-            } catch (LHLookupException exn) {
-                LHUtil.logError("Shouldn't be possible to have this but we do.", exn.getMessage());
-                // Nothing to do, because shouldn't be able to get here.
+        for (Map.Entry<String, ThreadSpecSchema> t: schema.threadSpecs.entrySet()) {
+            ThreadSpecSchema tspec = t.getValue();
+            for (Map.Entry<String, NodeSchema> n : tspec.nodes.entrySet()) {
+                try {
+                    list.add(new Node(n.getValue(), this, config));
+                } catch (LHLookupException exn) {
+                    LHUtil.logError(
+                        "Shouldn't be possible to have this but we do.",
+                        exn.getMessage()
+                    );
+                    // Nothing to do, because shouldn't be able to get here.
+                }
             }
         }
         return list;

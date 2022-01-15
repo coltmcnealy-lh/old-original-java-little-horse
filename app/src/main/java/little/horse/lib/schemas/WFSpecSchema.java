@@ -2,20 +2,31 @@ package little.horse.lib.schemas;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import little.horse.lib.LHStatus;
 
 public class WFSpecSchema extends BaseSchema {
     public String name;
     public String guid;
-    public HashMap<String, NodeSchema> nodes;
-    public ArrayList<EdgeSchema> edges;
     public LHStatus status;
     public String kafkaTopic;
-    public String entrypointNodeName;
+    public String entrypointThreadName;
     public LHStatus desiredStatus;
 
-    public HashMap<String, WFRunVariableDefSchema> variableDefs;
+    public HashMap<String, ThreadSpecSchema> threadSpecs;
 
-    public ArrayList<SignalHandlerSpecSchema> signalHandlers;
+    @JsonIgnore
+    public ArrayList<Map.Entry<String, NodeSchema>> allNodePairs() {
+        ArrayList<Map.Entry<String, NodeSchema>> out = new ArrayList<>();
+        for (Map.Entry<String, ThreadSpecSchema> tp: threadSpecs.entrySet()) {
+            ThreadSpecSchema t = tp.getValue();
+            for (Map.Entry<String, NodeSchema> np: t.nodes.entrySet()) {
+                out.add(np);
+            }
+        }
+        return out;
+    }
 }

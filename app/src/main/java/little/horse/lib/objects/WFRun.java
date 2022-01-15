@@ -1,13 +1,14 @@
 package little.horse.lib.objects;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.jayway.jsonpath.JsonPath;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
@@ -24,10 +25,9 @@ import little.horse.lib.schemas.VariableMutationOperation;
 import little.horse.lib.schemas.VariableMutationSchema;
 import little.horse.lib.schemas.WFRunMetadataEnum;
 import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFRunVariableContexSchema;
 import little.horse.lib.schemas.WFRunVariableDefSchema;
 import little.horse.lib.schemas.WFRunVariableTypeEnum;
-import little.horse.lib.schemas.WFTokenSchema;
+import little.horse.lib.schemas.ThreadRunSchema;
 import little.horse.lib.wfRuntime.WFRunStatus;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -53,38 +53,6 @@ public class WFRun {
         if (schema.status == null) {
             schema.status = WFRunStatus.RUNNING;
         }
-    }
-
-    public static WFRunVariableContexSchema getContext(WFRunSchema wfRun, WFTokenSchema token) {
-        WFRunVariableContexSchema schema = new WFRunVariableContexSchema();
-
-        Integer tokenNumber = token == null ? null : token.tokenNumber;
-
-        schema.nodeOutputs = new HashMap<String, ArrayList<TaskRunSchema>>();
-        for (WFTokenSchema tok : wfRun.tokens) {
-            if (tok.tokenNumber == tokenNumber) {
-                // Skip it for now and come back later to ensure that this token is last.
-                continue;
-            }
-            for (TaskRunSchema tr : tok.taskRuns) {
-                if (!schema.nodeOutputs.containsKey(tr.nodeName)) {
-                    schema.nodeOutputs.put(tr.nodeName, new ArrayList<TaskRunSchema>());
-                }
-                schema.nodeOutputs.get(tr.nodeName).add(tr);
-            }
-        }
-
-        if (tokenNumber != null) {
-            for (TaskRunSchema tr : token.taskRuns) {
-                if (!schema.nodeOutputs.containsKey(tr.nodeName)) {
-                    schema.nodeOutputs.put(tr.nodeName, new ArrayList<TaskRunSchema>());
-                }
-                schema.nodeOutputs.get(tr.nodeName).add(tr);
-            }
-        }
-
-        schema.wfRunVariables = wfRun.variables;
-        return schema;
     }
 
     public static WFRun fromGuid(String guid, Config config)
@@ -137,11 +105,6 @@ public class WFRun {
         return new WFRun(schema, config);
     }
 
-    public static String getContextString(WFRunSchema wfRun, WFTokenSchema token) {
-        WFRunVariableContexSchema schema = WFRun.getContext(wfRun, token);
-        return schema.toString();
-    }
-
     public WFRun(WFRunSchema schema, Config config) throws LHLookupException, LHValidationError {
         this.config = config;
         this.schema = schema;
@@ -180,7 +143,7 @@ public class WFRun {
     }
 
     public static boolean evaluateEdge(
-        WFRunSchema wfRun, EdgeConditionSchema condition, WFTokenSchema token
+        WFRunSchema wfRun, EdgeConditionSchema condition, ThreadRunSchema token
     ) throws VarSubOrzDash {
         if (condition == null) return true;
         Object lhs = getVariableSubstitution(wfRun, condition.leftSide, token);
@@ -236,10 +199,9 @@ public class WFRun {
     }
 
     public static Object getVariableSubstitution(
-            WFRunSchema wfRun, VariableAssignmentSchema var, WFTokenSchema token
+            WFRunSchema wfRun, VariableAssignmentSchema var, ThreadRunSchema thread
     ) throws VarSubOrzDash {
 
-        WFRunVariableContexSchema context = getContext(wfRun, token);
         if (var.literalValue != null) {
             LHUtil.log("returning literalvalue: ", var.literalValue.getClass());
             return var.literalValue;
@@ -249,23 +211,8 @@ public class WFRun {
         // from a wfRunVariable.
 
         Object dataToParse = null;
-        if (var.nodeName != null) {
-            ArrayList<TaskRunSchema> taskRuns = context.nodeOutputs.get(var.nodeName);
-            if (taskRuns == null && var.defaultValue == null) {
-                throw new VarSubOrzDash(
-                    null,
-                    "Could not find taskRuns for node name " + var.nodeName
-                );
-            }
-            if (taskRuns == null) {
-                return var.defaultValue;
-            } else if (var.useLatestTaskRun) {
-                dataToParse = taskRuns.get(taskRuns.size() - 1).toString();
-            } else {
-                dataToParse = LHUtil.jsonify(taskRuns);
-            }
-        } else if (var.wfRunVariableName != null) {
-            HashMap<String, Object> variableContext = context.wfRunVariables;
+        if (var.wfRunVariableName != null) {
+            HashMap<String, Object> variableContext = thread.getAllVariables(wfRun);
             Object result = variableContext.get(var.wfRunVariableName);
             if (result == null) {
                 throw new VarSubOrzDash(
@@ -281,6 +228,10 @@ public class WFRun {
                 return wfRun.wfSpecGuid;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
                 return wfRun.wfSpecName;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.TOKEN_GUID) {
+                return String.valueOf(thread.id) + "-"+ wfRun.guid;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.TOKEN_ID) {
+                return Integer.valueOf(thread.id);
             }
         }
 
@@ -311,7 +262,14 @@ public class WFRun {
         WFSpec wfSpec,
         TaskRunSchema tr
     ) throws VarSubOrzDash {
-        WFRunVariableDefSchema def = wfSpec.getModel().variableDefs.get(varName);
+        ThreadRunSchema curThread = wfRun.threadRuns.get(tr.threadID);
+
+        Pair<WFRunVariableDefSchema, ThreadRunSchema> pair = curThread
+            .getVariableDefinition(varName, wfRun, wfSpec.getModel());
+        
+        ThreadRunSchema thread = pair.getRight();
+        WFRunVariableDefSchema def = pair.getLeft();
+
         String dataToParse = tr.toString();
         Object result;
         if (mutation.jsonPath != null) {
@@ -319,7 +277,7 @@ public class WFRun {
         } else {
             result = mutation.literalValue;
         }
-        Object original = wfRun.variables.get(varName);
+        Object original = thread.variables.get(varName);
         
         Class<?> defTypeCls = null;
         switch (def.type) {
@@ -339,7 +297,7 @@ public class WFRun {
                     " substituting " + mutation.jsonPath + " on " + tr.toString()
                 );
             }
-            wfRun.variables.put(varName, result);
+            thread.variables.put(varName, result);
         } else if (mutation.operation == VariableMutationOperation.ADD) {
             if (def.type == WFRunVariableTypeEnum.BOOLEAN ||
                 def.type == WFRunVariableTypeEnum.OBJECT
@@ -351,20 +309,20 @@ public class WFRun {
             } else if (def.type == WFRunVariableTypeEnum.STRING) {
                 String orig = (String) original;
                 orig = orig + ((String)result);
-                wfRun.variables.put(varName, orig);
+                thread.variables.put(varName, orig);
             } else if (def.type == WFRunVariableTypeEnum.INT) {
                 Integer orig = (Integer) original;
                 orig += (Integer) result;
-                wfRun.variables.put(varName, orig);
+                thread.variables.put(varName, orig);
             } else if (def.type == WFRunVariableTypeEnum.DOUBLE) {
                 Double orig = (Double) original;
                 orig += (Double) result;
-                wfRun.variables.put(varName, orig);
+                thread.variables.put(varName, orig);
             } else if (def.type == WFRunVariableTypeEnum.ARRAY) {
                 @SuppressWarnings("unchecked")
                 List<Object> orig = (List<Object>) original;
                 orig.add(result);
-                wfRun.variables.put(varName, orig);
+                thread.variables.put(varName, orig);
             }
         
         } else {
