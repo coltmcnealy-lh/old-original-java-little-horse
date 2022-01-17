@@ -23,4 +23,6 @@ public class WFRunSchema extends BaseSchema {
 
     public HashMap<String, ArrayList<ExternalEventCorrelSchema>> correlatedEvents;
     public Stack<String> pendingInterrupts;
+
+    public HashMap<String, ArrayList<ThreadRunMetaSchema>> awaitableThreads;
 }

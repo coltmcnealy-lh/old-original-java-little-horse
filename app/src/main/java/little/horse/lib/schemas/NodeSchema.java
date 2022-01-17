@@ -21,5 +21,10 @@ public class NodeSchema extends BaseSchema {
     public String externalEventDefName;
     public String externalEventDefGuid;
 
+    public String threadWaitSourceNodeName;
+    public String threadWaitSourceNodeGuid;
+
+    public String threadSpawnThreadSpecName;
+
     public HashMap<String, VariableMutationSchema> variableMutations;
 }
