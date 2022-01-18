@@ -12,6 +12,7 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -105,5 +106,18 @@ public class LHUtil {
             exn.printStackTrace();
             return null;
         }
+    }
+
+    public static Object jsonifyIfPossible(String data) {
+        try {
+            Object obj = LHUtil.mapper.readValue(data, Object.class);
+            return obj;
+        } catch(Exception exn) {
+            return data;
+        }
+    }
+
+    public static Object jsonPath(String json, String path) {
+        return JsonPath.parse(json).read(path);
     }
 }

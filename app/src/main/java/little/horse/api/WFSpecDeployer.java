@@ -36,7 +36,7 @@ public class WFSpecDeployer {
                         Thread.sleep(500);
                     } catch(Exception exn) {}
                     WFSpecSchema schema = BaseSchema.fromString(record.value(), WFSpecSchema.class);
-                    WFSpec spec = WFSpec.fromIdentifier(schema.guid, config);
+                    schema.setConfig(config);
                     if (schema.desiredStatus == LHStatus.REMOVED) {
                         spec.undeploy();
                     } else if (schema.desiredStatus == LHStatus.RUNNING) {

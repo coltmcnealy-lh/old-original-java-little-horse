@@ -2,9 +2,8 @@ package little.horse.lib.schemas;
 
 public class ThreadRunMetaSchema extends BaseSchema {
     public int threadID;
-    public String wfRunGuid;
-    public String wfSpecGuid;
-    public String wfSpecName;
+    public int parentThreadID;
+    public String threadSpecName;
 
     public String sourceNodeName;
     public String sourceNodeGuid;

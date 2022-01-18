@@ -63,7 +63,38 @@ public class WFRunSchema extends BaseSchema {
         return wfSpec;
     }
 
-    public void addThread(
+    public ThreadRunMetaSchema addThread(
+        String threadName,
+        Map<String, Object> variables,
+        WFRunStatus initialStatus,
+        TaskRunSchema parentTaskRun
+    ) throws LHNoConfigException, LHLookupException {
+        ThreadRunSchema thread = addThread(threadName, variables, initialStatus);
+        thread.parentThreadID = parentTaskRun.threadID;
+
+        // lmao that's a lot of chaining haha
+        parentTaskRun.parentThread.childThreadIDs.add(thread.id);
+
+        if (awaitableThreads.get(parentTaskRun.nodeName) == null) {
+            awaitableThreads.put(
+                parentTaskRun.nodeName, new ArrayList<ThreadRunMetaSchema>()
+            );
+        }
+
+        ThreadRunMetaSchema meta = new ThreadRunMetaSchema();
+        passConfig(meta);
+        meta.sourceNodeGuid = parentTaskRun.nodeGuid;
+        meta.sourceNodeName = parentTaskRun.nodeName;
+        meta.threadID = thread.id;
+        meta.timesAwaited = 0;
+        meta.parentThreadID = parentTaskRun.threadID;
+        meta.threadSpecName = parentTaskRun.parentThread.threadSpecName;
+        awaitableThreads.get(parentTaskRun.nodeName).add(meta);
+
+        return meta;
+    }
+
+    public ThreadRunSchema addThread(
         String threadName, Map<String, Object> variables, WFRunStatus initialStatus
     ) throws LHNoConfigException, LHLookupException {
         getWFSpec();  // just make sure the thing isn't null;
@@ -94,11 +125,14 @@ public class WFRunSchema extends BaseSchema {
                 trun.variables.put(varName, varDef.defaultValue);
             }
         }
-        trun.upNext = new ArrayList<TaskRunSchema>();
+        trun.upNext = new ArrayList<EdgeSchema>();
 
         // Now add the entrypoint taskRun
-        NodeSchema node = tspec.nodes.get(tspec.entrypointNodeName);
-        trun.addTaskRunToUpNext(node);
+        EdgeSchema fakeEdge = new EdgeSchema();
+        fakeEdge.sinkNodeName = tspec.entrypointNodeName;
+        trun.addEdgeToUpNext(fakeEdge);
+
+        return trun;
     }
 
     @JsonIgnore
@@ -119,7 +153,8 @@ public class WFRunSchema extends BaseSchema {
         throw new RuntimeException("implement me");
     }
 
-    public void incorporatEvent(WFEventSchema event) {
+    public void incorporateEvent(WFEventSchema event)
+    throws LHNoConfigException, LHLookupException {
         if (event.type == WFEventType.WF_RUN_STARTED) {
             throw new RuntimeException(
                 "This shouldn't happen, colty you're programming like you're drunk"
@@ -134,6 +169,38 @@ public class WFRunSchema extends BaseSchema {
         if (event.type == WFEventType.TASK_EVENT) {
             ThreadRunSchema thread = threadRuns.get(event.threadID);
             thread.incorporateEvent(event);
+        }
+    }
+
+    public void updateStatuses() {
+        for (ThreadRunSchema thread: threadRuns) {
+            thread.updateStatus();
+        }
+
+        if (status == WFRunStatus.HALTING) {
+            boolean allHalted = true;
+            for (ThreadRunSchema thread: this.threadRuns) {
+                if (thread.status == WFRunStatus.HALTING) {
+                    allHalted = false;
+                } else if (thread.status == WFRunStatus.RUNNING) {
+                    LHUtil.log("WTF how is the thread RUNNING while wfRun is HALTING?");
+                }
+            }
+            if (allHalted) {
+                this.status = WFRunStatus.HALTED;
+            }
+        } else if (this.status == WFRunStatus.RUNNING) {
+            boolean allCompleted = true;
+            for (ThreadRunSchema thread: this.threadRuns) {
+                if (thread.status == WFRunStatus.RUNNING) {
+                    allCompleted = false;
+                } else if (thread.status != WFRunStatus.COMPLETED) {
+                    LHUtil.log("WTF is this? Got a halted or halting thread but wfrun is running");
+                }
+            }
+            if (allCompleted) {
+                this.status = WFRunStatus.COMPLETED;
+            }
         }
     }
 }

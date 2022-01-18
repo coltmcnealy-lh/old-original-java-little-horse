@@ -58,8 +58,9 @@ public class WFSpecSchema extends BaseSchema {
         wfRun.threadRuns = new ArrayList<ThreadRunSchema>();
         wfRun.correlatedEvents =
             new HashMap<String, ArrayList<ExternalEventCorrelSchema>>();
-        
+
         wfRun.startTime = event.timestamp;
+        wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMetaSchema>>();
 
         wfRun.addThread(
             entrypointThreadName, runRequest.variables, WFRunStatus.RUNNING

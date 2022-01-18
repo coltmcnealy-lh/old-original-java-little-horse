@@ -24,14 +24,15 @@ import little.horse.api.WFSpecDeployer;
 import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
+import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.SystemEventActor;
 import little.horse.lib.TaskDaemonEventActor;
 import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
-import little.horse.lib.objects.TaskDef;
-import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.NodeSchema;
+import little.horse.lib.schemas.TaskDefSchema;
 import little.horse.lib.schemas.ThreadSpecSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 
 
 class FrontendAPIApp {
@@ -122,13 +123,17 @@ class DaemonApp {
 
         // just need to set up the topology and run it.
 
-        WFSpec wfSpec = WFSpec.fromIdentifier(config.getWfSpecGuid(), config);
-        ThreadSpecSchema thread = wfSpec.getModel().threadSpecs.get(
+        WFSpecSchema wfSpec = LHDatabaseClient.lookupWFSpec(
+            config.getWfSpecGuid(), config
+        );
+        ThreadSpecSchema thread = wfSpec.threadSpecs.get(
             config.getThreadSpecName()
         );
         NodeSchema node = thread.nodes.get(config.getNodeName());
 
-        TaskDef td = TaskDef.fromIdentifier(node.taskDefinitionName, config);
+        TaskDefSchema td = LHDatabaseClient.lookupTaskDef(
+            node.taskDefinitionName, config
+        );
 
         WFEventProcessorActor actor = new TaskDaemonEventActor(
             wfSpec,
@@ -137,7 +142,7 @@ class DaemonApp {
             config
         );
 
-        Pattern pattern = Pattern.compile(wfSpec.getModel().kafkaTopic);
+        Pattern pattern = Pattern.compile(wfSpec.kafkaTopic);
         Topology topology = new Topology();
 
         WFRunTopology.addStuff(topology, config, pattern, actor);

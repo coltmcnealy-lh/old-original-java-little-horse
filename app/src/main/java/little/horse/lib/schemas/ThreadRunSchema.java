@@ -2,21 +2,22 @@ package little.horse.lib.schemas;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
-import org.apache.commons.lang3.tuple.Pair;
 import little.horse.lib.LHFailureReason;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHNoConfigException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
+import little.horse.lib.NodeType;
 import little.horse.lib.VarSubOrzDash;
+import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.wfRuntime.WFRunStatus;
 
 public class ThreadRunSchema extends BaseSchema {
@@ -116,36 +117,91 @@ public class ThreadRunSchema extends BaseSchema {
         return null;
     }
 
-    public Pair<Object, ThreadRunSchema> getVariableValue(String varName) {
-        
-        return null;
+    public Object getMutationRHS(
+        VariableMutationSchema mutSchema, TaskRunSchema tr
+    ) throws LHNoConfigException, LHLookupException, VarSubOrzDash {
+        if (mutSchema.copyDirectlyFromNodeOutput) {
+            return tr.stdout;
+        } else if (mutSchema.jsonPath != null) {
+            return LHUtil.jsonPath(tr.stdout.toString(), mutSchema.jsonPath);
+        } else if (mutSchema.sourceVariable != null) {
+            return assignVariable(mutSchema.sourceVariable);
+        } else {
+            return mutSchema.literalValue;
+        }
     }
 
-    public Object getMutationRHS(VariableMutationSchema mutSchema) {
-        return null;
+    public Object assignVariable(VariableAssignmentSchema var)
+    throws LHNoConfigException, LHLookupException, VarSubOrzDash {
+        if (var.literalValue != null) {
+            LHUtil.log("returning literalvalue: ", var.literalValue.getClass());
+            return var.literalValue;
+        }
+
+        Object dataToParse = null;
+        if (var.wfRunVariableName != null) {
+            VariableLookupResult varLookup = getVariableDefinition(
+                var.wfRunVariableName
+            );
+            Object result = varLookup.value;
+            if (result == null) {
+                throw new VarSubOrzDash(
+                    null,
+                    "No variable named " + var.wfRunVariableName + " in context."
+                );
+            }
+            dataToParse = result;
+        } else if (var.wfRunMetadata != null) {
+            if (var.wfRunMetadata == WFRunMetadataEnum.WF_RUN_GUID) {
+                return wfRun.guid;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_GUID) {
+                return wfRun.wfSpecGuid;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
+                return wfRun.wfSpecName;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_GUID) {
+                return String.valueOf(this.id) + "-"+ wfRun.guid;
+            } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_ID) {
+                return Integer.valueOf(this.id);
+            }
+        }
+
+        if (dataToParse == null) {
+            // Then we need to have a literal value.
+            assert (var.defaultValue != null);
+            return var.defaultValue;
+        }
+        if (var.jsonPath == null) {
+            // just return the whole thing
+            return dataToParse;
+        }
+
+        try {
+            return LHUtil.jsonPath(dataToParse.toString(), var.jsonPath);
+        } catch(Exception exn) {
+            throw new VarSubOrzDash(
+                exn,
+                "Specified jsonpath " + var.jsonPath + " failed to resolve on " + dataToParse
+            );
+        }
     }
 
-    /*
-    commented out because we're going to replace upNext with edges rather than
-    taskRuns to avoid the following race condition:
-      - task A is scheduled after an edge fires with condition (myVar > 0)
-      - task A is delayed because it contends with task B to edit variable foo.
-      - task B completes and mutates myVar so now myVar < 0
-      - task A now is unblocked and executes, even though myVar < 0. Orz.
-    */
-    // public void addTaskRunToUpNext(NodeSchema node)
-    // throws LHNoConfigException, LHLookupException {
-    //     TaskRunSchema tr = new TaskRunSchema();
-    //     tr.status = LHStatus.PENDING;
-    //     tr.threadID = id;
-    //     tr.number = taskRuns.size();
-    //     tr.nodeName = node.name;
-    //     tr.nodeGuid = node.guid;
-    //     tr.wfSpecGuid = wfRun.getWFSpec().guid;
-    //     tr.wfSpecName = wfRun.getWFSpec().name;
+    public void addEdgeToUpNext(EdgeSchema edge) {
+        upNext.add(edge);
+    }
 
-    //     upNext.add(tr);
-    // }
+    public TaskRunSchema createNewTaskRun(NodeSchema node) 
+    throws LHNoConfigException, LHLookupException {
+        TaskRunSchema tr = new TaskRunSchema();
+        tr.status = LHStatus.PENDING;
+        tr.threadID = id;
+        tr.number = taskRuns.size();
+        tr.nodeName = node.name;
+        tr.nodeGuid = node.guid;
+        tr.wfSpecGuid = wfRun.getWFSpec().guid;
+        tr.wfSpecName = wfRun.getWFSpec().name;
+
+        return tr;
+    }
 
     public void incorporateEvent(WFEventSchema wfEvent)
     throws LHLookupException, LHNoConfigException {
@@ -171,35 +227,53 @@ public class ThreadRunSchema extends BaseSchema {
         tr.stdin = event.stdin;
     }
 
+    private void completeTask(
+        TaskRunSchema task,
+        LHStatus taskStatus,
+        String stdout,
+        String stderr,
+        Date endTime,
+        int returnCode
+    ) throws LHLookupException, LHNoConfigException {
+        task.endTime = endTime;
+        task.stdout = LHUtil.jsonifyIfPossible(stdout);
+        task.stderr = LHUtil.jsonifyIfPossible(stderr);
+        task.status = taskStatus;
+        task.returnCode = returnCode;
+
+        if (taskStatus == LHStatus.COMPLETED) {
+            try {
+                mutateVariables(task);
+            } catch(VarSubOrzDash exn) {
+                markTaskFailed(
+                    task, LHFailureReason.VARIABLE_LOOKUP_ERROR,exn.getMessage()
+                );
+                return;
+            }
+
+            // now schedule the up next (:
+            for (EdgeSchema edge: task.getNode().outgoingEdges) {
+                upNext.add(edge);
+            }
+
+        } else {
+            markTaskFailed(
+                task, LHFailureReason.TASK_FAILURE,
+                "thread failed on node " + task.nodeName
+            );
+        }
+    }
+
     private void handleTaskEnded(TaskRunEventSchema trEvent)
     throws LHLookupException, LHNoConfigException {
         TaskRunSchema tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunEndedEventSchema event = trEvent.endedEvent;
-        tr.endTime = trEvent.timestamp;
+        LHStatus taskStatus = event.success ? LHStatus.COMPLETED : LHStatus.ERROR;
 
-        tr.stdout = event.stdout;
-        tr.stderr = event.stderr;
-        tr.returnCode = event.returncode;
-        tr.endTime = trEvent.timestamp;
-
-        if (trEvent.endedEvent.success) {
-            tr.status = LHStatus.COMPLETED;
-            try {
-                mutateVariables(tr);
-            } catch(VarSubOrzDash exn) {
-                markTaskFailed(
-                    tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,exn.getMessage()
-                );
-                return;
-            }
-        } else {
-            tr.status = LHStatus.ERROR;
-            // TODO: Call failure somewhere...
-            markTaskFailed(
-                tr, LHFailureReason.TASK_FAILURE,
-                "thread failed on node " + tr.nodeName
-            );
-        }
+        completeTask(
+            tr, taskStatus, event.stdout, event.stderr, trEvent.timestamp,
+            event.returncode
+        );
     }
 
     public void mutateVariables(TaskRunSchema tr) 
@@ -221,13 +295,13 @@ public class ThreadRunSchema extends BaseSchema {
             WFRunVariableDefSchema varDef = varLookup.varDef;
             ThreadRunSchema thread = varLookup.thread;
             Object lhs = varLookup.value;
-            Object rhs = getMutationRHS(mutSchema);
+            Object rhs = getMutationRHS(mutSchema, tr);
             VariableMutationOperation op = mutSchema.operation;
 
             // Ok, if we got this far, then we know that the RHS and LHS both exist,
             // but are LHS + operation + RHS valid?
             Mutation mut = new Mutation(lhs, rhs, op, thread, varDef, varName);
-            mut.checkValidity();
+            mut.execute(true);  // validate by call with dryRun==true
             mutations.add(mut);
         }
 
@@ -235,7 +309,7 @@ public class ThreadRunSchema extends BaseSchema {
         // that we aren't going to have an error when we finally apply the
         // mutations.
         for (Mutation mutation: mutations) {
-            mutation.execute();
+            mutation.execute(false);
         }
     }
 
@@ -248,6 +322,229 @@ public class ThreadRunSchema extends BaseSchema {
 
     private void fail(LHFailureReason reason, String message) {
         throw new RuntimeException("Implement me");
+    }
+
+    boolean evaluateEdge(EdgeConditionSchema condition)
+    throws VarSubOrzDash, LHNoConfigException, LHLookupException {
+        if (condition == null) return true;
+        Object lhs = assignVariable(condition.leftSide);
+        LHUtil.log("LHS is ", lhs, lhs.getClass());
+        Object rhs = assignVariable(condition.rightSide);
+        switch (condition.comparator) {
+            case LESS_THAN: return Mutation.compare(lhs, rhs) < 0;
+            case LESS_THAN_EQ: return Mutation.compare(lhs, rhs) <= 0;
+            case GREATER_THAN: return Mutation.compare(lhs, rhs) > 0;
+            case GRREATER_THAN_EQ: return Mutation.compare(lhs, rhs) >= 0;
+            case EQUALS: return lhs != null && lhs.equals(rhs);
+            case NOT_EQUALS: return lhs != null && !lhs.equals(rhs);
+            case IN: return Mutation.contains(lhs, rhs);
+            case NOT_IN: return !Mutation.contains(lhs, rhs);
+            default: return false;
+        }
+    }
+
+    public void updateStatus() {
+        if (status == WFRunStatus.COMPLETED) return;
+        if (upNext == null) upNext = new ArrayList<EdgeSchema>();
+        TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
+
+        if (status == WFRunStatus.RUNNING) {
+            // If there are no pending taskruns and the last one executed was
+            // COMPLETED, then the thread is now completed.
+            if (upNext == null || upNext.size() == 0) {
+                if (lastTr.status == LHStatus.COMPLETED) {
+                    status = WFRunStatus.COMPLETED;
+                }
+            } else if (lastTr.status == LHStatus.ERROR) {
+                status = WFRunStatus.HALTED;
+            }
+
+        } else if (status == WFRunStatus.HALTED) {
+            // This shouldn't really be possible I don't think
+            LHUtil.log(
+                "What? How are we getting here when the thread is already halted?"
+            );
+        } else if (status == WFRunStatus.HALTING) {
+            // Well we just gotta see if the last task run is done.
+            if (lastTr.status == LHStatus.COMPLETED ||
+                lastTr.status == LHStatus.ERROR
+            ) {
+                status = WFRunStatus.HALTED;
+            }
+        }
+    }
+
+    public boolean advance(WFEventSchema event, WFEventProcessorActor actor)
+    throws LHLookupException, LHNoConfigException {
+        if (status != WFRunStatus.RUNNING || upNext.size() == 0) {
+            return false;
+        }
+
+        // If we get here, we know we have a running thread, and there's an Edge in
+        // the upNext that is waiting to be fired.
+        if (upNextEdgesBlocked()) {
+            return false;
+        }
+
+        TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
+
+        // Now we have the green light to determine whether any of the edges will
+        // fire.
+        NodeSchema activatedNode = null;
+        for (EdgeSchema edge: upNext) {
+            try {
+                if (evaluateEdge(edge.condition)) {
+                    activatedNode = getThreadSpec().nodes.get(edge.sinkNodeName);
+                    break;
+                }
+                // If we got here without returning, then we know that there are no
+                // taskRuns left.
+            } catch(VarSubOrzDash exn) {
+                exn.printStackTrace();
+                markTaskFailed(
+                    lastTr,
+                    LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                    "Failed substituting variable when processing if condition: " +
+                    exn.getMessage()
+                );
+                return true;
+            }
+        }
+        upNext = new ArrayList<EdgeSchema>();
+
+        if (activatedNode == null) {
+            return false;
+        }
+
+        return activateNode(activatedNode, actor, event);
+    }
+
+    private boolean activateNode(
+        NodeSchema node, WFEventProcessorActor actor, WFEventSchema event)
+    throws LHLookupException, LHNoConfigException {
+        if (node.nodeType == NodeType.TASK) {
+            TaskRunSchema tr = createNewTaskRun(node);
+            taskRuns.add(tr);
+            if (node.guid.equals(actor.getNodeGuid())) {
+                actor.act(wfRun, id, tr.number);
+            }
+            return true;
+
+        } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
+            ArrayList<ExternalEventCorrelSchema> relevantEvents =
+            wfRun.correlatedEvents.get(node.externalEventDefName);
+            if (relevantEvents == null) {
+                relevantEvents = new ArrayList<ExternalEventCorrelSchema>();
+                wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
+            }
+            ExternalEventCorrelSchema correlSchema = null;
+            
+            for (ExternalEventCorrelSchema candidate : relevantEvents) {
+                // In the future, we may want to add the ability to signal
+                // a specific thread rather than the whole wfRun. We would do that here.
+                if (candidate.event != null && candidate.assignedNodeGuid == null) {
+                    correlSchema = candidate;
+                }
+            }
+            if (correlSchema == null) return false;  // Still waiting nothing changed
+
+            TaskRunSchema tr = createNewTaskRun(node);
+            taskRuns.add(tr);
+            correlSchema.assignedNodeGuid = node.guid;
+            correlSchema.assignedNodeName = node.name;
+            correlSchema.assignedTaskRunExecutionNumber = tr.number;
+            correlSchema.assignedThreadID = tr.threadID;
+
+            completeTask(
+                tr, LHStatus.COMPLETED, correlSchema.event.content.toString(),
+                null, correlSchema.event.timestamp, 0
+            );
+            return true; // Obviously something changed, we done did add a task.
+
+        } else if (node.nodeType == NodeType.SPAWN_THREAD) {
+            HashMap<String, Object> inputVars = new HashMap<String, Object>();
+            TaskRunSchema tr = createNewTaskRun(node);
+            try {
+                for (Map.Entry<String, VariableAssignmentSchema> pair: 
+                    node.variables.entrySet()
+                ) {
+                    inputVars.put(pair.getKey(), assignVariable(pair.getValue()));
+                }
+            } catch(VarSubOrzDash exn) {
+                exn.printStackTrace();
+                markTaskFailed(
+                    tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                    "Failed creating variables for subthread: " + exn.getMessage()
+                );
+                return true;
+            }
+
+            ThreadRunMetaSchema meta = wfRun.addThread(
+                node.threadSpawnThreadSpecName,
+                inputVars,
+                WFRunStatus.RUNNING,
+                tr
+            );
+            completeTask(
+                tr, LHStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
+            );
+            return true;
+
+        } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
+            // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
+            // If it's from the node we're waiting for and it's NOT done, then
+            // this node does nothing. But if it's already done, we mark it as
+            // awaited and continue on. If all of the relevant threads are done,
+            // then this node completes.
+            TaskRunSchema tr = createNewTaskRun(node);
+
+            ArrayList<ThreadRunMetaSchema> awaitables = wfRun.awaitableThreads.get(
+                node.threadWaitSourceNodeName
+            );
+            if (awaitables == null) {
+                taskRuns.add(tr);
+                markTaskFailed(
+                    tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
+                    "Got to node " + node.name + " which waits for a thread from " +
+                    node.threadWaitSourceNodeName + " but no threads have started" +
+                    " from the specified source node."
+                );
+                return true;
+            }
+
+            ArrayList<ThreadRunMetaSchema> waitedFor = new ArrayList<>();
+            for (ThreadRunMetaSchema meta: awaitables) {
+                ThreadRunSchema threadRun = wfRun.threadRuns.get(meta.threadID);
+                if (meta.timesAwaited == 0 &&
+                    threadRun.status == WFRunStatus.COMPLETED
+                ) {
+                    waitedFor.add(meta);
+                } else if (threadRun.status != WFRunStatus.RUNNING) {
+                    return false;
+                }
+            }
+
+            // If we got this far, then we know that the threads have been awaited.
+            for (ThreadRunMetaSchema meta: waitedFor) {
+                meta.timesAwaited++;
+            }
+            taskRuns.add(tr);
+            completeTask(
+                tr, LHStatus.COMPLETED, waitedFor.toString(), null, event.timestamp, 0
+            );
+            return true;
+        }
+        throw new RuntimeException("invalid node type");
+    }
+
+    /**
+     * Determine whether the edges in `this.upNext` are blocked because a TaskRun in
+     * another ThreadRun is using a certain variable that the edges need.
+     * @return true if the edges are Blocked, false if they're UNBlocked.
+     */
+    private boolean upNextEdgesBlocked() {
+        // Will implement this once we got some threads going.
+        return false;
     }
 }
 
@@ -272,24 +569,13 @@ class Mutation {
         this.varName = varName;
     }
 
-    @SuppressWarnings("unused")
-    public void checkValidity() throws VarSubOrzDash {
-        Class<?> defTypeCls = null;
-        switch (varDef.type) {
-            case STRING: defTypeCls = String.class; break;
-            case OBJECT: defTypeCls = Map.class; break;
-            case INT: defTypeCls = Integer.class; break;
-            case DOUBLE: defTypeCls = Double.class; break;
-            case BOOLEAN: defTypeCls = Boolean.class; break;
-            case ARRAY: defTypeCls = List.class; break;
-        }
-
-        if (lhs != null && !defTypeCls.isInstance(lhs)) {
-            throw new VarSubOrzDash(
-                null, "Variable " + varName + " is not of the correct type "
-                + defTypeCls.getName() + ", it is a " + lhs.getClass().getName()
-            );
-        }
+    public void execute(boolean dryRun) throws VarSubOrzDash {
+        // Can't rely upon the WFRunVariableDefSchema because if, for example, the
+        // LHS variable is an OBJECT, and there is a jsonpath, we could index from
+        // the object to an Integer, in which case the LHS is not of the same type
+        // as the varDef.type; but we will get more fancy once we add jsonschema
+        // validation.
+        Class<?> defTypeCls = lhs.getClass();
 
         // Now we handle every operation that's legal. Because I'm lazy, there's
         // only two so far.
@@ -300,6 +586,9 @@ class Mutation {
                     defTypeCls.getName() + " to " + rhs.toString() + ", which is " +
                     " of type " + rhs.getClass().getName()
                 );
+            }
+            if (!dryRun) {
+                tr.variables.put(varName, rhs);
             }
 
         } else if (op == VariableMutationOperation.ADD) {
@@ -316,14 +605,28 @@ class Mutation {
                 // Just try to cast the right hand side to what it's supposed to be
                 // in order to verify that it'll work.
                 if (varDef.type == WFRunVariableTypeEnum.INT) {
-                    Integer toAdd = (Integer) rhs;
+                    Integer result = (Integer) rhs + (Integer) lhs;
+                    if (!dryRun) {
+                        tr.variables.put(varName, result);
+                    }
                 } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
-                    String toAdd = (String) rhs;
+                    String result = (String) lhs + (String) rhs;
+                    if (!dryRun) {
+                        tr.variables.put(varName, result);
+                    }
                 } else if (varDef.type == WFRunVariableTypeEnum.ARRAY) {
-                    // nothing to do here until we start enforcing json schemas
+                    // nothing to verify here until we start enforcing json schemas
                     // within arrays
+                    @SuppressWarnings("unchecked")
+                    ArrayList<Object> lhsArr = (ArrayList<Object>) lhs;
+                    if (!dryRun) {
+                        lhsArr.add(rhs);
+                    }
                 } else if (varDef.type == WFRunVariableTypeEnum.DOUBLE) {
-                    Double toAdd = (Double) rhs;
+                    Double result = (Double) lhs + (Double) rhs;
+                    if (!dryRun) {
+                        tr.variables.put(varName, result);
+                    }
                 }
             } catch(Exception exn) {
                 throw new VarSubOrzDash(exn,
@@ -331,34 +634,11 @@ class Mutation {
                     defTypeCls.getName()
                 );
             }
-
-
-        }
-
-    }
-
-    public void execute() {
-
-    }
-
-    @SuppressWarnings("all") // lol
-    private static int compare(Object left, Object right) throws VarSubOrzDash {
-
-        LHUtil.log("Left class: ", left.getClass());
-        LHUtil.log("right class: ", right.getClass());
-        try {
-            LHUtil.log("Comparing", left, "to", right);
-            int result = ((Comparable) left).compareTo((Comparable) right);
-            LHUtil.log("got:", result);
-            return result;
-        } catch(Exception exn) {
-            LHUtil.logError(exn.getMessage());
-            throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
         }
     }
 
     @SuppressWarnings("all")
-    private static boolean contains(Object left, Object right) throws VarSubOrzDash {
+    public static boolean contains(Object left, Object right) throws VarSubOrzDash {
         try {
             Collection<Object> collection = (Collection<Object>) left;
             for (Object thing : collection) {
@@ -375,5 +655,21 @@ class Mutation {
         }
         return false;
 
+    }
+
+    @SuppressWarnings("all") // lol
+    public static int compare(Object left, Object right) throws VarSubOrzDash {
+
+        LHUtil.log("Left class: ", left.getClass());
+        LHUtil.log("right class: ", right.getClass());
+        try {
+            LHUtil.log("Comparing", left, "to", right);
+            int result = ((Comparable) left).compareTo((Comparable) right);
+            LHUtil.log("got:", result);
+            return result;
+        } catch(Exception exn) {
+            LHUtil.logError(exn.getMessage());
+            throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
+        }
     }
 }
