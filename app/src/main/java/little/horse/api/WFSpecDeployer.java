@@ -7,11 +7,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 
 import little.horse.lib.Config;
 import little.horse.lib.LHDeployError;
-import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
-import little.horse.lib.LHValidationError;
-import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 
@@ -35,19 +32,14 @@ public class WFSpecDeployer {
                     try {
                         Thread.sleep(500);
                     } catch(Exception exn) {}
-                    WFSpecSchema schema = BaseSchema.fromString(record.value(), WFSpecSchema.class);
-                    schema.setConfig(config);
-                    if (schema.desiredStatus == LHStatus.REMOVED) {
-                        spec.undeploy();
-                    } else if (schema.desiredStatus == LHStatus.RUNNING) {
-                        spec.deploy();
+                    WFSpecSchema wfSpec = BaseSchema.fromString(
+                        record.value(), WFSpecSchema.class);
+                    wfSpec.setConfig(config);
+                    if (wfSpec.desiredStatus == LHStatus.REMOVED) {
+                        wfSpec.undeploy();
+                    } else if (wfSpec.desiredStatus == LHStatus.RUNNING) {
+                        wfSpec.deploy();
                     }
-                } catch (LHLookupException exn) {
-                    exn.printStackTrace();
-                    LHUtil.log("Got a lookup orzdash", exn.getMessage());
-                exn.printStackTrace();} catch (LHValidationError exn) {
-                    exn.printStackTrace();
-                    LHUtil.log("Got a validation orzdash", exn.getMessage());
                 } catch(LHDeployError exn) {
                     exn.printStackTrace();
                     LHUtil.log("Got a deploy orzdash", exn.getMessage());
