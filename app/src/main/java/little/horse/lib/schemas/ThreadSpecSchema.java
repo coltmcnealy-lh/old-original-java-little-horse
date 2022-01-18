@@ -3,7 +3,7 @@ package little.horse.lib.schemas;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class ThreadSpecSchema {
+public class ThreadSpecSchema extends BaseSchema {
     public String name;
     public String guid;
 

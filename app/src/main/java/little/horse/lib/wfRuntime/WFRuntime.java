@@ -14,7 +14,10 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
+import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHFailureReason;
+import little.horse.lib.LHLookupException;
+import little.horse.lib.LHNoConfigException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.NodeType;
@@ -27,7 +30,7 @@ import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.EdgeSchema;
 import little.horse.lib.schemas.ExternalEventCorrelSchema;
 import little.horse.lib.schemas.ExternalEventPayloadSchema;
-import little.horse.lib.schemas.NodeCompletedEventSchema;
+import little.horse.lib.schemas.TaskRunEndedEventSchema;
 import little.horse.lib.schemas.NodeSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunSchema;
@@ -49,12 +52,12 @@ public class WFRuntime
     private KeyValueStore<String, WFRunSchema> kvStore;
     private WFEventProcessorActor actor;
     private Config config;
-    private HashMap<String, WFSpec> wfspecs;
+    private HashMap<String, WFSpecSchema> wfspecs;
 
     public WFRuntime(WFEventProcessorActor actor, Config config) {
         this.actor = actor;
         this.config = config;
-        this.wfspecs = new HashMap<String, WFSpec>();
+        this.wfspecs = new HashMap<String, WFSpecSchema>();
     }
 
     @Override
@@ -68,24 +71,30 @@ public class WFRuntime
         WFEventSchema event = record.value();
 
         WFRunSchema wfRun = kvStore.get(wfRunGuid);
-        WFSpec wfSpec = null;
-        if (wfRun != null) {
-            wfSpec = getWFSpec(wfRun.wfSpecGuid);
-        }
+        WFSpecSchema wfSpec = getWFSpec(event.wfSpecGuid);
 
-        if (wfSpec == null && event.type != WFEventType.WF_RUN_STARTED) {
+        if (wfSpec == null) {
             LHUtil.log(
-                "Got an event for which we either couldn't find wfRun or couldnt find wfSpec:\n",
+                "Got an event for which we either couldn't find wfSpec:\n",
                 event.toString()
             );
+
+            // TODO: Catch the exceptions on loading wfSpec, and forward these failed
+            // records to another kafka topic so we can re-process them later.
             return;
         }
 
         if (wfRun == null) {
-            wfRun = handleWFRunStarted(event, wfRun, record, wfSpec);
-            wfSpec = getWFSpec(wfRun.wfSpecGuid);
+            if (event.type == WFEventType.WF_RUN_STARTED) {
+                wfRun = wfSpec.newRun(record);
+            } else {
+                LHUtil.logError("Couldnt find wfRun for event", event);
+                return;
+            }
         } else {
-            updateTaskRunsOrEvents(event, wfRun, record, wfSpec);
+            wfRun.setConfig(config);
+            wfRun.setWFSpec(wfSpec);
+            wfRun.incorporateEvent(event);
         }
 
         if (shouldHalt(wfRun, event)) {
@@ -263,14 +272,18 @@ public class WFRuntime
                         );
                     }
                 }
+            } else if (node.nodeType == NodeType.SPAWN_THREAD) {
 
+            } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
 
             }
 
         } else {
-            // Then we gotta terminate the thread and add two child threads.
+            // Then there are more than one nodes up next. This should not be possible, since
+            // you should only be able to split a thread off via a specific call to SPAWN_THREAD.
             thread.upNext = null; // CRUCIAL.
-            LHUtil.log("TODO: Actually write the thing that splits threads off.");
+            thread.status = WFRunStatus.HALTED;
+            LHUtil.log("This is a problem: There were two outgoing edges.");
         }
     }
 
@@ -306,10 +319,10 @@ public class WFRuntime
             theTask.stdin = trs.stdin;
 
         // Task Completed //// Task Completed //// Task Completed //// Task Completed //
-        } else if (event.type == WFEventType.NODE_COMPLETED) {
-            NodeCompletedEventSchema tre = BaseSchema.fromString(
+        } else if (event.type == WFEventType.TASK_COMPLETED) {
+            TaskRunEndedEventSchema tre = BaseSchema.fromString(
                 event.content,
-                NodeCompletedEventSchema.class
+                TaskRunEndedEventSchema.class
             );
             ThreadRunSchema thread = wfRun.threadRuns.get(tre.threadID);
             ThreadSpecSchema threadSpec = spec.getModel().threadSpecs.get(
@@ -409,19 +422,14 @@ public class WFRuntime
         return false;
     }
 
-    // Below are a bunch of utility methods.
-    private WFSpec getWFSpec(String guid) {
+    private WFSpecSchema getWFSpec(String guid) throws LHLookupException, LHNoConfigException {
         if (wfspecs.get(guid) != null) {
             return wfspecs.get(guid);
         }
         // TODO: Do some caching here—that's the only reason we have this.
-        try {
-            WFSpec result = WFSpec.fromIdentifier(guid, config);
-            wfspecs.put(guid, result);
-            return result;
-        } catch (Exception exn) {
-            return null;
-        }
+        WFSpecSchema result = LHDatabaseClient.lookupWFSpec(guid, config);
+        wfspecs.put(guid, result);
+        return result;
     }
 
     private void raiseWorkflowProcessingError(
@@ -517,82 +525,4 @@ public class WFRuntime
         }
     }
 
-    public WFRunSchema handleWFRunStarted(
-        WFEventSchema event,
-        WFRunSchema wfRun,
-        final Record<String, WFEventSchema> record,
-        WFSpec wfSpec
-    ) {
-        WFRunRequestSchema runRequest = BaseSchema.fromString(
-            event.content, WFRunRequestSchema.class
-        );
-
-        wfSpec = getWFSpec(event.wfSpecGuid);
-        if (wfSpec == null) {
-            raiseWorkflowProcessingError(
-                "Unable to find WFSpec",
-                event,
-                LHFailureReason.INTERNAL_LITTLEHORSE_ERROR
-            );
-            return wfRun;
-        }
-
-        wfRun = new WFRunSchema();
-        wfRun.guid = record.key();
-        wfRun.wfSpecGuid = event.wfSpecGuid;
-        wfRun.wfSpecName = event.wfSpecName;
-        LHUtil.log("event", event, "\nguid", wfRun.wfSpecGuid, "name", wfRun.wfSpecName);
-        wfRun.status = WFRunStatus.RUNNING;
-        wfRun.threadRuns = new ArrayList<ThreadRunSchema>();
-        wfRun.correlatedEvents = new HashMap<
-            String, ArrayList<ExternalEventCorrelSchema>
-        >();
-
-        // lookup threadspec and add here
-        ThreadRunSchema thread = new ThreadRunSchema();
-        thread.id = 0;
-        thread.status = WFRunStatus.RUNNING;
-        thread.taskRuns = new ArrayList<TaskRunSchema>();
-        WFSpecSchema wfSpecSchema = wfSpec.getModel();
-
-        ThreadSpecSchema entrypointThread = wfSpecSchema.threadSpecs.get(
-            wfSpecSchema.entrypointThreadName
-        );
-        thread.threadSpecName = entrypointThread.name;
-
-        NodeSchema node = entrypointThread.nodes.get(
-            entrypointThread.entrypointNodeName
-        );
-
-        TaskRunSchema tr = new TaskRunSchema();
-        tr.status = LHStatus.PENDING;
-        tr.threadID = 0;
-        tr.number = 0;
-        tr.nodeGuid = node.guid;
-        tr.nodeName = node.name;
-        tr.wfSpecGuid = wfRun.wfSpecGuid;
-        tr.wfSpecName = wfRun.wfSpecName;
-        thread.upNext = new ArrayList<TaskRunSchema>();
-        thread.upNext.add(tr);
-
-        wfRun.threadRuns.add(thread);
-
-        thread.variables = runRequest.variables;
-        thread.variables = new HashMap<String, Object>();
-        if (runRequest.variables == null) {
-            runRequest.variables = new HashMap<String, Object>();
-        }
-        for (String varName: entrypointThread.variableDefs.keySet()) {
-            WFRunVariableDefSchema varDef = entrypointThread.variableDefs.get(varName);
-
-            Object result = runRequest.variables.get(varName);
-            if (result != null) {
-                thread.variables.put(varName, result);
-            } else {
-                thread.variables.put(varName, varDef.defaultValue);
-            }
-        }
-
-        return wfRun;
-    }
 }

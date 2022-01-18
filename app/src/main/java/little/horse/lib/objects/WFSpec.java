@@ -17,6 +17,7 @@ import little.horse.lib.schemas.NodeSchema;
 
 import little.horse.lib.schemas.ThreadSpecSchema;
 import little.horse.lib.schemas.VariableAssignmentSchema;
+import little.horse.lib.schemas.VariableMutationSchema;
 import little.horse.lib.schemas.WFRunVariableDefSchema;
 import little.horse.lib.schemas.WFSpecSchema;
 import okhttp3.OkHttpClient;
@@ -127,12 +128,7 @@ public class WFSpec {
 
     private void cleanupWaitForThreadNode(NodeSchema node) throws LHValidationError {
         ThreadSpecSchema thread = schema.threadSpecs.get(node.threadSpecName);
-        NodeSchema sourceNode = null;
-        if (node.threadWaitSourceNodeGuid != null) {
-            sourceNode = thread.nodes.get(node.threadWaitSourceNodeGuid);
-        } else {
-            sourceNode = thread.nodes.get(node.threadWaitSourceNodeName);
-        }
+        NodeSchema sourceNode = thread.nodes.get(node.threadWaitSourceNodeName);
 
         if (sourceNode == null) {
             throw new LHValidationError(
@@ -171,24 +167,18 @@ public class WFSpec {
                 "Node name didn't match for node " + name
             );
         }
-
+        if (node.variableMutations == null) {
+            node.variableMutations = new HashMap<String, VariableMutationSchema>();
+        }
+        if (node.variables == null) {
+            node.variables = new HashMap<String, VariableAssignmentSchema>();
+        }
         if (node.outgoingEdges == null) {
             node.outgoingEdges = new ArrayList<EdgeSchema>();
         }
         if (node.incomingEdges == null) {
             node.incomingEdges = new ArrayList<EdgeSchema>();
         }
-
-        if (node.nodeType == NodeType.TASK) {
-            cleanupTaskNode(node);
-        } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
-            cleanupExternalEventNode(node);
-        } else if (node.nodeType == NodeType.SPAWN_THREAD) {
-            cleanupSpawnThreadNode(node);
-        } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
-            cleanupWaitForThreadNode(node);
-        }
-
     }
 
     private void cleanupEdge(EdgeSchema edge, ThreadSpecSchema thread) {
@@ -236,12 +226,26 @@ public class WFSpec {
         if (spec.variableDefs == null) {
             spec.variableDefs = new HashMap<String, WFRunVariableDefSchema>();
         }
-
+        
+        // Light Clean up the node (i.e. give it a guid if it doesn't have one, etc), validate that
+        // its taskdef exist
         for (Map.Entry<String, NodeSchema> pair: spec.nodes.entrySet()) {
-            // clean up the node (i.e. give it a guid if it doesn't have one, etc), validate that
-            // its taskdef exist
             cleanupNode(pair.getKey(), pair.getValue(), spec);
         }
+        // Now do the deep clean.
+        for (Map.Entry<String, NodeSchema> pair: spec.nodes.entrySet()) {
+            NodeSchema node = pair.getValue();
+            if (node.nodeType == NodeType.TASK) {
+                cleanupTaskNode(node);
+            } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
+                cleanupExternalEventNode(node);
+            } else if (node.nodeType == NodeType.SPAWN_THREAD) {
+                cleanupSpawnThreadNode(node);
+            } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
+                cleanupWaitForThreadNode(node);
+            }
+        }
+
 
         if (spec.edges == null) {
             spec.edges = new ArrayList<EdgeSchema>();
@@ -408,64 +412,6 @@ public class WFSpec {
         this.k8sName = LHUtil.toValidK8sName(
             this.schema.name + "-" + LHUtil.digestify(schema.guid)
         );
-    }
-
-    /**
-     * Loads a WFSpec object by querying the backend data store (as of this commit, that
-     * means making a REST call to the main API running KafkaStreams).
-     * @param guid the guid to load.
-     * @param config a valid little.horse.lib.Config object representing this environment.
-     * @return a WFSpec object.
-     */
-    public static WFSpec fromIdentifier(String guid, Config config) 
-    throws LHLookupException, LHValidationError {
-
-        OkHttpClient client = config.getHttpClient();
-        String url = config.getAPIUrlFor(Constants.WF_SPEC_API_PATH) + "/" + guid;
-        Request request = new Request.Builder().url(url).build();
-        Response response;
-        String responseBody = null;
-
-        try {
-            response = client.newCall(request).execute();
-            responseBody = response.body().string();
-        }
-        catch (IOException exn) {
-            String err = "Got an error making request to " + url + ": " + exn.getMessage() + ".\n";
-            err += "Was trying to call URL " + url;
-
-            System.err.println(err);
-            throw new LHLookupException(exn, LHLookupExceptionReason.IO_FAILURE, err);
-        }
-
-        // Check response code.
-        if (response.code() == 404) {
-            throw new LHLookupException(
-                null,
-                LHLookupExceptionReason.OBJECT_NOT_FOUND,
-                "Could not find WFSpec with guid " + guid + "."
-            );
-        } else if (response.code() != 200) {
-            if (responseBody == null) {
-                responseBody = "";
-            }
-            throw new LHLookupException(
-                null,
-                LHLookupExceptionReason.OTHER_ERROR,
-                "API Returned an error: " + String.valueOf(response.code()) + " " + responseBody
-            );
-        }
-
-        WFSpecSchema schema = BaseSchema.fromString(responseBody, WFSpecSchema.class);
-        if (schema == null) {
-            throw new LHLookupException(
-                null,
-                LHLookupExceptionReason.INVALID_RESPONSE,
-                "Got an invalid response: " + responseBody
-            );
-        }
-
-        return new WFSpec(schema, config);
     }
 
     public WFSpecSchema getModel() {

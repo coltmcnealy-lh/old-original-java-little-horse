@@ -43,10 +43,13 @@ public class WFSpecDeployer {
                         spec.deploy();
                     }
                 } catch (LHLookupException exn) {
+                    exn.printStackTrace();
                     LHUtil.log("Got a lookup orzdash", exn.getMessage());
-                } catch (LHValidationError exn) {
+                exn.printStackTrace();} catch (LHValidationError exn) {
+                    exn.printStackTrace();
                     LHUtil.log("Got a validation orzdash", exn.getMessage());
                 } catch(LHDeployError exn) {
+                    exn.printStackTrace();
                     LHUtil.log("Got a deploy orzdash", exn.getMessage());
                 }
             });

@@ -53,12 +53,20 @@ public class LHUtil {
         return new Date();
     }
 
-    public static void log(Object... things) {
-        System.out.print(Thread.currentThread().getStackTrace()[2].getMethodName());
+    /**
+     * Logs stuff.
+     * @param framesBack The number of stack frames back to go 
+     * @param things
+     */
+    public static void logBack(int framesBack, Object... things) {
+        framesBack += 2;  // 2 frames needed for processing the thing.
+        StackTraceElement ste = Thread.currentThread().getStackTrace()[framesBack];
+
+        System.out.print(ste.getMethodName());
         System.out.print(" ");
-        System.out.print(Thread.currentThread().getStackTrace()[2].getFileName());
+        System.out.print(ste.getFileName());
         System.out.print(": ");
-        System.out.print(Thread.currentThread().getStackTrace()[2].getLineNumber());
+        System.out.print(ste.getLineNumber());
         System.out.print(": ");
         for (Object thing : things) {
             System.out.print(thing == null ? "null" : thing.toString());
@@ -67,18 +75,12 @@ public class LHUtil {
         System.out.println();
     }
 
+    public static void log(Object... things) {
+        logBack(1, things);  // Add one frame back because of this method call.
+    }
+
     public static void logError(Object... things) {
-        System.out.print(Thread.currentThread().getStackTrace()[2].getMethodName());
-        System.out.print(" ");
-        System.out.print(Thread.currentThread().getStackTrace()[2].getFileName());
-        System.out.print(": ");
-        System.out.print(Thread.currentThread().getStackTrace()[2].getLineNumber());
-        System.out.print(": ");
-        for (Object thing : things) {
-            System.out.print(thing == null ? "null" : thing.toString());
-            System.out.print(" ");
-        }
-        System.out.println();
+        logBack(1, "ERROR:", things);
     }
 
     public static String inputStreamToString(InputStream stream) {

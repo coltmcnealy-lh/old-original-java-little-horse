@@ -11,7 +11,7 @@ import little.horse.lib.objects.TaskDef;
 import little.horse.lib.objects.WFRun;
 import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.NodeCompletedEventSchema;
+import little.horse.lib.schemas.TaskRunEndedEventSchema;
 import little.horse.lib.schemas.TaskRunFailedEventSchema;
 import little.horse.lib.schemas.TaskRunStartedEventSchema;
 import little.horse.lib.schemas.VariableAssignmentSchema;
@@ -88,7 +88,8 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         return newCmd;
     }
 
-    private void doAction(WFRunSchema wfRun, int threadNumber, int taskRunNumber) throws Exception {
+    private void doAction(WFRunSchema wfRun, int threadNumber, int taskRunNumber)
+    throws Exception {
         ArrayList<String> command;
         ThreadRunSchema thread = wfRun.threadRuns.get(threadNumber);
         try {
@@ -104,19 +105,8 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
             trf.taskRunNumber = taskRunNumber;
             trf.nodeGuid = node.guid;
 
-            WFEventSchema event = new WFEventSchema();
-            event.type = WFEventType.TASK_FAILED;
-            event.content = trf.toString();
-            event.timestamp = LHUtil.now();
-            event.wfRunGuid = wfRun.guid;
-            event.wfSpecGuid = wfSpec.getModel().guid;
-            event.wfSpecName = wfSpec.getModel().name;
-
-            config.send(new ProducerRecord<String, String>(
-                wfSpec.getModel().kafkaTopic,
-                wfRun.guid,
-                event.toString()
-            ));
+            WFEventSchema event = wfRun.newWFEvent(WFEventType.TASK_FAILED, trf);
+            event.record();
             return;
         }
 
@@ -129,20 +119,10 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         trs.threadID = threadNumber;
         trs.bashCommand = command;
 
-        WFEventSchema taskStartedEvent = new WFEventSchema();
-        taskStartedEvent.content = trs.toString();
-        taskStartedEvent.timestamp = new Date();
-        taskStartedEvent.type = WFEventType.TASK_STARTED;
-        taskStartedEvent.wfRunGuid = wfRun.guid;
-        taskStartedEvent.wfSpecGuid = wfRun.wfSpecGuid;
-        taskStartedEvent.wfSpecName = wfRun.wfSpecName;
-
-        ProducerRecord<String, String> taskStartRecord = new ProducerRecord<String, String>(
-            wfSpec.getModel().kafkaTopic,
-            wfRun.guid,
-            taskStartedEvent.toString()
+        WFEventSchema taskStartedEvent = wfRun.newWFEvent(
+            WFEventType.TASK_STARTED, trs
         );
-        config.send(taskStartRecord);
+        taskStartedEvent.record();
 
         ProcessBuilder pb = new ProcessBuilder(command);
         Process proc;
@@ -154,9 +134,9 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         proc.getOutputStream().close();
         proc.waitFor();
 
-        NodeCompletedEventSchema tr;
+        TaskRunEndedEventSchema tr;
         boolean success = (proc.exitValue() == 0);
-        tr = success ? new NodeCompletedEventSchema() : new TaskRunFailedEventSchema();
+        tr = success ? new TaskRunEndedEventSchema() : new TaskRunFailedEventSchema();
 
         tr.stdout = LHUtil.inputStreamToString(proc.getInputStream());
         tr.stderr = LHUtil.inputStreamToString(proc.getErrorStream());
@@ -175,7 +155,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         WFEventSchema event = new WFEventSchema();
         event.content = tr.toString();
         event.timestamp = new Date();
-        event.type = success ? WFEventType.NODE_COMPLETED : WFEventType.TASK_FAILED;
+        event.type = success ? WFEventType.TASK_COMPLETED : WFEventType.TASK_FAILED;
         event.wfRunGuid = wfRun.guid;
         event.wfSpecGuid = wfRun.wfSpecGuid;
         event.wfSpecName = wfRun.wfSpecName;
