@@ -5,16 +5,15 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
 import little.horse.lib.Config;
+import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHLookupException;
+import little.horse.lib.LHNoConfigException;
 import little.horse.lib.LHUtil;
-import little.horse.lib.LHValidationError;
 import little.horse.lib.WFEventType;
-import little.horse.lib.objects.ExternalEventDef;
-import little.horse.lib.objects.WFRun;
-import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.LHAPIResponsePost;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 import little.horse.lib.schemas.ExternalEventDefSchema;
 import little.horse.lib.schemas.ExternalEventPayloadSchema;
 
@@ -28,24 +27,14 @@ public class ExternalEventDefAPI {
     }
 
     public void post(Context ctx) {
-        ExternalEventDefSchema rawSpec = ctx.bodyAsClass(ExternalEventDefSchema.class);
-        ExternalEventDef spec;
-
-        try {
-            spec = new ExternalEventDef(rawSpec, this.config);
-        }
-        catch (LHValidationError exn) {
-            ctx.status(400);
-            LHAPIError error = new LHAPIError(exn.getMessage());
-            ctx.json(error);
-            return;
-        }
-
+        ExternalEventDefSchema spec = ctx.bodyAsClass(ExternalEventDefSchema.class);
+        spec.setConfig(config);
+        spec.validateAndCleanup();
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = spec.getModel().guid;
-        response.name = spec.getModel().name;
+        response.guid = spec.guid;
+        response.name = spec.name;
         ctx.json(response);
     }
 
@@ -78,28 +67,24 @@ public class ExternalEventDefAPI {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         String externalEventDefID = ctx.pathParam("externalEventDefID");
         Object eventContent = ctx.bodyAsClass(Object.class);
-        WFRun wfRun;
-        WFSpec wfSpec;
-        ExternalEventDef evd;
+        WFRunSchema wfRun;
+        WFSpecSchema wfSpec;
+        ExternalEventDefSchema evd;
 
         try {
-            wfRun = WFRun.fromGuid(wfRunGuid, config);
+            wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            wfRun.setConfig(config);
             wfSpec = wfRun.getWFSpec();
-            evd = ExternalEventDef.fromIdentifier(externalEventDefID, config);
+            evd = LHDatabaseClient.lookupExternalEventDef(externalEventDefID, config);
         } catch(LHLookupException exn) {
             ctx.status(404);
             LHAPIError error = new LHAPIError("Orzdash: " + exn.getMessage());
             ctx.json(error);
             return;
-        } catch(LHValidationError exn) {
-            ctx.status(400);
-            LHAPIError error = new LHAPIError("Orzdash: " + exn.getMessage());
-            ctx.json(error);
-            return;
-        }
+        } catch(LHNoConfigException exn) {exn.printStackTrace(); return;}
 
-        WFRunSchema schema = wfRun.getModel();
-        ExternalEventDefSchema evdSchema = evd.getModel();
+        WFRunSchema schema = wfRun;
+        ExternalEventDefSchema evdSchema = evd;
         String externalEventGuid = LHUtil.generateGuid();
 
         ExternalEventPayloadSchema payload = new ExternalEventPayloadSchema();
@@ -117,7 +102,7 @@ public class ExternalEventDefAPI {
         wfEvent.content = payload.toString();
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            wfSpec.getModel().kafkaTopic,
+            wfSpec.kafkaTopic,
             wfEvent.wfRunGuid,
             wfEvent.toString()
         );

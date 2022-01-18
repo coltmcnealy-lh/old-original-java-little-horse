@@ -4,7 +4,6 @@ import io.javalin.http.Context;
 import little.horse.lib.Config;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHValidationError;
-import little.horse.lib.objects.WFSpec;
 import little.horse.lib.schemas.LHAPIResponsePost;
 import little.horse.lib.schemas.WFSpecSchema;
 
@@ -18,18 +17,17 @@ public class WFSpecAPI {
     }
 
     public void post(Context ctx) {
-        WFSpecSchema rawSpec;
+        WFSpecSchema spec;
         try {
-            rawSpec = ctx.bodyAsClass(WFSpecSchema.class);
+            spec = ctx.bodyAsClass(WFSpecSchema.class);
         } catch(Exception exn) {
             ctx.status(400);
             LHAPIError error = new LHAPIError("Bad input value: " + exn.getMessage());
             ctx.json(error);
             return;
         }
-        WFSpec spec;
         try {
-            spec = new WFSpec(rawSpec, this.config);
+            spec.cleanupAndValidate(config);
         } catch (LHValidationError exn) {
             ctx.status(400);
             LHAPIError err = new LHAPIError(exn.getMessage());
@@ -39,9 +37,9 @@ public class WFSpecAPI {
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = spec.getModel().guid;
-        response.status = spec.getModel().status;
-        response.name = spec.getModel().name;
+        response.guid = spec.guid;
+        response.status = spec.status;
+        response.name = spec.name;
         ctx.json(response);
     }
 
@@ -78,27 +76,15 @@ public class WFSpecAPI {
             return;
         }
 
-        // TODO: validate that the action is valid given current status.
-
         schema.desiredStatus = LHStatus.REMOVED;
-        try {
-            WFSpec wfSpec = new WFSpec(schema, config);
-            wfSpec.record();
-            ctx.status(202);
+        schema.record();
+        ctx.status(202);
 
-            LHAPIResponsePost response = new LHAPIResponsePost();
-            response.guid = schema.guid;
-            response.name = schema.name;
-            response.status = schema.status;
+        LHAPIResponsePost response = new LHAPIResponsePost();
+        response.guid = schema.guid;
+        response.name = schema.name;
+        response.status = schema.status;
 
-            ctx.json(response);
-
-        } catch (LHValidationError exn) {
-            LHAPIError error = new LHAPIError(exn.getMessage());
-            ctx.status(400);
-            ctx.json(error);
-            return;
-        }
-
+        ctx.json(response);
     }
 }
