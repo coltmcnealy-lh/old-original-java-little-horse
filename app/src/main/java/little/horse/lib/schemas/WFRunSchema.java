@@ -42,9 +42,6 @@ public class WFRunSchema extends BaseSchema {
 
     public HashMap<String, ArrayList<ThreadRunMetaSchema>> awaitableThreads;
 
-    // Map from variable name to threadID of thread holding lock on the variable.
-    public HashMap<String, Integer> variableLocks;
-
     @JsonIgnore
     private WFSpecSchema wfSpec;
 
@@ -145,6 +142,7 @@ public class WFRunSchema extends BaseSchema {
 
         trun.childThreadIDs = new ArrayList<>();
         trun.wfRun = this;
+        trun.variableLocks = new HashMap<String, Integer>();
 
         return trun;
     }
@@ -238,7 +236,7 @@ public class WFRunSchema extends BaseSchema {
         }
     }
 
-    public HashSet<String> getNeededVars(NodeSchema n) {
+    public static HashSet<String> getNeededVars(NodeSchema n) {
         HashSet<String> neededVars = new HashSet<String>();
         // first figure out which variables we need as input
         for (VariableAssignmentSchema var: n.variables.values()) {
@@ -262,30 +260,6 @@ public class WFRunSchema extends BaseSchema {
             }
         }
         return neededVars;
-    }
-
-    @JsonIgnore
-    public boolean lockVariables(NodeSchema n, int threadID) {
-        HashSet<String> neededVars = getNeededVars(n);
-
-        // Now check to make sure that no one is using the variables we need.
-        for (String var: neededVars) {
-            if (variableLocks.containsKey(var)) return false;
-        }
-
-        // if we got this far, then we are all clear. Lock every variable and go
-        // from there.
-        for (String var: neededVars) {
-            variableLocks.put(var, threadID);
-        }
-        return true;
-    }
-
-    @JsonIgnore
-    public void unlockVariables(NodeSchema n) {
-        for (String var: getNeededVars(n)) {
-            variableLocks.remove(var);
-        }
     }
 
     @Override

@@ -427,7 +427,6 @@ public class WFSpecSchema extends BaseSchema {
             entrypointThreadName, runRequest.variables, WFRunStatus.RUNNING
         ));
 
-        wfRun.variableLocks = new HashMap<String, Integer>();
         return wfRun;
     }
 

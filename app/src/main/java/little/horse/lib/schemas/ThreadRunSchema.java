@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -40,6 +41,9 @@ public class ThreadRunSchema extends BaseSchema {
     public int id;
     public Integer parentThreadID;
     public ArrayList<Integer> childThreadIDs;
+
+    // Map from variable name to threadID of thread holding lock on the variable.
+    public HashMap<String, Integer> variableLocks;
 
     @JsonIgnore
     private ThreadSpecSchema privateThreadSpec;
@@ -263,7 +267,7 @@ public class ThreadRunSchema extends BaseSchema {
         task.status = taskStatus;
         task.returnCode = returnCode;
 
-        wfRun.unlockVariables(task.getNode());
+        unlockVariables(task.getNode());
 
         if (taskStatus == LHStatus.COMPLETED) {
             try {
@@ -409,6 +413,61 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    public boolean isLocked(String variableName, int threadID) {
+        if (variables.containsKey(variableName)) {
+            Integer lockingThread = variableLocks.get(variableName);
+            return lockingThread != null && lockingThread != threadID;
+        }
+        if (parentThreadID != null) {
+            return wfRun.threadRuns.get(
+                parentThreadID
+            ).isLocked(variableName, threadID);
+        }
+        throw new RuntimeException("Impossible to get here since it means");
+    }
+    
+    public void lock(String variableName, int threadID) {
+        if (variables.containsKey(variableName)) {
+            variableLocks.put(variableName, threadID);
+        } else if (parentThreadID != null) {
+            wfRun.threadRuns.get(parentThreadID).lock(variableName, threadID);
+        } else {
+            throw new RuntimeException("Impossible");
+        }
+    }
+
+    public void unlock(String variableName) {
+        if (variables.containsKey(variableName)) {
+            variableLocks.remove(variableName);
+        } else if (parentThreadID != null) {
+            wfRun.threadRuns.get(parentThreadID).unlock(variableName);
+        }
+    }
+
+    @JsonIgnore
+    public boolean lockVariables(NodeSchema n, int threadID) {
+        HashSet<String> neededVars = WFRunSchema.getNeededVars(n);
+
+        // Now check to make sure that no one is using the variables we need.
+        for (String var: neededVars) {
+            if (isLocked(var, threadID)) return false;
+        }
+
+        // if we got this far, then we are all clear. Lock every variable and go
+        // from there.
+        for (String var: neededVars) {
+            lock(var, threadID);
+        }
+        return true;
+    }
+
+    @JsonIgnore
+    public void unlockVariables(NodeSchema n) {
+        for (String var: WFRunSchema.getNeededVars(n)) {
+            unlock(var);
+        }
+    }
+
     @JsonIgnore
     public boolean advance(WFEventSchema event, WFEventProcessorActor actor)
     throws LHLookupException, LHNoConfigException {
@@ -430,7 +489,7 @@ public class ThreadRunSchema extends BaseSchema {
             try {
                 if (evaluateEdge(edge.condition)) {
                     NodeSchema n = getThreadSpec().nodes.get(edge.sinkNodeName);
-                    if (wfRun.lockVariables(n, id)) {
+                    if (lockVariables(n, id)) {
                         activatedNode = n;
                         break;
                     }
