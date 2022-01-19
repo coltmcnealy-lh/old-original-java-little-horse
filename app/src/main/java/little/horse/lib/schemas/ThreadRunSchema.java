@@ -487,6 +487,7 @@ public class ThreadRunSchema extends BaseSchema {
                 tr, LHStatus.COMPLETED, correlSchema.event.content.toString(),
                 null, correlSchema.event.timestamp, 0
             );
+            upNext = new ArrayList<EdgeSchema>();
             return true; // Obviously something changed, we done did add a task.
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {

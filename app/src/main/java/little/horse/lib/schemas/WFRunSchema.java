@@ -158,7 +158,21 @@ public class WFRunSchema extends BaseSchema {
 
     @JsonIgnore
     private void recordExternalEvent(WFEventSchema event) {
-        throw new RuntimeException("implement me");
+        ExternalEventPayloadSchema payload = BaseSchema.fromString(
+            event.content, ExternalEventPayloadSchema.class);
+        
+        ExternalEventCorrelSchema correl = new ExternalEventCorrelSchema();
+        correl.event = payload;
+        correl.arrivalTime = event.timestamp;
+
+        if (correlatedEvents == null) {
+            correlatedEvents = new HashMap<>();
+        }
+        if (correlatedEvents.get(payload.externalEventDefName) == null) {
+            correlatedEvents.put(payload.externalEventDefName, new ArrayList<>());
+        }
+
+        correlatedEvents.get(payload.externalEventDefName).add(correl);
     }
 
     @JsonIgnore

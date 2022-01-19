@@ -27,6 +27,7 @@ public class LittleHorseAPI {
         this.externalEventDefAPI = new ExternalEventDefAPI(config, streams);
 
         this.app = Javalin.create();
+
         this.app.post("/wfSpec", this.wfSpecAPI::post);
         this.app.get("/wfSpec/{nameOrGuid}", this.wfSpecAPI::get);
         this.app.delete("/wfSpec/{nameOrGuid}", this.wfSpecAPI::delete);
@@ -36,7 +37,7 @@ public class LittleHorseAPI {
 
         this.app.get("/wfRun/{wfRunGuid}", this.wfRunAPI::get);
         this.app.post("/wfRun/{wfSpec}", this.wfRunAPI::post);
-
+        
         this.app.get("/externalEventDef/{nameOrGuid}", this.externalEventDefAPI::get);
         this.app.post("/externalEventDef", this.externalEventDefAPI::post);
 

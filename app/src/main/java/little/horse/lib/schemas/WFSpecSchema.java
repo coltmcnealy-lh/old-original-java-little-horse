@@ -181,6 +181,9 @@ public class WFSpecSchema extends BaseSchema {
         for (NodeSchema node: thread.nodes.values()) {
             for (String varName: node.variables.keySet()) {
                 VariableAssignmentSchema assign = node.variables.get(varName);
+                if (assign.wfRunVariableName == null) {
+                    continue;
+                }
                 if (!seenVars.containsKey(assign.wfRunVariableName)) {
                     throw new LHValidationError(
                         "Variable " + varName + "refers to wfRunVariable named " +
