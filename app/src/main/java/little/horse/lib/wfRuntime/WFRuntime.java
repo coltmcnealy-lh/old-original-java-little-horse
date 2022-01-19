@@ -89,16 +89,17 @@ public class WFRuntime
             wfRun.status = WFRunStatus.RUNNING;
         }
 
-        wfRun.updateStatuses();
+        wfRun.updateStatuses(event);
 
         boolean shouldAdvance = true;
         while (shouldAdvance) {
             boolean didAdvance = false;
-            for (ThreadRunSchema thread: wfRun.threadRuns) {
+            for (int i = 0; i < wfRun.threadRuns.size(); i++) {
+                ThreadRunSchema thread = wfRun.threadRuns.get(i);
                 didAdvance = thread.advance(event, actor) || didAdvance;
             }
             shouldAdvance = didAdvance;
-            wfRun.updateStatuses();
+            wfRun.updateStatuses(event);
         }
 
         kvStore.put(wfRun.guid, wfRun);

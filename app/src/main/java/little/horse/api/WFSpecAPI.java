@@ -70,12 +70,13 @@ public class WFSpecAPI {
         String wfSpecId = ctx.pathParam("nameOrGuid");
 
         WFSpecSchema schema = getFromIdentifier(wfSpecId);
-
+        
         if (schema == null) {
             ctx.status(404);
             return;
         }
-
+        schema.setConfig(config);
+        
         schema.desiredStatus = LHStatus.REMOVED;
         schema.record();
         ctx.status(202);

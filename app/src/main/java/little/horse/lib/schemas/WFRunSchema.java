@@ -139,6 +139,9 @@ public class WFRunSchema extends BaseSchema {
         fakeEdge.sinkNodeName = tspec.entrypointNodeName;
         trun.addEdgeToUpNext(fakeEdge);
 
+        trun.childThreadIDs = new ArrayList<>();
+        trun.wfRun = this;
+
         return trun;
     }
 
@@ -196,8 +199,9 @@ public class WFRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public void updateStatuses() {
+    public void updateStatuses(WFEventSchema event) {
         for (ThreadRunSchema thread: threadRuns) {
+            // LHUtil.log(event.type, thread.id, thread.upNext, "\n\n");
             thread.updateStatus();
         }
 

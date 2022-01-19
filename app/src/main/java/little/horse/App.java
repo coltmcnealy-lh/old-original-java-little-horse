@@ -176,18 +176,18 @@ public class App {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else {
-            // String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
-            // Object obj = JsonPath.parse(json).read("$.foo");
-            // System.out.println(obj.getClass());
-            // // System.out.println(((Comparable)obj).compareTo(Integer.valueOf(-100)));
+            String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
+            Object obj = JsonPath.parse(json).read("$.foo");
+            System.out.println(obj.getClass());
+            // System.out.println(((Comparable)obj).compareTo(Integer.valueOf(-100)));
 
-            // ArrayList<Object> thing = new ArrayList<Object>();
-            // NodeSchema node = new NodeSchema();
-            // node.guid = "asdf;";
-            // thing.add(node);
-            // System.out.println(thing.toString());
+            ArrayList<Object> thing = new ArrayList<Object>();
+            NodeSchema node = new NodeSchema();
+            node.guid = "asdf;";
+            thing.add(node);
+            System.out.println(thing.toString());
 
-            // System.out.println("\n\n\n\n\n\n\n");
+            System.out.println("\n\n\n\n\n\n\n");
 
             String data = "{\"threadRuns\":[{\"id\":0}]}";
             WFRunSchema schema = BaseSchema.fromString(data, WFRunSchema.class);

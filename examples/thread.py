@@ -32,7 +32,7 @@ task_definition2 = {
 task_definition3 = {
     "name": "slowtask",
     "dockerImage": "little-horse-daemon",
-    "bashCommand": ["python", "examples/sleep.py"]
+    "bashCommand": ["python3", "examples/sleep.py"]
 }
 
 wf_definition = {
@@ -85,12 +85,12 @@ wf_definition = {
                             "wfRunVariableName": "name"
                         }
                     },
-                    "variableMutations": {
-                        "secondName": {
-                            "operation": "SET",
-                            "jsonPath": "$.stdout.person"
-                        },
-                    }
+                    # "variableMutations": {
+                    #     "secondName": {
+                    #         "operation": "SET",
+                    #         "jsonPath": "$.stdout.person"
+                    #     },
+                    # }
                 },
                 "secondNode": {
                     "nodeType": "SPAWN_THREAD",
@@ -101,7 +101,7 @@ wf_definition = {
                     "taskDefinitionName": "task2",
                     "variables": {
                         "personNameSecondTask": {
-                            "wfRunVariableName": "secondName",
+                            "wfRunVariableName": "name",
                         }
                     },
                 },

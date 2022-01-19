@@ -19,6 +19,7 @@ import little.horse.lib.LHUtil;
 import little.horse.lib.NodeType;
 import little.horse.lib.VarSubOrzDash;
 import little.horse.lib.WFEventProcessorActor;
+import little.horse.lib.WFEventType;
 import little.horse.lib.wfRuntime.WFRunStatus;
 
 public class ThreadRunSchema extends BaseSchema {
@@ -241,6 +242,13 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
+    public WFEventSchema newWFEvent(WFEventType type, BaseSchema content) {
+        WFEventSchema out = wfRun.newWFEvent(type, content);
+        out.threadID = id;
+        return out;
+    }
+
+    @JsonIgnore
     private void completeTask(
         TaskRunSchema task,
         LHStatus taskStatus,
@@ -368,8 +376,6 @@ public class ThreadRunSchema extends BaseSchema {
         if (status == WFRunStatus.RUNNING) {
             // If there are no pending taskruns and the last one executed was
             // COMPLETED, then the thread is now completed.
-            LHUtil.log("status: ", status);
-            LHUtil.log("upNext:", upNext);
             if (upNext == null || upNext.size() == 0) {
                 TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
                 if (lastTr.status == LHStatus.COMPLETED) {
@@ -500,6 +506,7 @@ public class ThreadRunSchema extends BaseSchema {
                 ) {
                     inputVars.put(pair.getKey(), assignVariable(pair.getValue()));
                 }
+
             } catch(VarSubOrzDash exn) {
                 exn.printStackTrace();
                 markTaskFailed(
@@ -553,12 +560,14 @@ public class ThreadRunSchema extends BaseSchema {
                     return false;
                 }
             }
+            if (waitedFor.size() == 0) return false;
 
             // If we got this far, then we know that the threads have been awaited.
             for (ThreadRunMetaSchema meta: waitedFor) {
                 meta.timesAwaited++;
             }
             taskRuns.add(tr);
+            upNext = new ArrayList<EdgeSchema>();
             completeTask(
                 tr, LHStatus.COMPLETED, waitedFor.toString(), null, event.timestamp, 0
             );

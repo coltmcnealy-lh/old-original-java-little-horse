@@ -111,7 +111,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
 
         event.endedEvent = ee;
 
-        thread.wfRun.newWFEvent(WFEventType.TASK_EVENT, event).record();
+        thread.newWFEvent(WFEventType.TASK_EVENT, event).record();
     }
 
     private void doAction(WFRunSchema wfRun, int threadNumber, int taskRunNumber)
@@ -144,7 +144,7 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         TaskRunEventSchema tre = getTaskRunEventSchema(thread);
         tre.startedEvent = trs;
 
-        WFEventSchema taskStartedEvent = wfRun.newWFEvent(
+        WFEventSchema taskStartedEvent = thread.newWFEvent(
             WFEventType.TASK_EVENT, tre
         );
         taskStartedEvent.record();
