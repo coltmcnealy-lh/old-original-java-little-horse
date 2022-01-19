@@ -58,7 +58,7 @@ public class WFSpecSchema extends BaseSchema {
 
         if (guid == null) guid = LHUtil.generateGuid();
         if (kafkaTopic == null) {
-            kafkaTopic = config.getKafkaTopicPrefix() + name + "-" + guid;
+            kafkaTopic = config.getWFRunTopicPrefix() + name + "-" + guid;
         }
         if (status == null) status = LHStatus.STOPPED;
         if (desiredStatus == null) desiredStatus = LHStatus.RUNNING;
@@ -256,7 +256,6 @@ public class WFSpecSchema extends BaseSchema {
         }
     }
 
-
     private void cleanupEdge(EdgeSchema edge, ThreadSpecSchema thread) {
         edge.wfSpecGuid = guid;
         if (edge.guid == null) {
@@ -280,6 +279,7 @@ public class WFSpecSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     private String calculateEntrypointNode(ThreadSpecSchema thread) throws LHValidationError {
         NodeSchema entrypoint = null;
         for (Map.Entry<String, NodeSchema> pair: thread.nodes.entrySet()) {
@@ -420,9 +420,9 @@ public class WFSpecSchema extends BaseSchema {
         wfRun.startTime = event.timestamp;
         wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMetaSchema>>();
 
-        wfRun.addThread(
+        wfRun.threadRuns.add(wfRun.createThreadClientAdds(
             entrypointThreadName, runRequest.variables, WFRunStatus.RUNNING
-        );
+        ));
 
         return wfRun;
     }
@@ -524,9 +524,23 @@ public class WFSpecSchema extends BaseSchema {
         this.record();
     }
 
+    @JsonIgnore
     public void record() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             this.config.getWFSpecTopic(), guid, this.toString());
         this.config.send(record);
+    }
+
+    @JsonIgnore
+    public Config setConfig(Config config) {
+        super.setConfig(config);
+        for (ThreadSpecSchema threadSpec: threadSpecs.values()) {
+            threadSpec.setConfig(config);
+            if (threadSpec.wfSpec == null) {
+                threadSpec.wfSpec = this;
+            }
+        }
+        
+        return this.config;
     }
 }

@@ -9,6 +9,7 @@ import java.util.Stack;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+import little.horse.lib.Config;
 import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHFailureReason;
 import little.horse.lib.LHLookupException;
@@ -63,13 +64,15 @@ public class WFRunSchema extends BaseSchema {
         return wfSpec;
     }
 
+    @JsonIgnore
     public ThreadRunMetaSchema addThread(
         String threadName,
         Map<String, Object> variables,
         WFRunStatus initialStatus,
         TaskRunSchema parentTaskRun
     ) throws LHNoConfigException, LHLookupException {
-        ThreadRunSchema thread = addThread(threadName, variables, initialStatus);
+        ThreadRunSchema thread = createThreadClientAdds(threadName, variables, initialStatus);
+        threadRuns.add(thread);
         thread.parentThreadID = parentTaskRun.threadID;
 
         // lmao that's a lot of chaining haha
@@ -94,7 +97,8 @@ public class WFRunSchema extends BaseSchema {
         return meta;
     }
 
-    public ThreadRunSchema addThread(
+    @JsonIgnore
+    public ThreadRunSchema createThreadClientAdds(
         String threadName, Map<String, Object> variables, WFRunStatus initialStatus
     ) throws LHNoConfigException, LHLookupException {
         getWFSpec();  // just make sure the thing isn't null;
@@ -107,7 +111,7 @@ public class WFRunSchema extends BaseSchema {
         passConfig(tspec);
 
         ThreadRunSchema trun = new ThreadRunSchema();
-        passConfig(trun);
+        setConfig(config); // this will populate the ThreadRun as well
 
         trun.id = threadRuns.size();
         trun.status = initialStatus;
@@ -126,6 +130,9 @@ public class WFRunSchema extends BaseSchema {
             }
         }
         trun.upNext = new ArrayList<EdgeSchema>();
+        trun.threadSpec = wfSpec.threadSpecs.get(threadName);
+        trun.threadSpecName = threadName;
+        trun.threadSpecGuid = trun.threadSpec.guid;
 
         // Now add the entrypoint taskRun
         EdgeSchema fakeEdge = new EdgeSchema();
@@ -149,10 +156,12 @@ public class WFRunSchema extends BaseSchema {
         return event;
     }
 
+    @JsonIgnore
     private void recordExternalEvent(WFEventSchema event) {
         throw new RuntimeException("implement me");
     }
 
+    @JsonIgnore
     public void incorporateEvent(WFEventSchema event)
     throws LHNoConfigException, LHLookupException {
         if (event.type == WFEventType.WF_RUN_STARTED) {
@@ -172,6 +181,7 @@ public class WFRunSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     public void updateStatuses() {
         for (ThreadRunSchema thread: threadRuns) {
             thread.updateStatus();
@@ -202,5 +212,17 @@ public class WFRunSchema extends BaseSchema {
                 this.status = WFRunStatus.COMPLETED;
             }
         }
+    }
+
+    @Override
+    @JsonIgnore
+    public Config setConfig(Config config) {
+        super.setConfig(config);
+        if (threadRuns == null) threadRuns = new ArrayList<>();
+        for (ThreadRunSchema thread: threadRuns) {
+            thread.wfRun = this;
+            thread.setConfig(config);
+        }
+        return this.config;
     }
 }

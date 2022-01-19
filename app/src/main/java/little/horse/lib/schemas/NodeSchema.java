@@ -89,22 +89,27 @@ public class NodeSchema extends BaseSchema {
         return externalEventDef;
     }
 
+    @JsonIgnore
     public String getNamespace() {
         return threadSpec.wfSpec.namespace;
     }
 
+    @JsonIgnore
     public int getReplicas() {
         return config.getDefaultReplicas();
     }
 
+    @JsonIgnore
     public int getPartitions() {
         return config.getDefaultPartitions();
     }
 
+    @JsonIgnore
     public ArrayList<String> getTaskDaemonCommand() {
         return config.getTaskDaemonCommand();
     }
 
+    @JsonIgnore
     private ArrayList<String> getK8sEntrypointCommand() {
         if (nodeType == NodeType.TASK) {
             return getTaskDaemonCommand();
@@ -114,6 +119,7 @@ public class NodeSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     public Deployment getK8sDeployment() {
         if (nodeType != NodeType.TASK) {
             return null;

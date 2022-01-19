@@ -141,8 +141,11 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         trs.threadID = threadNumber;
         trs.bashCommand = command;
 
+        TaskRunEventSchema tre = getTaskRunEventSchema(thread);
+        tre.startedEvent = trs;
+
         WFEventSchema taskStartedEvent = wfRun.newWFEvent(
-            WFEventType.TASK_EVENT, trs
+            WFEventType.TASK_EVENT, tre
         );
         taskStartedEvent.record();
 

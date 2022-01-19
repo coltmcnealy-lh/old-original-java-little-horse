@@ -252,8 +252,12 @@ public class Config {
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
-        props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 15000);
-        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 15000);
+        props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 4000);
+        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 4000);
+        props.put(
+            StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+            org.apache.kafka.streams.errors.LogAndContinueExceptionHandler.class
+        );
         return props;
     }
 

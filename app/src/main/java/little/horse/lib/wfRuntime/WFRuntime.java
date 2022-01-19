@@ -71,6 +71,8 @@ public class WFRuntime
         if (wfRun == null) {
             if (event.type == WFEventType.WF_RUN_STARTED) {
                 wfRun = wfSpec.newRun(record);
+                wfRun.setConfig(config);
+                wfRun.setWFSpec(wfSpec);
             } else {
                 LHUtil.logError("Couldnt find wfRun for event", event);
                 return;
@@ -96,6 +98,7 @@ public class WFRuntime
                 didAdvance = thread.advance(event, actor) || didAdvance;
             }
             shouldAdvance = didAdvance;
+            wfRun.updateStatuses();
         }
 
         kvStore.put(wfRun.guid, wfRun);

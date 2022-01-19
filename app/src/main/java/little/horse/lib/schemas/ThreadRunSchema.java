@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+import little.horse.lib.Config;
 import little.horse.lib.LHFailureReason;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHNoConfigException;
@@ -46,14 +47,19 @@ public class ThreadRunSchema extends BaseSchema {
     public WFRunSchema wfRun;
 
     @JsonIgnore
+    public ThreadSpecSchema threadSpec;
+
+    @JsonIgnore
     private ThreadSpecSchema getThreadSpec()
     throws LHNoConfigException, LHLookupException {
+        if (threadSpec != null) return threadSpec;
         if (wfRun == null) {
             throw new LHNoConfigException(
                 "parent wfRun isn't set and config isn't set!!"
             );
         }
-        return wfRun.getWFSpec().threadSpecs.get(threadSpecName);
+        threadSpec = wfRun.getWFSpec().threadSpecs.get(threadSpecName);
+        return threadSpec;
     }
 
     /**
@@ -117,13 +123,14 @@ public class ThreadRunSchema extends BaseSchema {
         return null;
     }
 
+    @JsonIgnore
     public Object getMutationRHS(
         VariableMutationSchema mutSchema, TaskRunSchema tr
     ) throws LHNoConfigException, LHLookupException, VarSubOrzDash {
         if (mutSchema.copyDirectlyFromNodeOutput) {
             return tr.stdout;
         } else if (mutSchema.jsonPath != null) {
-            return LHUtil.jsonPath(tr.stdout.toString(), mutSchema.jsonPath);
+            return LHUtil.jsonPath(tr.toString(), mutSchema.jsonPath);
         } else if (mutSchema.sourceVariable != null) {
             return assignVariable(mutSchema.sourceVariable);
         } else {
@@ -131,10 +138,10 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     public Object assignVariable(VariableAssignmentSchema var)
     throws LHNoConfigException, LHLookupException, VarSubOrzDash {
         if (var.literalValue != null) {
-            LHUtil.log("returning literalvalue: ", var.literalValue.getClass());
             return var.literalValue;
         }
 
@@ -185,10 +192,12 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     public void addEdgeToUpNext(EdgeSchema edge) {
         upNext.add(edge);
     }
 
+    @JsonIgnore
     public TaskRunSchema createNewTaskRun(NodeSchema node) 
     throws LHNoConfigException, LHLookupException {
         TaskRunSchema tr = new TaskRunSchema();
@@ -200,13 +209,16 @@ public class ThreadRunSchema extends BaseSchema {
         tr.wfSpecGuid = wfRun.getWFSpec().guid;
         tr.wfSpecName = wfRun.getWFSpec().name;
 
+        tr.parentThread = this;
+
         return tr;
     }
 
+    @JsonIgnore
     public void incorporateEvent(WFEventSchema wfEvent)
     throws LHLookupException, LHNoConfigException {
         TaskRunEventSchema event = BaseSchema.fromString(
-            wfEvent.toString(), TaskRunEventSchema.class
+            wfEvent.content, TaskRunEventSchema.class
         );
         if (event.startedEvent != null) {
             handleTaskStarted(event);
@@ -217,6 +229,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     // Potentially this and handleTaskEnded could go in the TaskRunSchema.java,
     // but I'm not sure I wanna deal with jumping back and forth like that.
+    @JsonIgnore
     private void handleTaskStarted(TaskRunEventSchema trEvent) {
         TaskRunSchema tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunStartedEventSchema event = trEvent.startedEvent;
@@ -227,6 +240,7 @@ public class ThreadRunSchema extends BaseSchema {
         tr.stdin = event.stdin;
     }
 
+    @JsonIgnore
     private void completeTask(
         TaskRunSchema task,
         LHStatus taskStatus,
@@ -264,6 +278,7 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     private void handleTaskEnded(TaskRunEventSchema trEvent)
     throws LHLookupException, LHNoConfigException {
         TaskRunSchema tr = taskRuns.get(trEvent.taskRunNumber);
@@ -276,6 +291,7 @@ public class ThreadRunSchema extends BaseSchema {
         );
     }
 
+    @JsonIgnore
     public void mutateVariables(TaskRunSchema tr) 
     throws VarSubOrzDash, LHLookupException, LHNoConfigException {
 
@@ -313,6 +329,7 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     private void markTaskFailed(
         TaskRunSchema tr, LHFailureReason reason, String message
     ) {
@@ -320,15 +337,16 @@ public class ThreadRunSchema extends BaseSchema {
         throw new RuntimeException("Implement me");
     }
 
+    @JsonIgnore
     private void fail(LHFailureReason reason, String message) {
         throw new RuntimeException("Implement me");
     }
 
+    @JsonIgnore
     boolean evaluateEdge(EdgeConditionSchema condition)
     throws VarSubOrzDash, LHNoConfigException, LHLookupException {
         if (condition == null) return true;
         Object lhs = assignVariable(condition.leftSide);
-        LHUtil.log("LHS is ", lhs, lhs.getClass());
         Object rhs = assignVariable(condition.rightSide);
         switch (condition.comparator) {
             case LESS_THAN: return Mutation.compare(lhs, rhs) < 0;
@@ -346,17 +364,24 @@ public class ThreadRunSchema extends BaseSchema {
     public void updateStatus() {
         if (status == WFRunStatus.COMPLETED) return;
         if (upNext == null) upNext = new ArrayList<EdgeSchema>();
-        TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
 
         if (status == WFRunStatus.RUNNING) {
             // If there are no pending taskruns and the last one executed was
             // COMPLETED, then the thread is now completed.
+            LHUtil.log("status: ", status);
+            LHUtil.log("upNext:", upNext);
             if (upNext == null || upNext.size() == 0) {
+                TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
                 if (lastTr.status == LHStatus.COMPLETED) {
                     status = WFRunStatus.COMPLETED;
                 }
-            } else if (lastTr.status == LHStatus.ERROR) {
-                status = WFRunStatus.HALTED;
+            } else {
+                if (taskRuns.size() > 0) {
+                    TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
+                    if (lastTr.status == LHStatus.ERROR) {
+                        status = WFRunStatus.HALTED;
+                    }
+                }
             }
 
         } else if (status == WFRunStatus.HALTED) {
@@ -366,6 +391,7 @@ public class ThreadRunSchema extends BaseSchema {
             );
         } else if (status == WFRunStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
+            TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
             if (lastTr.status == LHStatus.COMPLETED ||
                 lastTr.status == LHStatus.ERROR
             ) {
@@ -374,6 +400,7 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    @JsonIgnore
     public boolean advance(WFEventSchema event, WFEventProcessorActor actor)
     throws LHLookupException, LHNoConfigException {
         if (status != WFRunStatus.RUNNING || upNext.size() == 0) {
@@ -385,8 +412,6 @@ public class ThreadRunSchema extends BaseSchema {
         if (upNextEdgesBlocked()) {
             return false;
         }
-
-        TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
 
         // Now we have the green light to determine whether any of the edges will
         // fire.
@@ -400,6 +425,7 @@ public class ThreadRunSchema extends BaseSchema {
                 // If we got here without returning, then we know that there are no
                 // taskRuns left.
             } catch(VarSubOrzDash exn) {
+                TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
                 exn.printStackTrace();
                 markTaskFailed(
                     lastTr,
@@ -410,19 +436,21 @@ public class ThreadRunSchema extends BaseSchema {
                 return true;
             }
         }
-        upNext = new ArrayList<EdgeSchema>();
-
+        
         if (activatedNode == null) {
-            return false;
+            upNext = new ArrayList<EdgeSchema>();
+            return true;
         }
 
         return activateNode(activatedNode, actor, event);
     }
 
+    @JsonIgnore
     private boolean activateNode(
         NodeSchema node, WFEventProcessorActor actor, WFEventSchema event)
     throws LHLookupException, LHNoConfigException {
         if (node.nodeType == NodeType.TASK) {
+            upNext = new ArrayList<EdgeSchema>();
             TaskRunSchema tr = createNewTaskRun(node);
             taskRuns.add(tr);
             if (node.guid.equals(actor.getNodeGuid())) {
@@ -462,6 +490,7 @@ public class ThreadRunSchema extends BaseSchema {
             return true; // Obviously something changed, we done did add a task.
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {
+            upNext = new ArrayList<EdgeSchema>();
             HashMap<String, Object> inputVars = new HashMap<String, Object>();
             TaskRunSchema tr = createNewTaskRun(node);
             try {
@@ -542,9 +571,24 @@ public class ThreadRunSchema extends BaseSchema {
      * another ThreadRun is using a certain variable that the edges need.
      * @return true if the edges are Blocked, false if they're UNBlocked.
      */
+    @JsonIgnore
     private boolean upNextEdgesBlocked() {
         // Will implement this once we got some threads going.
         return false;
+    }
+
+    @JsonIgnore
+    @Override
+    public Config setConfig(Config config) {
+        super.setConfig(config);
+
+        if (taskRuns == null) taskRuns = new ArrayList<>();
+        for (TaskRunSchema taskRun: taskRuns) {
+            taskRun.setConfig(config);
+            taskRun.parentThread = this;
+        }
+    
+        return this.config;
     }
 }
 
@@ -575,7 +619,7 @@ class Mutation {
         // the object to an Integer, in which case the LHS is not of the same type
         // as the varDef.type; but we will get more fancy once we add jsonschema
         // validation.
-        Class<?> defTypeCls = lhs.getClass();
+        Class<?> defTypeCls = lhs == null ? Object.class : lhs.getClass();
 
         // Now we handle every operation that's legal. Because I'm lazy, there's
         // only two so far.
@@ -660,12 +704,8 @@ class Mutation {
     @SuppressWarnings("all") // lol
     public static int compare(Object left, Object right) throws VarSubOrzDash {
 
-        LHUtil.log("Left class: ", left.getClass());
-        LHUtil.log("right class: ", right.getClass());
         try {
-            LHUtil.log("Comparing", left, "to", right);
             int result = ((Comparable) left).compareTo((Comparable) right);
-            LHUtil.log("got:", result);
             return result;
         } catch(Exception exn) {
             LHUtil.logError(exn.getMessage());

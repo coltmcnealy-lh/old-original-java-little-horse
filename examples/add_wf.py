@@ -89,7 +89,7 @@ wf_definition = {
                         "wfRunVariableName": "counter"
                     },
                     "rightSide": {
-                        "literalValue": 5
+                        "literalValue": 2
                     },
                     "comparator": "LESS_THAN",
                 }
