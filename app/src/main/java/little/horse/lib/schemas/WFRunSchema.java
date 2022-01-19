@@ -3,6 +3,7 @@ package little.horse.lib.schemas;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Stack;
 
@@ -40,6 +41,9 @@ public class WFRunSchema extends BaseSchema {
     public Stack<String> pendingInterrupts;
 
     public HashMap<String, ArrayList<ThreadRunMetaSchema>> awaitableThreads;
+
+    // Map from variable name to threadID of thread holding lock on the variable.
+    public HashMap<String, Integer> variableLocks;
 
     @JsonIgnore
     private WFSpecSchema wfSpec;
@@ -223,12 +227,64 @@ public class WFRunSchema extends BaseSchema {
                 if (thread.status == WFRunStatus.RUNNING) {
                     allCompleted = false;
                 } else if (thread.status != WFRunStatus.COMPLETED) {
-                    LHUtil.log("WTF is this? Got a halted or halting thread but wfrun is running");
+                    LHUtil.log(
+                        "WTF is this? Got a halted/ing thread but wfrun is running"
+                    );
                 }
             }
             if (allCompleted) {
                 this.status = WFRunStatus.COMPLETED;
             }
+        }
+    }
+
+    public HashSet<String> getNeededVars(NodeSchema n) {
+        HashSet<String> neededVars = new HashSet<String>();
+        // first figure out which variables we need as input
+        for (VariableAssignmentSchema var: n.variables.values()) {
+            if (var.wfRunVariableName != null) {
+                neededVars.add(var.wfRunVariableName);
+            }
+        }
+
+        // Now see which variables we need as output
+        for (Map.Entry<String, VariableMutationSchema> p:
+            n.variableMutations.entrySet()
+        ) {
+            // Add the variable that gets mutated
+            neededVars.add(p.getKey());
+
+            VariableAssignmentSchema rhsVarAssign = p.getValue().sourceVariable;
+            if (rhsVarAssign != null) {
+                if (rhsVarAssign.wfRunVariableName != null) {
+                    neededVars.add(rhsVarAssign.wfRunVariableName);
+                }
+            }
+        }
+        return neededVars;
+    }
+
+    @JsonIgnore
+    public boolean lockVariables(NodeSchema n, int threadID) {
+        HashSet<String> neededVars = getNeededVars(n);
+
+        // Now check to make sure that no one is using the variables we need.
+        for (String var: neededVars) {
+            if (variableLocks.containsKey(var)) return false;
+        }
+
+        // if we got this far, then we are all clear. Lock every variable and go
+        // from there.
+        for (String var: neededVars) {
+            variableLocks.put(var, threadID);
+        }
+        return true;
+    }
+
+    @JsonIgnore
+    public void unlockVariables(NodeSchema n) {
+        for (String var: getNeededVars(n)) {
+            variableLocks.remove(var);
         }
     }
 

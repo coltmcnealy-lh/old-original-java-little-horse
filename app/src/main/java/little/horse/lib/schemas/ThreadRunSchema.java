@@ -263,6 +263,8 @@ public class ThreadRunSchema extends BaseSchema {
         task.status = taskStatus;
         task.returnCode = returnCode;
 
+        wfRun.unlockVariables(task.getNode());
+
         if (taskStatus == LHStatus.COMPLETED) {
             try {
                 mutateVariables(task);
@@ -377,8 +379,9 @@ public class ThreadRunSchema extends BaseSchema {
             // If there are no pending taskruns and the last one executed was
             // COMPLETED, then the thread is now completed.
             if (upNext == null || upNext.size() == 0) {
-                TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
-                if (lastTr.status == LHStatus.COMPLETED) {
+                TaskRunSchema lastTr = taskRuns.size() > 0 ?
+                    taskRuns.get(taskRuns.size() - 1) : null;
+                if (lastTr == null || lastTr.status == LHStatus.COMPLETED) {
                     status = WFRunStatus.COMPLETED;
                 }
             } else {
@@ -421,12 +424,20 @@ public class ThreadRunSchema extends BaseSchema {
 
         // Now we have the green light to determine whether any of the edges will
         // fire.
+        boolean shouldClear = true;
         NodeSchema activatedNode = null;
         for (EdgeSchema edge: upNext) {
             try {
                 if (evaluateEdge(edge.condition)) {
-                    activatedNode = getThreadSpec().nodes.get(edge.sinkNodeName);
-                    break;
+                    NodeSchema n = getThreadSpec().nodes.get(edge.sinkNodeName);
+                    if (wfRun.lockVariables(n, id)) {
+                        activatedNode = n;
+                        break;
+                    }
+                    // If we get here, we know there's still stuff to do, but we
+                    // can't do it yet because we're blocked. This means don't clear
+                    // the upNext taskRuns.
+                    shouldClear = false;
                 }
                 // If we got here without returning, then we know that there are no
                 // taskRuns left.
@@ -442,10 +453,15 @@ public class ThreadRunSchema extends BaseSchema {
                 return true;
             }
         }
-        
-        if (activatedNode == null) {
+
+        if (activatedNode == null && shouldClear) {
             upNext = new ArrayList<EdgeSchema>();
             return true;
+        }
+
+        if (activatedNode == null && !shouldClear) {
+            // then we're blocked but nothing changed.
+            return false;
         }
 
         return activateNode(activatedNode, actor, event);

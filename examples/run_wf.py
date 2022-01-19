@@ -22,7 +22,7 @@ wf_run_schema = {
 }
 
 run_wf_response = requests.post(f'{URL}/wfRun/{sys.argv[1]}', json=wf_run_schema)
-
+print(run_wf_response.content.decode())
 import time
 time.sleep(2)
 

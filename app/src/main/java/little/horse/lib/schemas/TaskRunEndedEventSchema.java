@@ -3,7 +3,7 @@ package little.horse.lib.schemas;
 
 import little.horse.lib.LHFailureReason;
 
-public class TaskRunEndedEventSchema extends TaskRunEventSchema {
+public class TaskRunEndedEventSchema extends BaseSchema {
     public String stdout;
     public String stderr;
     public int returncode;

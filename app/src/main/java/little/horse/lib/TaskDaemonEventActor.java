@@ -121,7 +121,8 @@ public class TaskDaemonEventActor implements WFEventProcessorActor {
         try {
             command = this.getBashCommand(wfRun, thread);
         } catch(VarSubOrzDash exn) {
-            exn.exn.printStackTrace();
+            exn.printStackTrace();
+            if (exn.exn != null) exn.exn.printStackTrace();
             String message = "Failed looking up a variable in the workflow context\n";
             message += exn.message;
 
