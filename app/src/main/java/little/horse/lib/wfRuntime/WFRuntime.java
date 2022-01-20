@@ -84,9 +84,9 @@ public class WFRuntime
         }
 
         if (shouldHalt(wfRun, event)) {
-            wfRun.status = WFRunStatus.HALTING;
+            wfRun.halt(event);
         } else if (shouldStart(wfRun, event)) {
-            wfRun.status = WFRunStatus.RUNNING;
+            wfRun.resume(event);
         }
 
         wfRun.updateStatuses(event);

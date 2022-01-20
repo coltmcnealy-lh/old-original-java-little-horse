@@ -203,7 +203,6 @@ public class WFRunSchema extends BaseSchema {
     @JsonIgnore
     public void updateStatuses(WFEventSchema event) {
         for (ThreadRunSchema thread: threadRuns) {
-            // LHUtil.log(event.type, thread.id, thread.upNext, "\n\n");
             thread.updateStatus();
         }
 
@@ -260,6 +259,23 @@ public class WFRunSchema extends BaseSchema {
             }
         }
         return neededVars;
+    }
+
+    @JsonIgnore
+    public ThreadRunSchema entrypointThreadRun() {
+        return threadRuns.get(0);
+    }
+
+    @JsonIgnore
+    public void halt(WFEventSchema event) {
+        status = WFRunStatus.HALTING;
+        entrypointThreadRun().halt(event);
+    }
+
+    @JsonIgnore
+    public void resume(WFEventSchema event) {
+        status = WFRunStatus.RUNNING;
+        entrypointThreadRun().resume(event);
     }
 
     @Override

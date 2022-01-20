@@ -667,11 +667,11 @@ public class ThreadRunSchema extends BaseSchema {
      * @param event WFEventSchema triggering the halt.
      */
     public void halt(WFEventSchema event) {
-        
+
     }
 
     public void resume(WFEventSchema event) {
-
+        
     }
 
     @JsonIgnore
