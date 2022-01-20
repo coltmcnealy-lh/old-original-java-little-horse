@@ -662,6 +662,18 @@ public class ThreadRunSchema extends BaseSchema {
         return false;
     }
 
+    /**
+     * Halts this WFRun and its children.
+     * @param event WFEventSchema triggering the halt.
+     */
+    public void halt(WFEventSchema event) {
+        
+    }
+
+    public void resume(WFEventSchema event) {
+
+    }
+
     @JsonIgnore
     @Override
     public Config setConfig(Config config) {
