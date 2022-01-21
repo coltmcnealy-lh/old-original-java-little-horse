@@ -82,6 +82,7 @@ public class WFRunAPI {
         WFEventSchema event = new WFEventSchema();
         event.setConfig(config);
         event.wfRunGuid = wfRunGuid;
+        event.threadID = 0;
         event.type = WFEventType.WF_RUN_STOP_REQUEST;
 
         try {
@@ -115,6 +116,7 @@ public class WFRunAPI {
 
         try {
             event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            event.threadID = 0;
             event.wfSpecGuid = event.wfRun.wfSpecGuid;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
@@ -134,4 +136,67 @@ public class WFRunAPI {
 
         ctx.json(response);
     }
+
+    public void stopThread(Context ctx) {
+        String wfRunGuid = ctx.pathParam("wfRunGuid");
+        int tid = Integer.valueOf(ctx.pathParam("tid"));
+        WFEventSchema event = new WFEventSchema();
+        event.setConfig(config);
+        event.wfRunGuid = wfRunGuid;
+        event.type = WFEventType.WF_RUN_STOP_REQUEST;
+
+        try {
+            event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            event.threadID = tid;
+            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecName = event.wfRun.wfSpecName;
+            event.record();
+        } catch(Exception exn) {
+            exn.printStackTrace();
+            ctx.status(500);
+            LHAPIError error = new LHAPIError(
+                "Failed recording stop request: " + exn.getMessage()
+            );
+            ctx.json(error);
+            return;
+        }
+
+        LHAPIResponsePost response = new LHAPIResponsePost();
+        response.guid = wfRunGuid;
+        response.status = null;
+
+        ctx.json(response);
+    }
+
+    public void resumeThread(Context ctx) {
+        String wfRunGuid = ctx.pathParam("wfRunGuid");
+        int tid = Integer.valueOf(ctx.pathParam("tid"));
+        WFEventSchema event = new WFEventSchema();
+        event.setConfig(config);
+        event.wfRunGuid = wfRunGuid;
+        event.type = WFEventType.WF_RUN_RESUME_REQUEST;
+
+        try {
+            event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.threadID = tid;
+            event.wfSpecName = event.wfRun.wfSpecName;
+            event.record();
+        } catch(Exception exn) {
+            exn.printStackTrace();
+            ctx.status(500);
+            LHAPIError error = new LHAPIError(
+                "Failed recording stop request: " + exn.getMessage()
+            );
+            ctx.json(error);
+            return;
+        }
+
+        LHAPIResponsePost response = new LHAPIResponsePost();
+        response.guid = wfRunGuid;
+        response.status = null;
+
+        ctx.json(response);
+    }
+
 }

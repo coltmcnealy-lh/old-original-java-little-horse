@@ -202,17 +202,23 @@ public class WFRunSchema extends BaseSchema {
         } 
 
         if (event.type == WFEventType.WF_RUN_STOP_REQUEST) {
-            if (status == WFRunStatus.RUNNING) {
+            if (event.threadID == 0 && status == WFRunStatus.RUNNING) {
                 status = WFRunStatus.HALTING;
             }
-            entrypointThreadRun().halt(WFHaltReasonEnum.MANUAL_STOP);
+            if (event.threadID < threadRuns.size()) {
+                threadRuns.get(event.threadID).halt(WFHaltReasonEnum.MANUAL_STOP);
+            }
         }
 
         if (event.type == WFEventType.WF_RUN_RESUME_REQUEST) {
-            if (status != WFRunStatus.COMPLETED) {
+            if (event.threadID == 0 && status != WFRunStatus.COMPLETED) {
                 status = WFRunStatus.RUNNING;
             }
-            entrypointThreadRun().removeHaltReason(WFHaltReasonEnum.MANUAL_STOP);
+            if (event.threadID < threadRuns.size()) {
+                threadRuns.get(event.threadID).removeHaltReason(
+                    WFHaltReasonEnum.MANUAL_STOP
+                );
+            }
         }
     }
 
