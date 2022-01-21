@@ -83,12 +83,6 @@ public class WFRuntime
             wfRun.incorporateEvent(event);
         }
 
-        if (shouldHalt(wfRun, event)) {
-            wfRun.halt(event);
-        } else if (shouldStart(wfRun, event)) {
-            wfRun.resume(event);
-        }
-
         wfRun.updateStatuses(event);
 
         boolean shouldAdvance = true;
@@ -115,18 +109,6 @@ public class WFRuntime
 
         wfspecs.put(guid, result);
         return result;
-    }
-
-    private boolean shouldHalt(WFRunSchema wfRun, WFEventSchema event) {
-        // Logic for determining whether an exception should stop the whole world or
-        // just stop one thread should live here.
-        return false;
-    }
-
-    private boolean shouldStart(WFRunSchema wfRun, WFEventSchema event) {
-        // As of now, we don't have any "please resume" events, like manual restarts
-        // or things like that.
-        return false;
     }
 
 }

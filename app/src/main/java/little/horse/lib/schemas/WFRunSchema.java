@@ -144,6 +144,8 @@ public class WFRunSchema extends BaseSchema {
         trun.wfRun = this;
         trun.variableLocks = new HashMap<String, Integer>();
 
+        trun.haltReasons = new HashSet<>();
+
         return trun;
     }
 
@@ -197,8 +199,23 @@ public class WFRunSchema extends BaseSchema {
         if (event.type == WFEventType.TASK_EVENT) {
             ThreadRunSchema thread = threadRuns.get(event.threadID);
             thread.incorporateEvent(event);
+        } 
+
+        if (event.type == WFEventType.WF_RUN_STOP_REQUEST) {
+            if (status == WFRunStatus.RUNNING) {
+                status = WFRunStatus.HALTING;
+            }
+            entrypointThreadRun().halt(WFHaltReasonEnum.MANUAL_STOP);
+        }
+
+        if (event.type == WFEventType.WF_RUN_RESUME_REQUEST) {
+            if (status != WFRunStatus.COMPLETED) {
+                status = WFRunStatus.RUNNING;
+            }
+            entrypointThreadRun().removeHaltReason(WFHaltReasonEnum.MANUAL_STOP);
         }
     }
+
 
     @JsonIgnore
     public void updateStatuses(WFEventSchema event) {
@@ -221,12 +238,8 @@ public class WFRunSchema extends BaseSchema {
         } else if (this.status == WFRunStatus.RUNNING) {
             boolean allCompleted = true;
             for (ThreadRunSchema thread: this.threadRuns) {
-                if (thread.status == WFRunStatus.RUNNING) {
+                if (thread.status != WFRunStatus.COMPLETED) {
                     allCompleted = false;
-                } else if (thread.status != WFRunStatus.COMPLETED) {
-                    LHUtil.log(
-                        "WTF is this? Got a halted/ing thread but wfrun is running"
-                    );
                 }
             }
             if (allCompleted) {
@@ -264,18 +277,6 @@ public class WFRunSchema extends BaseSchema {
     @JsonIgnore
     public ThreadRunSchema entrypointThreadRun() {
         return threadRuns.get(0);
-    }
-
-    @JsonIgnore
-    public void halt(WFEventSchema event) {
-        status = WFRunStatus.HALTING;
-        entrypointThreadRun().halt(event);
-    }
-
-    @JsonIgnore
-    public void resume(WFEventSchema event) {
-        status = WFRunStatus.RUNNING;
-        entrypointThreadRun().resume(event);
     }
 
     @Override

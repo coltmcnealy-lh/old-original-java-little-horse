@@ -64,7 +64,16 @@ wf_definition = {
                 "thirdNode": {
                     "nodeType": "WAIT_FOR_THREAD",
                     "threadWaitSourceNodeName": "firstNode",
-                }
+                },
+                "fourthNode": {
+                    "nodeType": "TASK",
+                    "taskDefinitionName": "task1",
+                    "variables": {
+                        "someVar": {
+                            "wfRunVariableName": "name"
+                        }
+                    }
+                },
             },
             "edges": [{
                 "sourceNodeName": "firstNode",
@@ -74,6 +83,10 @@ wf_definition = {
                 "sourceNodeName": "secondNode",
                 "sinkNodeName": "thirdNode"
             },
+            {
+                "sourceNodeName": "thirdNode",
+                "sinkNodeName": "fourthNode",
+            }
             ]
         }
     }

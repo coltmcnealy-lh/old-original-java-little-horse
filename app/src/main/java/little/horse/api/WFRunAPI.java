@@ -4,7 +4,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
-
 import little.horse.lib.Config;
 import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHLookupException;
@@ -75,6 +74,64 @@ public class WFRunAPI {
         response.status = LHStatus.PENDING;
 
         ctx.status(201);
+        ctx.json(response);
+    }
+
+    public void stopWFRun(Context ctx) {
+        String wfRunGuid = ctx.pathParam("wfRunGuid");
+        WFEventSchema event = new WFEventSchema();
+        event.setConfig(config);
+        event.wfRunGuid = wfRunGuid;
+        event.type = WFEventType.WF_RUN_STOP_REQUEST;
+
+        try {
+            event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecName = event.wfRun.wfSpecName;
+            event.record();
+        } catch(Exception exn) {
+            exn.printStackTrace();
+            ctx.status(500);
+            LHAPIError error = new LHAPIError(
+                "Failed recording stop request: " + exn.getMessage()
+            );
+            ctx.json(error);
+            return;
+        }
+
+        LHAPIResponsePost response = new LHAPIResponsePost();
+        response.guid = wfRunGuid;
+        response.status = null;
+
+        ctx.json(response);
+    }
+
+    public void resumeWFRun(Context ctx) {
+        String wfRunGuid = ctx.pathParam("wfRunGuid");
+        WFEventSchema event = new WFEventSchema();
+        event.setConfig(config);
+        event.wfRunGuid = wfRunGuid;
+        event.type = WFEventType.WF_RUN_RESUME_REQUEST;
+
+        try {
+            event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecName = event.wfRun.wfSpecName;
+            event.record();
+        } catch(Exception exn) {
+            exn.printStackTrace();
+            ctx.status(500);
+            LHAPIError error = new LHAPIError(
+                "Failed recording stop request: " + exn.getMessage()
+            );
+            ctx.json(error);
+            return;
+        }
+
+        LHAPIResponsePost response = new LHAPIResponsePost();
+        response.guid = wfRunGuid;
+        response.status = null;
+
         ctx.json(response);
     }
 }

@@ -45,6 +45,8 @@ public class ThreadRunSchema extends BaseSchema {
     // Map from variable name to threadID of thread holding lock on the variable.
     public HashMap<String, Integer> variableLocks;
 
+    public HashSet<WFHaltReasonEnum> haltReasons;
+
     @JsonIgnore
     private ThreadSpecSchema privateThreadSpec;
 
@@ -269,23 +271,24 @@ public class ThreadRunSchema extends BaseSchema {
 
         unlockVariables(task.getNode());
 
+        // Need the up next to be set whether or not the task fails/there is
+        // a retry/it succeeds.
+        for (EdgeSchema edge: task.getNode().outgoingEdges) {
+            upNext.add(edge);
+        }
+
         if (taskStatus == LHStatus.COMPLETED) {
             try {
                 mutateVariables(task);
             } catch(VarSubOrzDash exn) {
-                markTaskFailed(
+                failTask(
                     task, LHFailureReason.VARIABLE_LOOKUP_ERROR,exn.getMessage()
                 );
                 return;
             }
 
-            // now schedule the up next (:
-            for (EdgeSchema edge: task.getNode().outgoingEdges) {
-                upNext.add(edge);
-            }
-
         } else {
-            markTaskFailed(
+            failTask(
                 task, LHFailureReason.TASK_FAILURE,
                 "thread failed on node " + task.nodeName
             );
@@ -344,16 +347,17 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    private void markTaskFailed(
+    private void failTask(
         TaskRunSchema tr, LHFailureReason reason, String message
     ) {
-        fail(LHFailureReason.TASK_FAILURE, "oops");
-        throw new RuntimeException("Implement me");
-    }
+        tr.status = LHStatus.ERROR;
+        tr.failureMessage = message;
+        tr.failureReason = reason;
 
-    @JsonIgnore
-    private void fail(LHFailureReason reason, String message) {
-        throw new RuntimeException("Implement me");
+        // TODO: Determine whether or not to enqueue a retry.
+        this.errorCode = reason;
+        this.errorMessage = message;
+        halt(WFHaltReasonEnum.FAILED_TASK);
     }
 
     @JsonIgnore
@@ -404,11 +408,15 @@ public class ThreadRunSchema extends BaseSchema {
             );
         } else if (status == WFRunStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
-            TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
-            if (lastTr.status == LHStatus.COMPLETED ||
-                lastTr.status == LHStatus.ERROR
-            ) {
+            if (taskRuns.size() == 0) {
                 status = WFRunStatus.HALTED;
+            } else {
+                TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
+                if (lastTr.status == LHStatus.COMPLETED ||
+                    lastTr.status == LHStatus.ERROR
+                ) {
+                    status = WFRunStatus.HALTED;
+                }
             }
         }
     }
@@ -425,7 +433,7 @@ public class ThreadRunSchema extends BaseSchema {
         }
         throw new RuntimeException("Impossible to get here since it means");
     }
-    
+
     public void lock(String variableName, int threadID) {
         if (variables.containsKey(variableName)) {
             variableLocks.put(variableName, threadID);
@@ -503,7 +511,7 @@ public class ThreadRunSchema extends BaseSchema {
             } catch(VarSubOrzDash exn) {
                 TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
                 exn.printStackTrace();
-                markTaskFailed(
+                failTask(
                     lastTr,
                     LHFailureReason.VARIABLE_LOOKUP_ERROR,
                     "Failed substituting variable when processing if condition: " +
@@ -584,7 +592,7 @@ public class ThreadRunSchema extends BaseSchema {
 
             } catch(VarSubOrzDash exn) {
                 exn.printStackTrace();
-                markTaskFailed(
+                failTask(
                     tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
                     "Failed creating variables for subthread: " + exn.getMessage()
                 );
@@ -615,7 +623,7 @@ public class ThreadRunSchema extends BaseSchema {
             );
             if (awaitables == null) {
                 taskRuns.add(tr);
-                markTaskFailed(
+                failTask(
                     tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
                     "Got to node " + node.name + " which waits for a thread from " +
                     node.threadWaitSourceNodeName + " but no threads have started" +
@@ -662,16 +670,48 @@ public class ThreadRunSchema extends BaseSchema {
         return false;
     }
 
+    @JsonIgnore
+    public ArrayList<ThreadRunSchema> getChildren() {
+        ArrayList<ThreadRunSchema> out = new ArrayList<ThreadRunSchema>();
+        for (int tid: childThreadIDs) {
+            out.add(wfRun.threadRuns.get(tid));
+        }
+        return out;
+    }
+
     /**
      * Halts this WFRun and its children.
      * @param event WFEventSchema triggering the halt.
      */
-    public void halt(WFEventSchema event) {
+    public void halt(WFHaltReasonEnum reason) {
+        if (status == WFRunStatus.RUNNING) {
+            status = WFRunStatus.HALTING;
+        } else if (status == WFRunStatus.COMPLETED) {
+            LHUtil.log(
+                "Somehow we find ourself in the halt() method on a completed",
+                "thread, which might mean that this is a child thread who has",
+                "already returned back to his dad."
+            );
+        }
+        haltReasons.add(reason);
 
+        for (ThreadRunSchema kid: getChildren()) {
+            kid.halt(WFHaltReasonEnum.PARENT_STOPPED);
+        }
     }
 
-    public void resume(WFEventSchema event) {
-        
+    public void removeHaltReason(WFHaltReasonEnum reason) {
+        haltReasons.remove(reason);
+
+        if (haltReasons.isEmpty()) {
+            if (status == WFRunStatus.HALTED || status == WFRunStatus.HALTING) {
+                status = WFRunStatus.RUNNING;
+            }
+
+            for (ThreadRunSchema kid: getChildren()) {
+                kid.removeHaltReason(WFHaltReasonEnum.PARENT_STOPPED);
+            }
+        }
     }
 
     @JsonIgnore
