@@ -41,6 +41,13 @@ public class ThreadRunSchema extends BaseSchema {
     public int id;
     public Integer parentThreadID;
     public ArrayList<Integer> childThreadIDs;
+    public ArrayList<Integer> activeInterruptThreadIDs;
+    public ArrayList<Integer> handledInterruptThreadIDs;
+
+    // should be set when this thread is actually an interrupt. Then we know the
+    // parentThreadID field above refers to a thread that was interrupted by this
+    // thread.
+    public boolean isInterruptThread = false;
 
     // Map from variable name to threadID of thread holding lock on the variable.
     public HashMap<String, Integer> variableLocks;
@@ -402,10 +409,23 @@ public class ThreadRunSchema extends BaseSchema {
             }
 
         } else if (status == WFRunStatus.HALTED) {
-            // This shouldn't really be possible I don't think
-            LHUtil.log(
-                "What? How are we getting here when the thread is already halted?"
-            );
+            // Check if interrupt handlers are done now (:
+            for (int i = activeInterruptThreadIDs.size() - 1; i >= 0; i--) {
+                int tid = activeInterruptThreadIDs.get(i);
+                if (tid >= wfRun.threadRuns.size()) continue;
+
+                ThreadRunSchema intHandler = wfRun.threadRuns.get(tid);
+                if (intHandler.status == WFRunStatus.COMPLETED) {
+                    activeInterruptThreadIDs.remove(i);
+                    handledInterruptThreadIDs.add(intHandler.id);
+                }
+            }
+            if (haltReasons.contains(WFHaltReasonEnum.INTERRUPT)
+                && activeInterruptThreadIDs.size() == 0
+            ) {
+                removeHaltReason(WFHaltReasonEnum.INTERRUPT);
+            }
+
         } else if (status == WFRunStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
             if (taskRuns.size() == 0) {
@@ -599,12 +619,28 @@ public class ThreadRunSchema extends BaseSchema {
                 return true;
             }
 
-            ThreadRunMetaSchema meta = wfRun.addThread(
-                node.threadSpawnThreadSpecName,
-                inputVars,
-                WFRunStatus.RUNNING,
-                tr
+            ThreadRunSchema thread = wfRun.createThreadClientAdds(
+                node.threadSpawnThreadSpecName, inputVars, this
             );
+            wfRun.threadRuns.add(thread);
+    
+            if (wfRun.awaitableThreads.get(tr.nodeName) == null) {
+                wfRun.awaitableThreads.put(
+                    tr.nodeName, new ArrayList<ThreadRunMetaSchema>()
+                );
+            }
+    
+            ThreadRunMetaSchema meta = new ThreadRunMetaSchema();
+            passConfig(meta);
+            meta.sourceNodeGuid = tr.nodeGuid;
+            meta.sourceNodeName = tr.nodeName;
+            meta.threadID = thread.id;
+            meta.timesAwaited = 0;
+            meta.parentThreadID = tr.threadID;
+            meta.threadSpecName = tr.parentThread.threadSpecName;
+    
+            wfRun.awaitableThreads.get(tr.nodeName).add(meta);
+
             completeTask(
                 tr, LHStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
             );
@@ -683,6 +719,7 @@ public class ThreadRunSchema extends BaseSchema {
      * Halts this WFRun and its children.
      * @param event WFEventSchema triggering the halt.
      */
+    @JsonIgnore
     public void halt(WFHaltReasonEnum reason) {
         if (status == WFRunStatus.RUNNING) {
             status = WFRunStatus.HALTING;
@@ -696,10 +733,13 @@ public class ThreadRunSchema extends BaseSchema {
         haltReasons.add(reason);
 
         for (ThreadRunSchema kid: getChildren()) {
-            kid.halt(WFHaltReasonEnum.PARENT_STOPPED);
+            if (!kid.isInterruptThread || reason != WFHaltReasonEnum.INTERRUPT) {
+                kid.halt(WFHaltReasonEnum.PARENT_STOPPED);
+            }
         }
     }
 
+    @JsonIgnore
     public void removeHaltReason(WFHaltReasonEnum reason) {
         haltReasons.remove(reason);
 
@@ -710,6 +750,55 @@ public class ThreadRunSchema extends BaseSchema {
 
             for (ThreadRunSchema kid: getChildren()) {
                 kid.removeHaltReason(WFHaltReasonEnum.PARENT_STOPPED);
+            }
+        } else if (haltReasons.size() == 1
+            && haltReasons.contains(WFHaltReasonEnum.INTERRUPT)
+        ) {
+            // In this case, the only thing holding up the parent is one (or more)
+            // interrupt threads. Those threads shouldn't be blocked by the parent
+            // at this point, so we unblock them.
+            for (ThreadRunSchema kid: getChildren()) {
+                // Only unblock the interrupts!!!
+                if (kid.isInterruptThread) {
+                    kid.removeHaltReason(WFHaltReasonEnum.PARENT_INTERRUPTED);
+                }
+            }
+        }
+    }
+
+    @JsonIgnore
+    public void handleInterrupt(ExternalEventPayloadSchema payload) throws
+    LHNoConfigException, LHLookupException {
+
+        HashMap<String, InterruptDefSchema> idefs = getThreadSpec().interruptDefs;
+        InterruptDefSchema idef = idefs.get(payload.externalEventDefName);
+        String tspecname = idef.threadSpecName;
+
+        // crucial to create the thread BEFORE calling halt(), as the call to halt()
+        // adds a WFHaltReason which we dont wanna propagate to the interrupt thread.
+        ThreadRunSchema trun = wfRun.createThreadClientAdds(
+            tspecname,
+            LHUtil.unsplat(payload.content),
+            this
+        );
+        trun.isInterruptThread = true;
+        wfRun.threadRuns.add(trun);
+
+        activeInterruptThreadIDs.add(trun.id);
+        // Now we call halt.
+        halt(WFHaltReasonEnum.INTERRUPT);
+    }
+
+    @JsonIgnore
+    public void propagateInterrupt(ExternalEventPayloadSchema payload) throws
+    LHNoConfigException, LHLookupException {
+        HashMap<String, InterruptDefSchema> idefs = getThreadSpec().interruptDefs;
+        if (idefs != null && idefs.containsKey(payload.externalEventDefName)) {
+            // Now we need to add thread!
+            handleInterrupt(payload);
+        } else {
+            for (ThreadRunSchema kid: getChildren()) {
+                kid.propagateInterrupt(payload);
             }
         }
     }

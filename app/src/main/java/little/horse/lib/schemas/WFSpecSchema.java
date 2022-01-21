@@ -40,6 +40,7 @@ public class WFSpecSchema extends BaseSchema {
     public String namespace;
 
     public HashMap<String, ThreadSpecSchema> threadSpecs;
+    public HashSet<String> interruptEvents;
 
     // All fields below ignored by Json
     @JsonIgnore
@@ -78,6 +79,9 @@ public class WFSpecSchema extends BaseSchema {
         if (spec.variableDefs == null) {
             spec.variableDefs = new HashMap<String, WFRunVariableDefSchema>();
         }
+        if (spec.interruptDefs == null) {
+            spec.interruptDefs = new HashMap<String, InterruptDefSchema>();
+        }
         
         // Light Clean up the node (i.e. give it a guid if it doesn't have one, etc), validate that
         // its taskdef exist
@@ -98,6 +102,20 @@ public class WFSpecSchema extends BaseSchema {
             }
         }
 
+        // validate interrupt handlers.
+        // TODO: More fancy validation where we make sure there's only one input
+        // variable.
+        interruptEvents = new HashSet<String>();
+        for (Map.Entry<String, InterruptDefSchema> p: spec.interruptDefs.entrySet()) {
+            interruptEvents.add(p.getKey()); // know to handle this event as interrupt
+            String tspecName = p.getValue().threadSpecName;
+            if (!threadSpecs.containsKey(tspecName)) {
+                throw new LHValidationError(
+                    "Interrupt handler " + p.getKey() + " references nonexistent" +
+                    "thread named " + tspecName
+                );
+            }
+        }
 
         if (spec.edges == null) {
             spec.edges = new ArrayList<EdgeSchema>();
@@ -424,7 +442,7 @@ public class WFSpecSchema extends BaseSchema {
         wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMetaSchema>>();
 
         wfRun.threadRuns.add(wfRun.createThreadClientAdds(
-            entrypointThreadName, runRequest.variables, WFRunStatus.RUNNING
+            entrypointThreadName, runRequest.variables, null
         ));
 
         return wfRun;

@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -82,6 +83,24 @@ public class LHUtil {
 
     public static void logError(Object... things) {
         logBack(1, "ERROR:", things);
+    }
+
+    /**
+     * Given an object, try to turn it into a HashMap (via json.loads). If possible
+     * return the hashmap; otherwise return the variable.
+     * @param obj the thing to unsplat
+     * @return the unsplatted object
+     */
+    @SuppressWarnings("unchecked")
+    public static HashMap<String, Object> unsplat(Object obj) {
+        HashMap<String, Object> out;
+        try {
+            LHUtil.log("obj:", obj.toString());
+            out = (HashMap<String, Object>) jsonifyIfPossible(obj.toString());
+        } catch (Exception exn) {
+            out = new HashMap<>();
+        }
+        return out;
     }
 
     public static String inputStreamToString(InputStream stream) {

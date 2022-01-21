@@ -9,6 +9,7 @@ package little.horse.lib.schemas;
  */
 public enum WFHaltReasonEnum {
     PARENT_STOPPED,
+    PARENT_INTERRUPTED,
     FAILED_TASK,
     INTERRUPT,
     MANUAL_STOP;    

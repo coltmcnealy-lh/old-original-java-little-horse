@@ -14,6 +14,7 @@ public class ThreadSpecSchema extends BaseSchema {
     public String guid;
 
     public HashMap<String, WFRunVariableDefSchema> variableDefs;
+    public HashMap<String, InterruptDefSchema> interruptDefs;
     @JsonManagedReference
     public HashMap<String, NodeSchema> nodes;
     public ArrayList<EdgeSchema> edges;

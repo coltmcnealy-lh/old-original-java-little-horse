@@ -66,41 +66,8 @@ public class WFRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public ThreadRunMetaSchema addThread(
-        String threadName,
-        Map<String, Object> variables,
-        WFRunStatus initialStatus,
-        TaskRunSchema parentTaskRun
-    ) throws LHNoConfigException, LHLookupException {
-        ThreadRunSchema thread = createThreadClientAdds(threadName, variables, initialStatus);
-        threadRuns.add(thread);
-        thread.parentThreadID = parentTaskRun.threadID;
-
-        // lmao that's a lot of chaining haha
-        parentTaskRun.parentThread.childThreadIDs.add(thread.id);
-
-        if (awaitableThreads.get(parentTaskRun.nodeName) == null) {
-            awaitableThreads.put(
-                parentTaskRun.nodeName, new ArrayList<ThreadRunMetaSchema>()
-            );
-        }
-
-        ThreadRunMetaSchema meta = new ThreadRunMetaSchema();
-        passConfig(meta);
-        meta.sourceNodeGuid = parentTaskRun.nodeGuid;
-        meta.sourceNodeName = parentTaskRun.nodeName;
-        meta.threadID = thread.id;
-        meta.timesAwaited = 0;
-        meta.parentThreadID = parentTaskRun.threadID;
-        meta.threadSpecName = parentTaskRun.parentThread.threadSpecName;
-        awaitableThreads.get(parentTaskRun.nodeName).add(meta);
-
-        return meta;
-    }
-
-    @JsonIgnore
     public ThreadRunSchema createThreadClientAdds(
-        String threadName, Map<String, Object> variables, WFRunStatus initialStatus
+        String threadName, Map<String, Object> variables, ThreadRunSchema parent
     ) throws LHNoConfigException, LHLookupException {
         getWFSpec();  // just make sure the thing isn't null;
 
@@ -115,7 +82,7 @@ public class WFRunSchema extends BaseSchema {
         setConfig(config); // this will populate the ThreadRun as well
 
         trun.id = threadRuns.size();
-        trun.status = initialStatus;
+        trun.status = parent == null ? WFRunStatus.RUNNING : parent.status;
         trun.taskRuns = new ArrayList<TaskRunSchema>();
 
         // Load the variables for the ThreadRun
@@ -135,6 +102,9 @@ public class WFRunSchema extends BaseSchema {
         trun.threadSpecName = threadName;
         trun.threadSpecGuid = trun.threadSpec.guid;
 
+        trun.activeInterruptThreadIDs = new ArrayList<Integer>();
+        trun.handledInterruptThreadIDs = new ArrayList<Integer>();
+
         // Now add the entrypoint taskRun
         EdgeSchema fakeEdge = new EdgeSchema();
         fakeEdge.sinkNodeName = tspec.entrypointNodeName;
@@ -145,6 +115,16 @@ public class WFRunSchema extends BaseSchema {
         trun.variableLocks = new HashMap<String, Integer>();
 
         trun.haltReasons = new HashSet<>();
+
+        if (parent != null) {
+            parent.childThreadIDs.add(trun.id);
+            trun.parentThreadID = parent.id;
+
+            // propagate the halt reasons.
+            for (WFHaltReasonEnum haltReason: parent.haltReasons) {
+                trun.haltReasons.add(haltReason);
+            }
+        }
 
         return trun;
     }
@@ -164,22 +144,41 @@ public class WFRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    private void recordExternalEvent(WFEventSchema event) {
+    private void handleExternalEvent(WFEventSchema event) throws
+    LHNoConfigException, LHLookupException {
         ExternalEventPayloadSchema payload = BaseSchema.fromString(
             event.content, ExternalEventPayloadSchema.class);
         
-        ExternalEventCorrelSchema correl = new ExternalEventCorrelSchema();
-        correl.event = payload;
-        correl.arrivalTime = event.timestamp;
+        if (wfSpec.interruptEvents.contains(payload.externalEventDefName)) {
+            // This is an interrupt. Find the appropriate thread and interrupt it.
+            // There's two options: the thread number is set, or it's not set.
+            // If the thread number is set, then just interrupt that thread.
+            if (event.threadID != -1) {
+                threadRuns.get(event.threadID).handleInterrupt(payload);
+            } else {
+                // if there's no thread number set, interrupt all threads that
+                // listen to this interrupt.
+                threadRuns.get(0).propagateInterrupt(payload);
+            }
+        } else {
+            // This isn't an interrupt, so store the event in case some other
+            // thread has an EXTERNAL_EVENT node that waits for this type of event.
+            ExternalEventCorrelSchema correl = new ExternalEventCorrelSchema();
+            correl.event = payload;
+            correl.arrivalTime = event.timestamp;
+            correl.assignedThreadID = event.threadID;
 
-        if (correlatedEvents == null) {
-            correlatedEvents = new HashMap<>();
-        }
-        if (correlatedEvents.get(payload.externalEventDefName) == null) {
-            correlatedEvents.put(payload.externalEventDefName, new ArrayList<>());
-        }
+            if (correlatedEvents == null) {
+                correlatedEvents = new HashMap<>();
+            }
+            if (correlatedEvents.get(payload.externalEventDefName) == null) {
+                correlatedEvents.put(
+                    payload.externalEventDefName, new ArrayList<>()
+                );
+            }
 
-        correlatedEvents.get(payload.externalEventDefName).add(correl);
+            correlatedEvents.get(payload.externalEventDefName).add(correl);
+        }
     }
 
     @JsonIgnore
@@ -192,14 +191,14 @@ public class WFRunSchema extends BaseSchema {
         }
 
         if (event.type == WFEventType.EXTERNAL_EVENT) {
-            recordExternalEvent(event);
+            handleExternalEvent(event);
             return;
         }
 
         if (event.type == WFEventType.TASK_EVENT) {
             ThreadRunSchema thread = threadRuns.get(event.threadID);
             thread.incorporateEvent(event);
-        } 
+        }
 
         if (event.type == WFEventType.WF_RUN_STOP_REQUEST) {
             if (event.threadID == 0 && status == WFRunStatus.RUNNING) {
@@ -221,7 +220,6 @@ public class WFRunSchema extends BaseSchema {
             }
         }
     }
-
 
     @JsonIgnore
     public void updateStatuses(WFEventSchema event) {
