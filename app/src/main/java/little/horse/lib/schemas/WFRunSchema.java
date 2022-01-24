@@ -114,15 +114,18 @@ public class WFRunSchema extends BaseSchema {
         trun.wfRun = this;
         trun.variableLocks = new HashMap<String, Integer>();
 
+        trun.completedExeptionHandlerThreads = new ArrayList<Integer>();
+
         trun.haltReasons = new HashSet<>();
 
         if (parent != null) {
             parent.childThreadIDs.add(trun.id);
             trun.parentThreadID = parent.id;
 
-            // propagate the halt reasons.
-            for (WFHaltReasonEnum haltReason: parent.haltReasons) {
-                trun.haltReasons.add(haltReason);
+            if (parent.status == WFRunStatus.HALTED ||
+                parent.status == WFRunStatus.HALTING
+            ) {
+                trun.haltReasons.add(WFHaltReasonEnum.PARENT_STOPPED);
             }
         }
 
@@ -242,7 +245,12 @@ public class WFRunSchema extends BaseSchema {
         } else if (this.status == WFRunStatus.RUNNING) {
             boolean allCompleted = true;
             for (ThreadRunSchema thread: this.threadRuns) {
-                if (thread.status != WFRunStatus.COMPLETED) {
+                if (!thread.isCompleted()) {
+                    if (thread.isFailed()) {
+                        this.status = WFRunStatus.HALTING;
+                        this.errorCode = LHFailureReason.TASK_FAILURE;
+                        this.errorMessage = "Workflow has failed.";
+                    }
                     allCompleted = false;
                 }
             }

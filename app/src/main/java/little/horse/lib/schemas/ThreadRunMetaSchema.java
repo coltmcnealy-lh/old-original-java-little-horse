@@ -12,4 +12,20 @@ public class ThreadRunMetaSchema extends BaseSchema {
     // can be looked up from the threadID without another network hop.
 
     public int timesAwaited = 0;
+
+
+    public ThreadRunMetaSchema() {
+
+    }
+
+    public ThreadRunMetaSchema(TaskRunSchema task, ThreadRunSchema thread) {
+        this.sourceNodeGuid = task.nodeGuid;
+        this.sourceNodeName = task.nodeName;
+        this.threadID = thread.id;
+        this.timesAwaited = 0;
+        this.parentThreadID = task.threadID;
+        this.threadSpecName = task.parentThread.threadSpecName;
+
+        thread.passConfig(this);
+    }
 }

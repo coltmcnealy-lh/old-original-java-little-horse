@@ -27,22 +27,20 @@ public class ThreadRunSchema extends BaseSchema {
     public String threadSpecName;
     public String threadSpecGuid;
 
-    public ArrayList<EdgeSchema> upNext;
-
     @JsonManagedReference
     public ArrayList<TaskRunSchema> taskRuns;
+    public ArrayList<EdgeSchema> upNext;
+    public WFRunStatus status;
 
     public HashMap<String, Object> variables;
-
-    public WFRunStatus status;
-    public LHFailureReason errorCode;
-    public String errorMessage;
 
     public int id;
     public Integer parentThreadID;
     public ArrayList<Integer> childThreadIDs;
     public ArrayList<Integer> activeInterruptThreadIDs;
     public ArrayList<Integer> handledInterruptThreadIDs;
+    public Integer exceptionHandlerThread = null;
+    public ArrayList<Integer> completedExeptionHandlerThreads;
 
     // should be set when this thread is actually an interrupt. Then we know the
     // parentThreadID field above refers to a thread that was interrupted by this
@@ -356,15 +354,32 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     private void failTask(
         TaskRunSchema tr, LHFailureReason reason, String message
-    ) {
+    ) throws LHNoConfigException, LHLookupException {
         tr.status = LHStatus.ERROR;
         tr.failureMessage = message;
         tr.failureReason = reason;
 
         // TODO: Determine whether or not to enqueue a retry.
-        this.errorCode = reason;
-        this.errorMessage = message;
-        halt(WFHaltReasonEnum.FAILED_TASK);
+
+        if (tr.getNode().baseExceptionhandler != null) {
+            // Treat the exception handler LIKE an interrupt, but not really.
+            String tname = tr.getNode().baseExceptionhandler.handlerThreadSpecName;
+
+            ThreadRunSchema handler = wfRun.createThreadClientAdds(
+                tname,
+                // In the future we may pass info to the handler thread.
+                new HashMap<String, Object>(),
+                this
+            );
+            wfRun.threadRuns.add(handler);
+            exceptionHandlerThread = handler.id;
+
+            // Important to do this after creating the exception handler thread
+            // so that we don't propagate HALTED/ING status to it.
+            halt(WFHaltReasonEnum.HANDLING_EXCEPTION);
+        } else {
+            halt(WFHaltReasonEnum.FAILED);
+        }
     }
 
     @JsonIgnore
@@ -387,7 +402,7 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     public void updateStatus() {
-        if (status == WFRunStatus.COMPLETED) return;
+        if (isCompleted()) return;
         if (upNext == null) upNext = new ArrayList<EdgeSchema>();
 
         if (status == WFRunStatus.RUNNING) {
@@ -415,7 +430,7 @@ public class ThreadRunSchema extends BaseSchema {
                 if (tid >= wfRun.threadRuns.size()) continue;
 
                 ThreadRunSchema intHandler = wfRun.threadRuns.get(tid);
-                if (intHandler.status == WFRunStatus.COMPLETED) {
+                if (intHandler.isCompleted()) {
                     activeInterruptThreadIDs.remove(i);
                     handledInterruptThreadIDs.add(intHandler.id);
                 }
@@ -426,17 +441,27 @@ public class ThreadRunSchema extends BaseSchema {
                 removeHaltReason(WFHaltReasonEnum.INTERRUPT);
             }
 
+            // Check if we just fixed an exception handler
+            if (exceptionHandlerThread != null) {
+                ThreadRunSchema handler = wfRun.threadRuns.get(
+                    exceptionHandlerThread
+                );
+
+                if (handler.isCompleted()) {
+                    removeHaltReason(WFHaltReasonEnum.HANDLING_EXCEPTION);
+                } else if (handler.isFailed()) {
+                    // we're failed.
+                    halt(WFHaltReasonEnum.FAILED);
+                } else {
+                    LHUtil.log("waiting for exception handler to finish");
+                }
+            }
         } else if (status == WFRunStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
-            if (taskRuns.size() == 0) {
+            if (taskRuns.size() == 0 || taskRuns.get(
+                    taskRuns.size() - 1
+            ).isTerminated()) {
                 status = WFRunStatus.HALTED;
-            } else {
-                TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
-                if (lastTr.status == LHStatus.COMPLETED ||
-                    lastTr.status == LHStatus.ERROR
-                ) {
-                    status = WFRunStatus.HALTED;
-                }
             }
         }
     }
@@ -629,18 +654,9 @@ public class ThreadRunSchema extends BaseSchema {
                     tr.nodeName, new ArrayList<ThreadRunMetaSchema>()
                 );
             }
-    
-            ThreadRunMetaSchema meta = new ThreadRunMetaSchema();
-            passConfig(meta);
-            meta.sourceNodeGuid = tr.nodeGuid;
-            meta.sourceNodeName = tr.nodeName;
-            meta.threadID = thread.id;
-            meta.timesAwaited = 0;
-            meta.parentThreadID = tr.threadID;
-            meta.threadSpecName = tr.parentThread.threadSpecName;
-    
-            wfRun.awaitableThreads.get(tr.nodeName).add(meta);
 
+            ThreadRunMetaSchema meta = new ThreadRunMetaSchema(tr, thread);
+            wfRun.awaitableThreads.get(tr.nodeName).add(meta);
             completeTask(
                 tr, LHStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
             );
@@ -672,10 +688,11 @@ public class ThreadRunSchema extends BaseSchema {
             for (ThreadRunMetaSchema meta: awaitables) {
                 ThreadRunSchema threadRun = wfRun.threadRuns.get(meta.threadID);
                 if (meta.timesAwaited == 0 &&
-                    threadRun.status == WFRunStatus.COMPLETED
+                    threadRun.isCompleted()
                 ) {
                     waitedFor.add(meta);
                 } else if (threadRun.status != WFRunStatus.RUNNING) {
+                    // TODO: Do some handling for failed runs.
                     return false;
                 }
             }
@@ -723,7 +740,7 @@ public class ThreadRunSchema extends BaseSchema {
     public void halt(WFHaltReasonEnum reason) {
         if (status == WFRunStatus.RUNNING) {
             status = WFRunStatus.HALTING;
-        } else if (status == WFRunStatus.COMPLETED) {
+        } else if (isCompleted()) {
             LHUtil.log(
                 "Somehow we find ourself in the halt() method on a completed",
                 "thread, which might mean that this is a child thread who has",
@@ -733,9 +750,15 @@ public class ThreadRunSchema extends BaseSchema {
         haltReasons.add(reason);
 
         for (ThreadRunSchema kid: getChildren()) {
-            if (!kid.isInterruptThread || reason != WFHaltReasonEnum.INTERRUPT) {
-                kid.halt(WFHaltReasonEnum.PARENT_STOPPED);
+            if (kid.isInterruptThread && reason == WFHaltReasonEnum.INTERRUPT) {
+                continue;
             }
+            if (kid.id == exceptionHandlerThread &&
+                reason == WFHaltReasonEnum.HANDLING_EXCEPTION
+            ) {
+                continue;
+            }
+            kid.halt(WFHaltReasonEnum.PARENT_STOPPED);
         }
     }
 
@@ -787,6 +810,23 @@ public class ThreadRunSchema extends BaseSchema {
         activeInterruptThreadIDs.add(trun.id);
         // Now we call halt.
         halt(WFHaltReasonEnum.INTERRUPT);
+    }
+
+    @JsonIgnore
+    public boolean isFailed() {
+        return (status == WFRunStatus.HALTED && haltReasons.contains(
+            WFHaltReasonEnum.FAILED
+        ));
+    }
+
+    @JsonIgnore
+    public boolean isCompleted() {
+        return (status == WFRunStatus.COMPLETED);
+    }
+
+    @JsonIgnore
+    public boolean isTerminated() {
+        return (isCompleted() || haltReasons.contains(WFHaltReasonEnum.FAILED));
     }
 
     @JsonIgnore

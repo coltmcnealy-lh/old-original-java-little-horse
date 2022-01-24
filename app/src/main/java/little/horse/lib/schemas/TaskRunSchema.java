@@ -25,6 +25,7 @@ public class TaskRunSchema extends BaseSchema {
 
     public ArrayList<String> bashCommand;
     public Object stdin;
+    public int attemptNumber = 1;
     
     public LHStatus status;
     public Object stdout;
@@ -36,6 +37,11 @@ public class TaskRunSchema extends BaseSchema {
 
     public LHFailureReason failureReason;
     public String failureMessage;
+
+    @JsonIgnore
+    public boolean isTerminated() {
+        return (status == LHStatus.COMPLETED || status == LHStatus.ERROR);
+    }
 
     @JsonIgnore
     public NodeSchema getNode() throws LHNoConfigException, LHLookupException {

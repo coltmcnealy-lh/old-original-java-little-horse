@@ -49,6 +49,11 @@ public class NodeSchema extends BaseSchema {
     @JsonBackReference
     public ThreadSpecSchema threadSpec;
 
+    // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
+    public String exceptionThrownToParent;
+
+    public ExceptionHandlerSpecSchema baseExceptionhandler;
+
     // Everything below doesn't show up in json.
     @JsonIgnore
     public String getK8sName() {

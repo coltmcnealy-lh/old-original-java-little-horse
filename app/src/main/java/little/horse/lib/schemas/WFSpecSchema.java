@@ -124,10 +124,7 @@ public class WFSpecSchema extends BaseSchema {
             cleanupEdge(edge, spec);
         }
 
-        // Next, assign the entryoint node
-        if (spec.entrypointNodeName == null) {
-            spec.entrypointNodeName = calculateEntrypointNode(spec);
-        }
+        spec.entrypointNodeName = calculateEntrypointNode(spec);
 
         // Now, iterate through variables and add them to the allVarDefs map.
         if (allVarDefs.containsKey(name)) {
@@ -227,6 +224,12 @@ public class WFSpecSchema extends BaseSchema {
             if (node.nodeType == NodeType.SPAWN_THREAD) {
                 String nextThreadName = node.threadSpawnThreadSpecName;
                 validateVariablesHelper(seenThreads, seenVars, nextThreadName);
+            }
+            if (node.baseExceptionhandler != null) {
+                String threadSpec = node.baseExceptionhandler.handlerThreadSpecName;
+                if (threadSpec != null) {
+                    validateVariablesHelper(seenThreads, seenVars, threadSpec);
+                }
             }
         }
 
@@ -343,6 +346,21 @@ public class WFSpecSchema extends BaseSchema {
         }
         if (node.incomingEdges == null) {
             node.incomingEdges = new ArrayList<EdgeSchema>();
+        }
+
+        if (node.baseExceptionhandler != null) {
+            String handlerSpecName = node.baseExceptionhandler.handlerThreadSpecName;
+            if (handlerSpecName != null) {
+                ThreadSpecSchema handlerSpec = threadSpecs.get(handlerSpecName);
+                if (handlerSpec == null) {
+                    throw new LHValidationError(
+                        "Exception handler on node " + node.name + " refers to " +
+                        "thread spec that doesn't exist: " + handlerSpecName
+                    );
+                }
+                // TODO: Maybe we should enforce "the exception handler thread
+                // can't have input variables"
+            }
         }
     }
 
