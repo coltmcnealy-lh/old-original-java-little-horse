@@ -16,9 +16,15 @@ def print_prettily(response):
 
 
 task_definition = {
-    "name": "task",
+    "name": "unreliable-task",
     "dockerImage": "little-horse-daemon",
     "bashCommand": ["python3", "/examples/task_unreliable.py"],
+}
+
+task_definition1 = {
+    "name": "task",
+    "dockerImage": "little-horse-daemon",
+    "bashCommand": ["python3", "/examples/task1.py", "foo"],
 }
 
 wf_definition = {
@@ -30,7 +36,7 @@ wf_definition = {
             "nodes": {
                 "firstNode": {
                     "nodeType": "TASK",
-                    "taskDefinitionName": "task",
+                    "taskDefinitionName": "unreliable-task",
                     "baseExceptionhandler": {
                         "shouldResume": True,
                         "handlerThreadSpecName": "handlerThread",
@@ -60,6 +66,8 @@ wf_definition = {
 
 
 create_task_def_response = requests.post(f"{URL}/taskDef", json=task_definition)
+print_prettily(create_task_def_response)
+create_task_def_response = requests.post(f"{URL}/taskDef", json=task_definition1)
 print_prettily(create_task_def_response)
 
 time.sleep(0.1)

@@ -3,7 +3,11 @@ import json
 import sys
 
 
-if random.random() > 0.8:
+thing = random.random()
+
+print(thing)
+
+if thing < 0.9:
     assert False
 
 print(json.dumps({"asdf": "asdf"}))

@@ -87,6 +87,10 @@ public class WFRuntime
 
         boolean shouldAdvance = true;
         while (shouldAdvance) {
+            // This call here seems redundant but it's actually not...if I don't put it here
+            // then the parent thread never notices if the exception handler thread has
+            // finished.
+            wfRun.updateStatuses(event);
             boolean didAdvance = false;
             for (int i = 0; i < wfRun.threadRuns.size(); i++) {
                 ThreadRunSchema thread = wfRun.threadRuns.get(i);
