@@ -305,6 +305,9 @@ public class WFSpecSchema extends BaseSchema {
 
     @JsonIgnore
     private String calculateEntrypointNode(ThreadSpecSchema thread) throws LHValidationError {
+        if (thread.entrypointNodeName != null) {
+            return thread.entrypointNodeName;
+        }
         NodeSchema entrypoint = null;
         for (Map.Entry<String, NodeSchema> pair: thread.nodes.entrySet()) {
             NodeSchema node = pair.getValue();
@@ -316,6 +319,11 @@ public class WFSpecSchema extends BaseSchema {
                     }
                 entrypoint = node;
             }
+        }
+        if (entrypoint == null) {
+            throw new LHValidationError(
+                "No entrypoint specified and no node present without incoming edges."
+            );
         }
         return entrypoint.name;
     }
