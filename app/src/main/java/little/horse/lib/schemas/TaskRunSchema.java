@@ -44,6 +44,13 @@ public class TaskRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
+    public boolean isCompleted() {
+        return (
+            status == LHStatus.COMPLETED || status == LHStatus.FAILED_AND_HANDLED
+        );
+    }
+
+    @JsonIgnore
     public NodeSchema getNode() throws LHNoConfigException, LHLookupException {
         if (parentThread == null) {
             throw new LHNoConfigException("Parent thread of taskrun was null!");

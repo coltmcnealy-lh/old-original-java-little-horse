@@ -101,6 +101,7 @@ public class WFRunSchema extends BaseSchema {
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
         trun.threadSpecGuid = trun.threadSpec.guid;
+        trun.errorMessage = "";
 
         trun.activeInterruptThreadIDs = new ArrayList<Integer>();
         trun.handledInterruptThreadIDs = new ArrayList<Integer>();
@@ -207,8 +208,12 @@ public class WFRunSchema extends BaseSchema {
             if (event.threadID == 0 && status == WFRunStatus.RUNNING) {
                 status = WFRunStatus.HALTING;
             }
-            if (event.threadID < threadRuns.size()) {
-                threadRuns.get(event.threadID).halt(WFHaltReasonEnum.MANUAL_STOP);
+            int threadID = event.threadID >= 0 ? event.threadID : 0;
+            if (threadID < threadRuns.size()) {
+                threadRuns.get(event.threadID).halt(
+                    WFHaltReasonEnum.MANUAL_STOP,
+                    "Manual halt of this thread requested by system admin."
+                );
             }
         }
 
@@ -230,6 +235,14 @@ public class WFRunSchema extends BaseSchema {
             thread.updateStatus();
         }
 
+        // // lmfao but this do be necessary tho
+        // for (int i = threadRuns.size() - 1; i >= 0; i--) {
+        //     threadRuns.get(i).updateStatus();
+        // }
+
+        boolean allTerminated = true;
+        boolean allCompleted = true;
+
         if (status == WFRunStatus.HALTING) {
             boolean allHalted = true;
             for (ThreadRunSchema thread: this.threadRuns) {
@@ -243,19 +256,14 @@ public class WFRunSchema extends BaseSchema {
                 this.status = WFRunStatus.HALTED;
             }
         } else if (this.status == WFRunStatus.RUNNING) {
-            boolean allCompleted = true;
             for (ThreadRunSchema thread: this.threadRuns) {
-                if (!thread.isCompleted()) {
-                    if (thread.isFailed()) {
-                        this.status = WFRunStatus.HALTING;
-                        this.errorCode = LHFailureReason.TASK_FAILURE;
-                        this.errorMessage = "Workflow has failed.";
-                    }
-                    allCompleted = false;
-                }
+                if (!thread.isTerminated()) allTerminated = false;
+                if (!thread.isCompleted()) allCompleted = false;
             }
             if (allCompleted) {
                 this.status = WFRunStatus.COMPLETED;
+            } else if (allTerminated) {
+                this.status = WFRunStatus.HALTED;
             }
         }
     }

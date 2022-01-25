@@ -50,9 +50,10 @@ public class NodeSchema extends BaseSchema {
     public ThreadSpecSchema threadSpec;
 
     // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
-    public String exceptionThrownToParent;
+    public String exceptionToThrow;
 
     public ExceptionHandlerSpecSchema baseExceptionhandler;
+    public HashMap<String, ExceptionHandlerSpecSchema> customExceptionHandlers;
 
     // Everything below doesn't show up in json.
     @JsonIgnore
@@ -65,6 +66,15 @@ public class NodeSchema extends BaseSchema {
 
     @JsonIgnore
     private ExternalEventDefSchema externalEventDef;
+
+    @JsonIgnore
+    public ExceptionHandlerSpecSchema getHandlerSpec(String exceptionName) {
+        if (exceptionName == null) {
+            return baseExceptionhandler;
+        } else {
+            return customExceptionHandlers.get(exceptionName);
+        }
+    }
 
     @JsonIgnore
     public TaskDefSchema getTaskDef() {

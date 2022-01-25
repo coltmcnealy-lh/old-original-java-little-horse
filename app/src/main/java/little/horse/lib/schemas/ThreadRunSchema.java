@@ -42,10 +42,14 @@ public class ThreadRunSchema extends BaseSchema {
     public Integer exceptionHandlerThread = null;
     public ArrayList<Integer> completedExeptionHandlerThreads;
 
+    public String errorMessage;
+
     // should be set when this thread is actually an interrupt. Then we know the
     // parentThreadID field above refers to a thread that was interrupted by this
     // thread.
     public boolean isInterruptThread = false;
+
+    public String exceptionName;
 
     // Map from variable name to threadID of thread holding lock on the variable.
     public HashMap<String, Integer> variableLocks;
@@ -278,6 +282,7 @@ public class ThreadRunSchema extends BaseSchema {
 
         // Need the up next to be set whether or not the task fails/there is
         // a retry/it succeeds.
+        upNext = new ArrayList<EdgeSchema>();
         for (EdgeSchema edge: task.getNode().outgoingEdges) {
             upNext.add(edge);
         }
@@ -295,7 +300,7 @@ public class ThreadRunSchema extends BaseSchema {
         } else {
             failTask(
                 task, LHFailureReason.TASK_FAILURE,
-                "thread failed on node " + task.nodeName
+                "thread failed on node " + task.nodeName + ": " + stderr
             );
         }
     }
@@ -352,6 +357,31 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
+    private void handleException(
+        String handlerSpecName, TaskRunSchema tr, LHFailureReason reason, String msg
+    ) throws LHLookupException, LHNoConfigException {
+        tr.status = LHStatus.ERROR;
+        tr.failureMessage = msg;
+        tr.failureReason = reason;
+
+        ThreadRunSchema handler = wfRun.createThreadClientAdds(
+            handlerSpecName,
+            // In the future we may pass info to the handler thread.
+            new HashMap<String, Object>(),
+            this
+        );
+        wfRun.threadRuns.add(handler);
+        exceptionHandlerThread = handler.id;
+
+        // Important to do this after creating the exception handler thread
+        // so that we don't propagate HALTED/ING status to it.
+        halt(
+            WFHaltReasonEnum.HANDLING_EXCEPTION,
+            "Handling exception on failed task " + tr.nodeName
+        );
+    }
+
+    @JsonIgnore
     private void failTask(
         TaskRunSchema tr, LHFailureReason reason, String message
     ) throws LHNoConfigException, LHLookupException {
@@ -364,21 +394,13 @@ public class ThreadRunSchema extends BaseSchema {
         if (tr.getNode().baseExceptionhandler != null) {
             // Treat the exception handler LIKE an interrupt, but not really.
             String tname = tr.getNode().baseExceptionhandler.handlerThreadSpecName;
-
-            ThreadRunSchema handler = wfRun.createThreadClientAdds(
-                tname,
-                // In the future we may pass info to the handler thread.
-                new HashMap<String, Object>(),
-                this
-            );
-            wfRun.threadRuns.add(handler);
-            exceptionHandlerThread = handler.id;
-
-            // Important to do this after creating the exception handler thread
-            // so that we don't propagate HALTED/ING status to it.
-            halt(WFHaltReasonEnum.HANDLING_EXCEPTION);
+            handleException(tname, tr, reason, message);
         } else {
-            halt(WFHaltReasonEnum.FAILED);
+            halt(
+                WFHaltReasonEnum.FAILED,
+                "Thread " + String.valueOf(id) + " failed on task "
+                + tr.nodeName + ": " + message
+            );
         }
     }
 
@@ -401,6 +423,12 @@ public class ThreadRunSchema extends BaseSchema {
         }
     }
 
+    private void log(Object... things) {
+        if (id != 0) return;
+
+        LHUtil.logBack(1, things);
+    }
+
     public void updateStatus() {
         if (isCompleted()) return;
         if (upNext == null) upNext = new ArrayList<EdgeSchema>();
@@ -411,7 +439,7 @@ public class ThreadRunSchema extends BaseSchema {
             if (upNext == null || upNext.size() == 0) {
                 TaskRunSchema lastTr = taskRuns.size() > 0 ?
                     taskRuns.get(taskRuns.size() - 1) : null;
-                if (lastTr == null || lastTr.status == LHStatus.COMPLETED) {
+                if (lastTr == null || lastTr.isCompleted()) {
                     status = WFRunStatus.COMPLETED;
                 }
             } else {
@@ -451,7 +479,9 @@ public class ThreadRunSchema extends BaseSchema {
                     removeHaltReason(WFHaltReasonEnum.HANDLING_EXCEPTION);
                 } else if (handler.isFailed()) {
                     // we're failed.
-                    halt(WFHaltReasonEnum.FAILED);
+                    halt(WFHaltReasonEnum.FAILED,
+                        "Exception handler on thread " + handler.id + " failed!"
+                    );
                 } else {
                     LHUtil.log("waiting for exception handler to finish");
                 }
@@ -587,6 +617,8 @@ public class ThreadRunSchema extends BaseSchema {
             upNext = new ArrayList<EdgeSchema>();
             TaskRunSchema tr = createNewTaskRun(node);
             taskRuns.add(tr);
+            log("Adding node on ", tr.nodeName, "length is ", taskRuns.size());
+            LHUtil.log("actor.act", id, tr.nodeName);
             if (node.guid.equals(actor.getNodeGuid())) {
                 actor.act(wfRun, id, tr.number);
             }
@@ -629,7 +661,7 @@ public class ThreadRunSchema extends BaseSchema {
             HashMap<String, Object> inputVars = new HashMap<String, Object>();
             TaskRunSchema tr = createNewTaskRun(node);
             try {
-                for (Map.Entry<String, VariableAssignmentSchema> pair: 
+                for (Map.Entry<String, VariableAssignmentSchema> pair:
                     node.variables.entrySet()
                 ) {
                     inputVars.put(pair.getKey(), assignVariable(pair.getValue()));
@@ -657,59 +689,201 @@ public class ThreadRunSchema extends BaseSchema {
 
             ThreadRunMetaSchema meta = new ThreadRunMetaSchema(tr, thread);
             wfRun.awaitableThreads.get(tr.nodeName).add(meta);
+            taskRuns.add(tr);
             completeTask(
                 tr, LHStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
             );
             return true;
 
         } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
-            // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
-            // If it's from the node we're waiting for and it's NOT done, then
-            // this node does nothing. But if it's already done, we mark it as
-            // awaited and continue on. If all of the relevant threads are done,
-            // then this node completes.
+            return handleWaitForThreadNode(node, actor, event);
+            // // LHUtil.log(id, "Here in wait_for_thread of activateNode()");
+            // // // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
+            // // // If it's from the node we're waiting for and it's NOT done, then
+            // // // this node does nothing. But if it's already done, we mark it as
+            // // // awaited and continue on. If all of the relevant threads are done,
+            // // // then this node completes.
+            // // TaskRunSchema tr = createNewTaskRun(node);
+
+            // // ArrayList<ThreadRunMetaSchema> awaitables = wfRun.awaitableThreads.get(
+            // //     node.threadWaitSourceNodeName
+            // // );
+            // // if (awaitables == null) {
+            // //     taskRuns.add(tr);
+            // //     failTask(
+            // //         tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
+            // //         "Got to node " + node.name + " which waits for a thread from " +
+            // //         node.threadWaitSourceNodeName + " but no threads have started" +
+            // //         " from the specified source node."
+            // //     );
+            // //     return true;
+            // // }
+
+            // // ArrayList<ThreadRunMetaSchema> waitedFor = new ArrayList<>();
+            // // for (ThreadRunMetaSchema meta: awaitables) {
+            // //     ThreadRunSchema threadRun = wfRun.threadRuns.get(meta.threadID);
+            // //     if (meta.timesAwaited == 0 &&
+            // //         threadRun.isCompleted()
+            // //     ) {
+            // //         waitedFor.add(meta);
+            // //     } else if (threadRun.isFailed() && meta.timesAwaited == 0) {
+            // //         // Hoboy, we have an issue.
+            // //         // First, check the exception handler.
+            // //         String errMsg = "Node " + tr.nodeName + " failed because thread "
+            // //             + String.valueOf(meta.threadID) + " died on us.";
+
+            // //         LHUtil.log(errMsg);
+            // //         String exceptionName = threadRun.exceptionName;
+            // //         if (exceptionName == null && node.baseExceptionhandler != null) {
+            // //             LHUtil.log("about to handle a base exception");
+            // //             handleException(
+            // //                 node.baseExceptionhandler.handlerThreadSpecName, tr,
+            // //                 LHFailureReason.TASK_FAILURE, errMsg
+            // //             );
+            // //             taskRuns.add(tr);
+            // //             completeTask(
+            // //                 tr, LHStatus.ERROR, meta.toString(), errMsg,
+            // //                 event.timestamp, -1
+            // //             ); 
+            // //         } else if (exceptionName != null &&
+            // //             node.customExceptionHandlers.containsKey(exceptionName)
+            // //         ) {
+            // //             LHUtil.log("about to handle a custom exception");
+            // //             handleException(
+            // //                 node.customExceptionHandlers.get(
+            // //                     exceptionName
+            // //                 ).handlerThreadSpecName, tr,
+            // //                 LHFailureReason.TASK_FAILURE, errMsg
+            // //             );
+            // //             taskRuns.add(tr);
+            // //             completeTask(
+            // //                 tr, LHStatus.ERROR, meta.toString(), errMsg,
+            // //                 event.timestamp, -1
+            // //             ); 
+            // //         } else {
+            // //             // The task done did fail.
+            // //             taskRuns.add(tr);
+            // //             completeTask(
+            // //                 tr, LHStatus.ERROR, meta.toString(), errMsg,
+            // //                 event.timestamp, -1
+            // //             ); 
+            // //         }
+
+            // //         return true;
+            // //     } else {
+            // //         return false;
+            // //     }
+            // }
+            // if (waitedFor.size() == 0) return false;
+
+            // // If we got this far, then we know that the threads have been awaited.
+            // for (ThreadRunMetaSchema meta: waitedFor) {
+            //     meta.timesAwaited++;
+            // }
+            // upNext = new ArrayList<EdgeSchema>();
+            // taskRuns.add(tr);
+            // completeTask(
+            //     tr, LHStatus.COMPLETED, waitedFor.toString(), null, event.timestamp, 0
+            // );
+            // return true;
+        } else if (node.nodeType == NodeType.THROW_EXCEPTION) {
             TaskRunSchema tr = createNewTaskRun(node);
-
-            ArrayList<ThreadRunMetaSchema> awaitables = wfRun.awaitableThreads.get(
-                node.threadWaitSourceNodeName
-            );
-            if (awaitables == null) {
-                taskRuns.add(tr);
-                failTask(
-                    tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
-                    "Got to node " + node.name + " which waits for a thread from " +
-                    node.threadWaitSourceNodeName + " but no threads have started" +
-                    " from the specified source node."
-                );
-                return true;
-            }
-
-            ArrayList<ThreadRunMetaSchema> waitedFor = new ArrayList<>();
-            for (ThreadRunMetaSchema meta: awaitables) {
-                ThreadRunSchema threadRun = wfRun.threadRuns.get(meta.threadID);
-                if (meta.timesAwaited == 0 &&
-                    threadRun.isCompleted()
-                ) {
-                    waitedFor.add(meta);
-                } else if (threadRun.status != WFRunStatus.RUNNING) {
-                    // TODO: Do some handling for failed runs.
-                    return false;
-                }
-            }
-            if (waitedFor.size() == 0) return false;
-
-            // If we got this far, then we know that the threads have been awaited.
-            for (ThreadRunMetaSchema meta: waitedFor) {
-                meta.timesAwaited++;
-            }
             taskRuns.add(tr);
-            upNext = new ArrayList<EdgeSchema>();
+            exceptionName = node.exceptionToThrow;
             completeTask(
-                tr, LHStatus.COMPLETED, waitedFor.toString(), null, event.timestamp, 0
+                tr, LHStatus.ERROR, "", "Throwing exception " + exceptionName,
+                event.timestamp, -1
             );
             return true;
         }
-        throw new RuntimeException("invalid node type");
+        throw new RuntimeException("invalid node type: " + node.nodeType);
+    }
+
+    private boolean handleWaitForThreadNode(
+        NodeSchema node, WFEventProcessorActor actor, WFEventSchema event
+    ) throws LHLookupException, LHNoConfigException {
+        // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
+        // If it's from the node we're waiting for and it's NOT done, then
+        // this node does nothing. But if it's already done, we mark it as
+        // awaited and continue on. If all of the relevant threads are done,
+        // then this node completes.
+        TaskRunSchema tr = createNewTaskRun(node);
+        ArrayList<ThreadRunMetaSchema> awaitables = wfRun.awaitableThreads.get(
+            node.threadWaitSourceNodeName
+        );
+
+        if (awaitables == null) {
+            taskRuns.add(tr);
+            failTask(
+                tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
+                "Got to node " + node.name + " which waits for a thread from " +
+                node.threadWaitSourceNodeName + " but no threads have started" +
+                " from the specified source node."
+            );
+            return true;
+        }
+        boolean allTerminated = true;
+        boolean allCompleted = true;
+
+        for (ThreadRunMetaSchema meta: awaitables) {
+            ThreadRunSchema thread = wfRun.threadRuns.get(meta.threadID);
+            if (!thread.isCompleted()) {
+                allCompleted = false;
+            }
+            if (!thread.isTerminated()) {
+                allTerminated = false;
+            }
+        }
+
+        // Still waiting for some children to do their thing.
+        if (!allTerminated) {
+            return false;
+        }
+
+        // If we got here, we know all the threads have finished. Let's handle the
+        // simplest case first--the threads succeeded:
+        if (allCompleted) {
+            taskRuns.add(tr);
+            completeTask(
+                tr, LHStatus.COMPLETED, awaitables.toString(),
+                null, event.timestamp, 0
+            );
+        } else {
+            // TODO: We're going to combine the exception handler infra with the
+            // interrupt handler infra. After we do that, we're going to be able to
+            // handle more than one exception at once, which will enable us to join
+            // multiple threads at once.
+            if (awaitables.size() != 1) {
+                throw new RuntimeException(
+                    "TODO: handle joins of more than one thread at once."
+                );
+            }
+
+            ThreadRunSchema thread = wfRun.threadRuns.get(awaitables.get(0).threadID);
+            if (thread.isCompleted() || !thread.isTerminated()) {
+                throw new RuntimeException("should be impossible");
+            }
+
+            ExceptionHandlerSpecSchema hspec = node.getHandlerSpec(
+                thread.exceptionName
+            );
+            if (hspec == null) {
+
+            } else {
+                String msg = "TaskRun on " + tr.nodeName +
+                " Failed with exception " + hspec.handlerThreadSpecName + ", so" +
+                " we are handling it.";
+
+                completeTask(
+                    tr, LHStatus.ERROR, awaitables.toString(), msg, event.timestamp, 1
+                );
+                handleException(
+                    hspec.handlerThreadSpecName, tr, LHFailureReason.TASK_FAILURE, msg
+                );
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -737,9 +911,10 @@ public class ThreadRunSchema extends BaseSchema {
      * @param event WFEventSchema triggering the halt.
      */
     @JsonIgnore
-    public void halt(WFHaltReasonEnum reason) {
+    public void halt(WFHaltReasonEnum reason, String message) {
         if (status == WFRunStatus.RUNNING) {
             status = WFRunStatus.HALTING;
+            errorMessage += message + "\n";
         } else if (isCompleted()) {
             LHUtil.log(
                 "Somehow we find ourself in the halt() method on a completed",
@@ -753,12 +928,12 @@ public class ThreadRunSchema extends BaseSchema {
             if (kid.isInterruptThread && reason == WFHaltReasonEnum.INTERRUPT) {
                 continue;
             }
-            if (kid.id == exceptionHandlerThread &&
+            if (exceptionHandlerThread != null && kid.id == exceptionHandlerThread &&
                 reason == WFHaltReasonEnum.HANDLING_EXCEPTION
             ) {
                 continue;
             }
-            kid.halt(WFHaltReasonEnum.PARENT_STOPPED);
+            kid.halt(WFHaltReasonEnum.PARENT_STOPPED, "Parent thread was halted.");
         }
     }
 
@@ -769,6 +944,7 @@ public class ThreadRunSchema extends BaseSchema {
         if (haltReasons.isEmpty()) {
             if (status == WFRunStatus.HALTED || status == WFRunStatus.HALTING) {
                 status = WFRunStatus.RUNNING;
+                errorMessage = "";
             }
 
             for (ThreadRunSchema kid: getChildren()) {
@@ -809,7 +985,7 @@ public class ThreadRunSchema extends BaseSchema {
 
         activeInterruptThreadIDs.add(trun.id);
         // Now we call halt.
-        halt(WFHaltReasonEnum.INTERRUPT);
+        halt(WFHaltReasonEnum.INTERRUPT, "Halted for interrupt");
     }
 
     @JsonIgnore

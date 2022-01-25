@@ -32,35 +32,32 @@ wf_definition = {
     "entrypointThreadName": "entrypointThread",
     "threadSpecs": {
         "entrypointThread": {
-            "entrypointNodeName": "firstNode",
             "nodes": {
                 "firstNode": {
                     "nodeType": "TASK",
                     "taskDefinitionName": "unreliable-task",
                     "baseExceptionhandler": {
-                        "shouldResume": True,
-                        "handlerThreadSpecName": "handlerThread",
+                        "handlerThreadSpecName": "subThread"
                     }
                 },
-                "secondNode": {
-                    "nodeType": "TASK",
-                    "taskDefinitionName": "task",
-                },
             },
-            "edges": [{
-                "sourceNodeName": "firstNode",
-                "sinkNodeName": "secondNode"
-            },
-            ]
         },
-        "handlerThread":{
+        "subThread":{
             "nodes": {
                 "myNode": {
                     "nodeType": "TASK",
                     "taskDefinitionName": "task",
+                },
+                "throwit": {
+                    "nodeType": "THROW_EXCEPTION",
+                    "exceptionToThrow": "foobar",
                 }
-            }
-        }
+            },
+            "edges": [{
+                "sourceNodeName": "myNode",
+                "sinkNodeName": "throwit"
+            }]
+        },
     }
 }
 
