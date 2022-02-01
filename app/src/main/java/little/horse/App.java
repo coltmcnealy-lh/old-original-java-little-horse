@@ -4,39 +4,23 @@
 package little.horse;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Properties;
 import java.util.regex.Pattern;
 
 import com.jayway.jsonpath.JsonPath;
 
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.APIStreamsContext;
-import little.horse.api.ExternalEventDefTopology;
-import little.horse.api.TaskDefTopology;
-import little.horse.api.WFSpecDeployer;
-import little.horse.api.WFSpecTopology;
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHUtil;
-import little.horse.lib.SystemEventActor;
-import little.horse.lib.TaskDaemonEventActor;
-import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFRunTopology;
 import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.TaskDefSchema;
 import little.horse.lib.schemas.ThreadRunSchema;
-import little.horse.lib.schemas.ThreadSpecSchema;
 import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFSpecSchema;
 
 
 class FrontendAPIApp {
@@ -52,6 +36,7 @@ class FrontendAPIApp {
             config.getTaskDefTopic(),
             config.getWFSpecNameKeyedTopic(),
             config.getExternalEventDefNameKeyedTopic(),
+            config.getWFRunTopic(),
             config.getExternalEventDefTopic()
         };
         for (String topicName : topics) {
@@ -73,16 +58,14 @@ class FrontendAPIApp {
         FrontendAPIApp.createKafkaTopics(config);
         Topology topology = new Topology();
 
-        TaskDefTopology.addStuff(topology, config);
-        WFSpecTopology.addStuff(topology, config);
-        ExternalEventDefTopology.addStuff(topology, config);
+        // TaskDefTopology.addStuff(topology, config);
+        // WFSpecTopology.addStuff(topology, config);
+        // ExternalEventDefTopology.addStuff(topology, config);
 
-        WFEventProcessorActor actor = new SystemEventActor();
         WFRunTopology.addStuff(
             topology,
             config,
-            config.getAllWFRunTopicsPattern(),
-            actor
+            Pattern.compile(config.getWFRunTopic())
         );
 
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
@@ -98,66 +81,15 @@ class FrontendAPIApp {
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);
 
-        Properties props = config.getConsumerConfig("wfSpecDeployer");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(
-            props
-        );
-        consumer.subscribe(Collections.singletonList(config.getWFSpecActionsTopic()));
-        WFSpecDeployer deployer = new WFSpecDeployer(consumer, config);
-        Thread deployerThread = new Thread(() -> deployer.run());
-
-        Runtime.getRuntime().addShutdownHook(new Thread(deployer::shutdown));
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
-        deployerThread.start();
         streams.start();
         lapi.run();
     }
 }
 
-
-class DaemonApp {
-    public static void run() throws Exception {
-        Config config = new Config();
-
-        // just need to set up the topology and run it.
-
-        WFSpecSchema wfSpec = LHDatabaseClient.lookupWFSpec(
-            config.getWfSpecGuid(), config
-        );
-        ThreadSpecSchema thread = wfSpec.threadSpecs.get(
-            config.getThreadSpecName()
-        );
-        NodeSchema node = thread.nodes.get(config.getNodeName());
-
-        TaskDefSchema td = LHDatabaseClient.lookupTaskDef(
-            node.taskDefinitionName, config
-        );
-
-        WFEventProcessorActor actor = new TaskDaemonEventActor(
-            wfSpec,
-            node,
-            td,
-            config
-        );
-
-        Pattern pattern = Pattern.compile(wfSpec.kafkaTopic);
-        Topology topology = new Topology();
-
-        WFRunTopology.addStuff(topology, config, pattern, actor);
-        KafkaStreams streams = new KafkaStreams(
-            topology,
-            config.getStreamsConfig(config.getWfSpecGuid() + config.getNodeName())
-        );
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
-        streams.start();
-    }
-}
 
 class Thing {
     public String mystring;
@@ -166,13 +98,7 @@ class Thing {
 
 public class App {
     public static void main(String[] args) {
-        if (args.length > 0 && args[0].equals("daemon")) {
-            try {
-                DaemonApp.run();
-            } catch(Exception exn) {
-                exn.printStackTrace();
-            }
-        } else if (args.length > 0 && args[0].equals("api")) {
+        if (args.length > 0 && args[0].equals("api")) {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else {

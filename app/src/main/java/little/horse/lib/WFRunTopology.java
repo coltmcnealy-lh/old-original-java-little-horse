@@ -11,17 +11,18 @@ import org.apache.kafka.streams.state.Stores;
 import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
 import little.horse.lib.schemas.WFEventSchema;
 import little.horse.lib.schemas.WFRunSchema;
+import little.horse.lib.schemas.WFSpecSchema;
 import little.horse.lib.wfRuntime.WFRuntime;
 
 
 public class WFRunTopology {
 
-    public static WFRuntime processorFactory(WFEventProcessorActor actor, Config config) {
-        return new WFRuntime(actor, config);
+    public static WFRuntime processorFactory(Config config) {
+        return new WFRuntime(config);
     }
 
     public static void addStuff(
-        Topology topology, Config config, Pattern topicPattern, WFEventProcessorActor actor
+        Topology topology, Config config, Pattern topicPattern
     ) {
 
         String topoSource = "WFRun Source";
@@ -33,10 +34,14 @@ public class WFRunTopology {
         LHSerdes<WFRunSchema> runSerde = new LHSerdes<>(
             WFRunSchema.class
         );
+        LHSerdes<WFSpecSchema> specSerde = new LHSerdes<>(
+            WFSpecSchema.class
+        );
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             eventSerde.close();
             runSerde.close();
+            specSerde.close();
         }));
 
         topology.addSource(
@@ -48,18 +53,25 @@ public class WFRunTopology {
 
         topology.addProcessor(
             updateProcessorName,
-            () -> {return WFRunTopology.processorFactory(actor, config);},
+            () -> {return new WFRuntime(config);},
             topoSource
         );
 
-        StoreBuilder<KeyValueStore<String, WFRunSchema>> storeBuilder =
+        StoreBuilder<KeyValueStore<String, WFRunSchema>> wfRunStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(Constants.WF_RUN_STORE),
                 Serdes.String(),
                 runSerde
             );
 
-        topology.addStateStore(storeBuilder, updateProcessorName);
+        topology.addStateStore(wfRunStoreBuilder, updateProcessorName);
 
+        StoreBuilder<KeyValueStore<String, WFSpecSchema>> wfSpecStoreBuilder =
+            Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore(Constants.WF_SPEC_GUID_STORE),
+                Serdes.String(),
+                specSerde
+            );
+        topology.addStateStore(wfSpecStoreBuilder, updateProcessorName);
     }
 }

@@ -9,6 +9,7 @@ import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
+import little.horse.lib.LHValidationError;
 import little.horse.lib.WFEventType;
 import little.horse.lib.schemas.LHAPIResponsePost;
 import little.horse.lib.schemas.WFEventSchema;
@@ -40,29 +41,39 @@ public class WFRunAPI {
 
     public void post(Context ctx) {
         WFRunRequestSchema request = ctx.bodyAsClass(WFRunRequestSchema.class);
-        String wfSpecId = ctx.pathParam("wfSpec");
-        WFSpecSchema wfSpec = null;
+        // String wfSpecId = ctx.pathParam("wfSpec");
+        if (request.wfSpec != null) {
+            try {
+                request.wfSpec.cleanupAndValidate(config);
+            } catch (LHValidationError exn) {
+                ctx.status(400);
+                LHAPIError err = new LHAPIError(exn.getMessage());
+                ctx.json(err);
+                return;
+            }
+        }
 
         WFEventSchema event = new WFEventSchema();
 
-        try {
-            wfSpec = LHDatabaseClient.lookupWFSpec(wfSpecId, config);
-        } catch (LHLookupException exn) {
-            ctx.status(404);
-            LHAPIError err = new LHAPIError(
-                "Unable to find desired wfSpec: " + exn.getMessage());
-            ctx.json(err);
-            return;
-        }
+        // try {
+        //     wfSpec = LHDatabaseClient.lookupWFSpec(wfSpecId, config);
+        // } catch (LHLookupException exn) {
+        //     ctx.status(404);
+        //     LHAPIError err = new LHAPIError(
+        //         "Unable to find desired wfSpec: " + exn.getMessage());
+        //     ctx.json(err);
+        //     return;
+        // }
+
         String guid = LHUtil.generateGuid();
         event.wfRunGuid = guid;
-        event.wfSpecGuid = wfSpec.guid;
-        event.wfSpecName = wfSpec.name;
+        // event.wfSpecGuid = wfSpec.guid;
+        // event.wfSpecName = wfSpec.name;
         event.content = request.toString();
         event.type = WFEventType.WF_RUN_STARTED;
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            wfSpec.kafkaTopic,
+            config.getWFRunTopic(), // wfSpec.kafkaTopic,
             event.wfRunGuid,
             event.toString()
         );

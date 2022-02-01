@@ -33,8 +33,8 @@ public class TaskDefAPI {
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = spec.guid;
-        response.name = spec.name;
+        response.guid = "";
+        response.name = "";
         ctx.json(response);
     }
 

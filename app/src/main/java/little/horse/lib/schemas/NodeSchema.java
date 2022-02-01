@@ -27,7 +27,6 @@ import little.horse.lib.schemas.NodeSchema;
 public class NodeSchema extends BaseSchema {
     public String name;
     public NodeType nodeType;
-    public String taskDefinitionName;
     public String wfSpecGuid;
     public String threadSpecName;
     public String guid;
@@ -46,6 +45,8 @@ public class NodeSchema extends BaseSchema {
     public String threadSpawnThreadSpecName;
     public HashMap<String, VariableMutationSchema> variableMutations;
 
+    public TaskDefSchema taskDef;
+
     @JsonBackReference
     public ThreadSpecSchema threadSpec;
 
@@ -62,9 +63,6 @@ public class NodeSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    private TaskDefSchema taskDef;
-
-    @JsonIgnore
     private ExternalEventDefSchema externalEventDef;
 
     @JsonIgnore
@@ -76,15 +74,7 @@ public class NodeSchema extends BaseSchema {
         }
     }
 
-    @JsonIgnore
     public TaskDefSchema getTaskDef() {
-        if (taskDef == null) {
-            try {
-                taskDef = LHDatabaseClient.lookupTaskDef(taskDefinitionName, config);
-            } catch(LHLookupException exn) {
-                exn.printStackTrace();
-            }
-        }
         return taskDef;
     }
 
@@ -136,86 +126,87 @@ public class NodeSchema extends BaseSchema {
 
     @JsonIgnore
     public Deployment getK8sDeployment() {
-        if (nodeType != NodeType.TASK) {
-            return null;
-            // throw new RuntimeException("Shouldn't be calling getK8sDeployment for non-task nodes");
-        }
-        Deployment dp = new Deployment();
-        dp.metadata = new DeploymentMetadata();
-        dp.spec = new DeploymentSpec();
-        dp.kind = "Deployment";
-        dp.apiVersion = "apps/v1";
+        return null;
+        // if (nodeType != NodeType.TASK) {
+        //     return null;
+        //     // throw new RuntimeException("Shouldn't be calling getK8sDeployment for non-task nodes");
+        // }
+        // Deployment dp = new Deployment();
+        // dp.metadata = new DeploymentMetadata();
+        // dp.spec = new DeploymentSpec();
+        // dp.kind = "Deployment";
+        // dp.apiVersion = "apps/v1";
 
-        dp.metadata.name = this.getK8sName();
-        dp.metadata.labels = new HashMap<String, String>();
-        dp.metadata.namespace = threadSpec.wfSpec.namespace;
-        dp.metadata.labels.put("app", this.getK8sName());
-        dp.metadata.labels.put("littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid);
-        dp.metadata.labels.put("littlehorse.io/nodeGuid", this.guid);
-        dp.metadata.labels.put("littlehorse.io/nodeName", this.name);
-        dp.metadata.labels.put("littlehorse.io/wfSpecName", threadSpec.wfSpec.name);
-        dp.metadata.labels.put("littlehorse.io/active", "true");
+        // dp.metadata.name = this.getK8sName();
+        // dp.metadata.labels = new HashMap<String, String>();
+        // dp.metadata.namespace = threadSpec.wfSpec.namespace;
+        // dp.metadata.labels.put("app", this.getK8sName());
+        // dp.metadata.labels.put("littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid);
+        // dp.metadata.labels.put("littlehorse.io/nodeGuid", this.guid);
+        // dp.metadata.labels.put("littlehorse.io/nodeName", this.name);
+        // dp.metadata.labels.put("littlehorse.io/wfSpecName", threadSpec.wfSpec.name);
+        // dp.metadata.labels.put("littlehorse.io/active", "true");
 
-        Container container = new Container();
-        container.name = this.getK8sName();
-        container.image = getTaskDef().dockerImage;
-        container.imagePullPolicy = "IfNotPresent";
-        container.command = getK8sEntrypointCommand();
-        container.env = config.getBaseK8sEnv();
-        container.env.add(new EnvEntry(
-            Constants.KAFKA_APPLICATION_ID_KEY,
-            this.guid
-        ));
+        // Container container = new Container();
+        // container.name = this.getK8sName();
+        // container.image = getTaskDef().dockerImage;
+        // container.imagePullPolicy = "IfNotPresent";
+        // container.command = getK8sEntrypointCommand();
+        // container.env = config.getBaseK8sEnv();
+        // container.env.add(new EnvEntry(
+        //     Constants.KAFKA_APPLICATION_ID_KEY,
+        //     this.guid
+        // ));
 
-        container.env.add(new EnvEntry(Constants.WF_SPEC_GUID_KEY, wfSpecGuid));
-        container.env.add(new EnvEntry(Constants.NODE_NAME_KEY, name));
-        container.env.add(
-            new EnvEntry(Constants.THREAD_SPEC_NAME_KEY, threadSpecName));
+        // container.env.add(new EnvEntry(Constants.WF_SPEC_GUID_KEY, wfSpecGuid));
+        // container.env.add(new EnvEntry(Constants.NODE_NAME_KEY, name));
+        // container.env.add(
+        //     new EnvEntry(Constants.THREAD_SPEC_NAME_KEY, threadSpecName));
 
-        Template template = new Template();
-        template.metadata = new DeploymentMetadata();
-        template.metadata.name = this.getK8sName();
-        template.metadata.labels = new HashMap<String, String>();
-        template.metadata.namespace = threadSpec.wfSpec.namespace;
-        template.metadata.labels.put("app", this.getK8sName());
-        template.metadata.labels.put("littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid);
-        template.metadata.labels.put("littlehorse.io/nodeGuid", this.guid);
-        template.metadata.labels.put("littlehorse.io/nodeName", this.name);
-        template.metadata.labels.put("littlehorse.io/wfSpecName", threadSpec.wfSpec.name);
-        template.metadata.labels.put("littlehorse.io/active", "true");
-        template.metadata.labels.put(
-            "littlehorse.io/threadSpecName", this.threadSpecName
-        );
+        // Template template = new Template();
+        // template.metadata = new DeploymentMetadata();
+        // template.metadata.name = this.getK8sName();
+        // template.metadata.labels = new HashMap<String, String>();
+        // template.metadata.namespace = threadSpec.wfSpec.namespace;
+        // template.metadata.labels.put("app", this.getK8sName());
+        // template.metadata.labels.put("littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid);
+        // template.metadata.labels.put("littlehorse.io/nodeGuid", this.guid);
+        // template.metadata.labels.put("littlehorse.io/nodeName", this.name);
+        // template.metadata.labels.put("littlehorse.io/wfSpecName", threadSpec.wfSpec.name);
+        // template.metadata.labels.put("littlehorse.io/active", "true");
+        // template.metadata.labels.put(
+        //     "littlehorse.io/threadSpecName", this.threadSpecName
+        // );
 
-        template.spec = new PodSpec();
-        template.spec.containers = new ArrayList<Container>();
-        template.spec.containers.add(container);
+        // template.spec = new PodSpec();
+        // template.spec.containers = new ArrayList<Container>();
+        // template.spec.containers.add(container);
 
-        dp.spec.template = template;
-        dp.spec.replicas = this.getReplicas();
-        dp.spec.selector = new Selector();
-        dp.spec.selector.matchLabels = new HashMap<String, String>();
-        dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        dp.spec.selector.matchLabels.put(
-            "littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid
-        );
-        dp.spec.selector.matchLabels.put("littlehorse.io/nodeGuid", this.guid);
-        dp.spec.selector.matchLabels.put("littlehorse.io/nodeName", this.name);
-        dp.spec.selector.matchLabels.put(
-            "littlehorse.io/threadSpecName", this.threadSpecName
-        );
-        dp.spec.selector.matchLabels.put(
-            "littlehorse.io/wfSpecName", threadSpec.wfSpec.name
-        );
+        // dp.spec.template = template;
+        // dp.spec.replicas = this.getReplicas();
+        // dp.spec.selector = new Selector();
+        // dp.spec.selector.matchLabels = new HashMap<String, String>();
+        // dp.spec.selector.matchLabels.put("app", this.getK8sName());
+        // dp.spec.selector.matchLabels.put(
+        //     "littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid
+        // );
+        // dp.spec.selector.matchLabels.put("littlehorse.io/nodeGuid", this.guid);
+        // dp.spec.selector.matchLabels.put("littlehorse.io/nodeName", this.name);
+        // dp.spec.selector.matchLabels.put(
+        //     "littlehorse.io/threadSpecName", this.threadSpecName
+        // );
+        // dp.spec.selector.matchLabels.put(
+        //     "littlehorse.io/wfSpecName", threadSpec.wfSpec.name
+        // );
 
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        try {
-            String result = mapper.writeValueAsString(dp);
-            LHUtil.log("Node tok8s: ", result);
-        } catch (JsonProcessingException exn) {
-            LHUtil.logError(exn.getMessage());
-        }
+        // ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        // try {
+        //     String result = mapper.writeValueAsString(dp);
+        //     LHUtil.log("Node tok8s: ", result);
+        // } catch (JsonProcessingException exn) {
+        //     LHUtil.logError(exn.getMessage());
+        // }
 
-        return dp;
+        // return dp;
     }
 }

@@ -314,6 +314,10 @@ public class Config {
         return cons;
     }
 
+    public String getWFRunTopic() {
+        return this.getKafkaTopicPrefix() + "wfRunEventLog";
+    }
+
     public String getWFRunTopicPrefix() {
         return this.getKafkaTopicPrefix() + "wfEvents__";
     }

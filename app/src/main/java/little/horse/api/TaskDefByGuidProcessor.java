@@ -31,7 +31,7 @@ public class TaskDefByGuidProcessor
         }
 
         Record<String, TaskDefSchema> nameKeyedRecord = new Record<>(
-            td.name,
+            "", // TODO: Fix this after the hacks for nirmata prototype
             td,
             record.timestamp()
         );

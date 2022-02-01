@@ -1,7 +1,5 @@
 package little.horse.lib.wfRuntime;
 
-import java.util.HashMap;
-
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -9,35 +7,33 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.lib.Config;
 import little.horse.lib.Constants;
-import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHLookupException;
 import little.horse.lib.LHNoConfigException;
 import little.horse.lib.LHUtil;
-import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFEventType;
 import little.horse.lib.schemas.WFEventSchema;
+import little.horse.lib.schemas.WFRunRequestSchema;
 import little.horse.lib.schemas.WFRunSchema;
 import little.horse.lib.schemas.WFSpecSchema;
+import little.horse.lib.schemas.BaseSchema;
 import little.horse.lib.schemas.ThreadRunSchema;
 
 
 public class WFRuntime
     implements Processor<String, WFEventSchema, String, WFRunSchema>
 {
-    private KeyValueStore<String, WFRunSchema> kvStore;
-    private WFEventProcessorActor actor;
+    private KeyValueStore<String, WFRunSchema> wfRunStore;
+    private KeyValueStore<String, WFSpecSchema> wfSpecStore;
     private Config config;
-    private HashMap<String, WFSpecSchema> wfspecs;
 
-    public WFRuntime(WFEventProcessorActor actor, Config config) {
-        this.actor = actor;
+    public WFRuntime(Config config) {
         this.config = config;
-        this.wfspecs = new HashMap<String, WFSpecSchema>();
     }
 
     @Override
     public void init(final ProcessorContext<String, WFRunSchema> context) {
-        kvStore = context.getStateStore(Constants.WF_RUN_STORE);
+        wfRunStore = context.getStateStore(Constants.WF_RUN_STORE);
+        wfSpecStore = context.getStateStore(Constants.WF_SPEC_GUID_STORE);
     }
 
     @Override
@@ -54,8 +50,12 @@ public class WFRuntime
         String wfRunGuid = record.key();
         WFEventSchema event = record.value();
 
-        WFRunSchema wfRun = kvStore.get(wfRunGuid);
+        WFRunSchema wfRun = wfRunStore.get(wfRunGuid);
         WFSpecSchema wfSpec = getWFSpec(event.wfSpecGuid);
+
+        if (wfSpec == null && event.type == WFEventType.WF_RUN_STARTED) {
+            wfSpec = createNewWFSpec(event);
+        }
 
         if (wfSpec == null) {
             LHUtil.log(
@@ -94,25 +94,29 @@ public class WFRuntime
             boolean didAdvance = false;
             for (int i = 0; i < wfRun.threadRuns.size(); i++) {
                 ThreadRunSchema thread = wfRun.threadRuns.get(i);
-                didAdvance = thread.advance(event, actor) || didAdvance;
+                didAdvance = thread.advance(event) || didAdvance;
             }
             shouldAdvance = didAdvance;
             wfRun.updateStatuses(event);
         }
 
-        kvStore.put(wfRun.guid, wfRun);
+        wfRunStore.put(wfRun.guid, wfRun);
     }
 
     private WFSpecSchema getWFSpec(String guid) throws LHLookupException, LHNoConfigException {
-        if (wfspecs.get(guid) != null) {
-            return wfspecs.get(guid);
-        }
-        // TODO: Do some caching here—that's the only reason we have this.
-        WFSpecSchema result = LHDatabaseClient.lookupWFSpec(guid, config);
-        result.setConfig(config);
-
-        wfspecs.put(guid, result);
-        return result;
+        return guid == null ? null : wfSpecStore.get(guid);
     }
 
+    private WFSpecSchema createNewWFSpec(WFEventSchema event) {
+        WFRunRequestSchema req = BaseSchema.fromString(
+            event.content, WFRunRequestSchema.class
+        );
+        if (req.wfSpec != null) {
+            wfSpecStore.put(req.wfSpec.guid, req.wfSpec);
+            event.wfSpecGuid = req.wfSpec.guid;
+            return req.wfSpec;
+        }
+
+        return null;
+    }
 }

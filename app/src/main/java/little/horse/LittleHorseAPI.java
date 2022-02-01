@@ -36,13 +36,11 @@ public class LittleHorseAPI {
         this.app.post("/taskDef", this.taskDefAPI::post);
 
         this.app.get("/wfRun/{wfRunGuid}", this.wfRunAPI::get);
-        this.app.post("/wfRun/{wfSpec}", this.wfRunAPI::post);
+        this.app.post("/wfRun/", this.wfRunAPI::post);
         this.app.post("/wfRun/stop/{wfRunGuid}", this.wfRunAPI::stopWFRun);
         this.app.post("/wfRun/resume/{wfRunGuid}", this.wfRunAPI::resumeWFRun);
         this.app.post("/wfRun/stop/{wfRunGuid}/{tid}", this.wfRunAPI::stopThread);
         this.app.post("/wfRun/resume/{wfRunGuid}/{tid}", this.wfRunAPI::resumeThread);
-
-
 
         this.app.get("/externalEventDef/{nameOrGuid}", this.externalEventDefAPI::get);
         this.app.post("/externalEventDef", this.externalEventDefAPI::post);

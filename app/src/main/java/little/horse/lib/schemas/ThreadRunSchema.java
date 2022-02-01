@@ -19,7 +19,6 @@ import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
 import little.horse.lib.NodeType;
 import little.horse.lib.VarSubOrzDash;
-import little.horse.lib.WFEventProcessorActor;
 import little.horse.lib.WFEventType;
 import little.horse.lib.wfRuntime.WFRunStatus;
 
@@ -552,7 +551,7 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public boolean advance(WFEventSchema event, WFEventProcessorActor actor)
+    public boolean advance(WFEventSchema event)
     throws LHLookupException, LHNoConfigException {
         if (status != WFRunStatus.RUNNING || upNext.size() == 0) {
             return false;
@@ -606,12 +605,27 @@ public class ThreadRunSchema extends BaseSchema {
             return false;
         }
 
-        return activateNode(activatedNode, actor, event);
+        return activateNode(activatedNode, event);
+    }
+
+    @JsonIgnore
+    private void scheduleTask(TaskRunSchema tr, NodeSchema node) {
+        TaskScheduledEventSchema te = new TaskScheduledEventSchema();
+        te.setConfig(config);
+        te.taskType = node.taskDef.taskType;
+        te.taskQueueName = node.taskDef.taskQueueName;
+        te.wfRunGuid = wfRun.guid;
+        te.wfSpecGuid = wfRun.wfSpecGuid;
+        te.wfSpecName = wfRun.wfSpecName;
+        te.taskExecutionGuid = wfRun.guid + "_" + String.valueOf(id) + "_" +
+            String.valueOf(taskRuns.size());
+
+        te.record();
     }
 
     @JsonIgnore
     private boolean activateNode(
-        NodeSchema node, WFEventProcessorActor actor, WFEventSchema event)
+        NodeSchema node, WFEventSchema event)
     throws LHLookupException, LHNoConfigException {
         if (node.nodeType == NodeType.TASK) {
             upNext = new ArrayList<EdgeSchema>();
@@ -619,9 +633,8 @@ public class ThreadRunSchema extends BaseSchema {
             taskRuns.add(tr);
             log("Adding node on ", tr.nodeName, "length is ", taskRuns.size());
             LHUtil.log("actor.act", id, tr.nodeName);
-            if (node.guid.equals(actor.getNodeGuid())) {
-                actor.act(wfRun, id, tr.number);
-            }
+
+            scheduleTask(tr, node);
             return true;
 
         } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
@@ -696,96 +709,7 @@ public class ThreadRunSchema extends BaseSchema {
             return true;
 
         } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
-            return handleWaitForThreadNode(node, actor, event);
-            // // LHUtil.log(id, "Here in wait_for_thread of activateNode()");
-            // // // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
-            // // // If it's from the node we're waiting for and it's NOT done, then
-            // // // this node does nothing. But if it's already done, we mark it as
-            // // // awaited and continue on. If all of the relevant threads are done,
-            // // // then this node completes.
-            // // TaskRunSchema tr = createNewTaskRun(node);
-
-            // // ArrayList<ThreadRunMetaSchema> awaitables = wfRun.awaitableThreads.get(
-            // //     node.threadWaitSourceNodeName
-            // // );
-            // // if (awaitables == null) {
-            // //     taskRuns.add(tr);
-            // //     failTask(
-            // //         tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
-            // //         "Got to node " + node.name + " which waits for a thread from " +
-            // //         node.threadWaitSourceNodeName + " but no threads have started" +
-            // //         " from the specified source node."
-            // //     );
-            // //     return true;
-            // // }
-
-            // // ArrayList<ThreadRunMetaSchema> waitedFor = new ArrayList<>();
-            // // for (ThreadRunMetaSchema meta: awaitables) {
-            // //     ThreadRunSchema threadRun = wfRun.threadRuns.get(meta.threadID);
-            // //     if (meta.timesAwaited == 0 &&
-            // //         threadRun.isCompleted()
-            // //     ) {
-            // //         waitedFor.add(meta);
-            // //     } else if (threadRun.isFailed() && meta.timesAwaited == 0) {
-            // //         // Hoboy, we have an issue.
-            // //         // First, check the exception handler.
-            // //         String errMsg = "Node " + tr.nodeName + " failed because thread "
-            // //             + String.valueOf(meta.threadID) + " died on us.";
-
-            // //         LHUtil.log(errMsg);
-            // //         String exceptionName = threadRun.exceptionName;
-            // //         if (exceptionName == null && node.baseExceptionhandler != null) {
-            // //             LHUtil.log("about to handle a base exception");
-            // //             handleException(
-            // //                 node.baseExceptionhandler.handlerThreadSpecName, tr,
-            // //                 LHFailureReason.TASK_FAILURE, errMsg
-            // //             );
-            // //             taskRuns.add(tr);
-            // //             completeTask(
-            // //                 tr, LHStatus.ERROR, meta.toString(), errMsg,
-            // //                 event.timestamp, -1
-            // //             ); 
-            // //         } else if (exceptionName != null &&
-            // //             node.customExceptionHandlers.containsKey(exceptionName)
-            // //         ) {
-            // //             LHUtil.log("about to handle a custom exception");
-            // //             handleException(
-            // //                 node.customExceptionHandlers.get(
-            // //                     exceptionName
-            // //                 ).handlerThreadSpecName, tr,
-            // //                 LHFailureReason.TASK_FAILURE, errMsg
-            // //             );
-            // //             taskRuns.add(tr);
-            // //             completeTask(
-            // //                 tr, LHStatus.ERROR, meta.toString(), errMsg,
-            // //                 event.timestamp, -1
-            // //             ); 
-            // //         } else {
-            // //             // The task done did fail.
-            // //             taskRuns.add(tr);
-            // //             completeTask(
-            // //                 tr, LHStatus.ERROR, meta.toString(), errMsg,
-            // //                 event.timestamp, -1
-            // //             ); 
-            // //         }
-
-            // //         return true;
-            // //     } else {
-            // //         return false;
-            // //     }
-            // }
-            // if (waitedFor.size() == 0) return false;
-
-            // // If we got this far, then we know that the threads have been awaited.
-            // for (ThreadRunMetaSchema meta: waitedFor) {
-            //     meta.timesAwaited++;
-            // }
-            // upNext = new ArrayList<EdgeSchema>();
-            // taskRuns.add(tr);
-            // completeTask(
-            //     tr, LHStatus.COMPLETED, waitedFor.toString(), null, event.timestamp, 0
-            // );
-            // return true;
+            return handleWaitForThreadNode(node, event);
         } else if (node.nodeType == NodeType.THROW_EXCEPTION) {
             TaskRunSchema tr = createNewTaskRun(node);
             taskRuns.add(tr);
@@ -800,7 +724,7 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     private boolean handleWaitForThreadNode(
-        NodeSchema node, WFEventProcessorActor actor, WFEventSchema event
+        NodeSchema node, WFEventSchema event
     ) throws LHLookupException, LHNoConfigException {
         // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
         // If it's from the node we're waiting for and it's NOT done, then

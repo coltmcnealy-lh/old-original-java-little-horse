@@ -20,7 +20,6 @@ import little.horse.lib.Config;
 import little.horse.lib.LHDatabaseClient;
 import little.horse.lib.LHDeployError;
 import little.horse.lib.LHLookupException;
-import little.horse.lib.LHLookupExceptionReason;
 import little.horse.lib.LHNoConfigException;
 import little.horse.lib.LHStatus;
 import little.horse.lib.LHUtil;
@@ -258,26 +257,13 @@ public class WFSpecSchema extends BaseSchema {
     }
 
     private void cleanupTaskNode(NodeSchema node) throws LHValidationError {
-        if (node.taskDefinitionName == null) {
+        if (node.taskDef == null) {
+            LHUtil.log(node);
             throw new LHValidationError(
-                "Invalid Node " + node.name + ": No taskDefinition supplied"
+                "Node " + node.name + " is type TASK but provides no TaskDef"
             );
         }
-        try {
-            LHDatabaseClient.lookupTaskDef(node.taskDefinitionName, config);
-        } catch (LHLookupException exn) {
-            if (exn.getReason() == LHLookupExceptionReason.OBJECT_NOT_FOUND) {
-                throw new LHValidationError(
-                    "No taskDef named " + node.taskDefinitionName + " found.\n" +
-                    exn.getMessage()
-                );
-            } else {
-                throw new LHValidationError(
-                    "Failed looking up TaskDef " + node.taskDefinitionName + "\n" +
-                    exn.getMessage()
-                );
-            }
-        }
+        node.taskDef.validateAndCleanup(config);
     }
 
     private void cleanupEdge(EdgeSchema edge, ThreadSpecSchema thread) {

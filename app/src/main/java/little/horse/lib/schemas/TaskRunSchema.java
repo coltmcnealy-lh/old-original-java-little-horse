@@ -26,7 +26,7 @@ public class TaskRunSchema extends BaseSchema {
     public ArrayList<String> bashCommand;
     public Object stdin;
     public int attemptNumber = 1;
-    
+
     public LHStatus status;
     public Object stdout;
     public Object stderr;
@@ -37,6 +37,8 @@ public class TaskRunSchema extends BaseSchema {
 
     public LHFailureReason failureReason;
     public String failureMessage;
+
+    public String taskExecutionGuid;
 
     @JsonIgnore
     public boolean isTerminated() {
