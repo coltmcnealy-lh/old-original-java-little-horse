@@ -12,9 +12,9 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
-import little.horse.api.APIStreamsContext;
 import little.horse.api.LittleHorseAPI;
-import little.horse.api.WFRunTopology;
+import little.horse.api.runtime.WFRunTopology;
+import little.horse.api.util.APIStreamsContext;
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.NodeSchema;
