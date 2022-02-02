@@ -5,10 +5,10 @@ import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
-import little.horse.lib.schemas.ExternalEventDefSchema;
-import little.horse.lib.schemas.TaskDefSchema;
-import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFSpecSchema;
+import little.horse.common.objects.metadata.ExternalEventDefSchema;
+import little.horse.common.objects.metadata.TaskDefSchema;
+import little.horse.common.objects.metadata.WFSpecSchema;
+import little.horse.common.objects.rundata.WFRunSchema;
 
 public class APIStreamsContext {
     private String wfSpecNameStoreName;

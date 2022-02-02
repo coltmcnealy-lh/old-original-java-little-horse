@@ -3,10 +3,9 @@ package little.horse.api;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
-import little.horse.lib.Config;
-import little.horse.lib.LHValidationError;
-import little.horse.lib.schemas.LHAPIResponsePost;
-import little.horse.lib.schemas.TaskDefSchema;
+import little.horse.common.Config;
+import little.horse.common.exceptions.LHValidationError;
+import little.horse.common.objects.metadata.TaskDefSchema;
 
 public class TaskDefAPI {
     private Config config;

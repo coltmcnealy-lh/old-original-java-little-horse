@@ -5,8 +5,8 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-import little.horse.lib.Constants;
-import little.horse.lib.schemas.TaskDefSchema;
+import little.horse.common.objects.metadata.TaskDefSchema;
+import little.horse.common.util.Constants;
 
 
 public class TaskDefByNameProcessor implements Processor<

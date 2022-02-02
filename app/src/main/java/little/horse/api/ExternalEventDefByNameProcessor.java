@@ -5,8 +5,8 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-import little.horse.lib.Constants;
-import little.horse.lib.schemas.ExternalEventDefSchema;
+import little.horse.common.objects.metadata.ExternalEventDefSchema;
+import little.horse.common.util.Constants;
 
 
 public class ExternalEventDefByNameProcessor implements Processor<

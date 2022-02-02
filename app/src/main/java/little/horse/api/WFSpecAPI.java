@@ -1,11 +1,10 @@
 package little.horse.api;
 
 import io.javalin.http.Context;
-import little.horse.lib.Config;
-import little.horse.lib.LHStatus;
-import little.horse.lib.LHValidationError;
-import little.horse.lib.schemas.LHAPIResponsePost;
-import little.horse.lib.schemas.WFSpecSchema;
+import little.horse.common.Config;
+import little.horse.common.exceptions.LHValidationError;
+import little.horse.common.objects.metadata.WFSpecSchema;
+import little.horse.common.objects.rundata.LHStatus;
 
 public class WFSpecAPI {
     private Config config;

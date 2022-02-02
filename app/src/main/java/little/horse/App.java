@@ -13,14 +13,15 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.APIStreamsContext;
-import little.horse.lib.Config;
-import little.horse.lib.Constants;
-import little.horse.lib.LHUtil;
-import little.horse.lib.WFRunTopology;
-import little.horse.lib.schemas.BaseSchema;
-import little.horse.lib.schemas.NodeSchema;
-import little.horse.lib.schemas.ThreadRunSchema;
-import little.horse.lib.schemas.WFRunSchema;
+import little.horse.api.LittleHorseAPI;
+import little.horse.api.WFRunTopology;
+import little.horse.common.Config;
+import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.metadata.NodeSchema;
+import little.horse.common.objects.rundata.ThreadRunSchema;
+import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.util.Constants;
+import little.horse.common.util.LHUtil;
 
 
 class FrontendAPIApp {

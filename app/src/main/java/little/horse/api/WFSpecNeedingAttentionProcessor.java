@@ -4,7 +4,7 @@ import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
-import little.horse.lib.schemas.WFSpecSchema;
+import little.horse.common.objects.metadata.WFSpecSchema;
 
 public class WFSpecNeedingAttentionProcessor implements Processor<
 String, WFSpecSchema, String, WFSpecSchema

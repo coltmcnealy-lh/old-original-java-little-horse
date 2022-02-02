@@ -4,18 +4,17 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.http.Context;
-import little.horse.lib.Config;
-import little.horse.lib.LHDatabaseClient;
-import little.horse.lib.LHLookupException;
-import little.horse.lib.LHNoConfigException;
-import little.horse.lib.LHUtil;
-import little.horse.lib.WFEventType;
-import little.horse.lib.schemas.LHAPIResponsePost;
-import little.horse.lib.schemas.WFEventSchema;
-import little.horse.lib.schemas.WFRunSchema;
-import little.horse.lib.schemas.WFSpecSchema;
-import little.horse.lib.schemas.ExternalEventDefSchema;
-import little.horse.lib.schemas.ExternalEventPayloadSchema;
+import little.horse.common.Config;
+import little.horse.common.events.ExternalEventPayloadSchema;
+import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.WFEventType;
+import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.exceptions.LHNoConfigException;
+import little.horse.common.objects.metadata.ExternalEventDefSchema;
+import little.horse.common.objects.metadata.WFSpecSchema;
+import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.util.LHDatabaseClient;
+import little.horse.common.util.LHUtil;
 
 public class ExternalEventDefAPI {
     private Config config;

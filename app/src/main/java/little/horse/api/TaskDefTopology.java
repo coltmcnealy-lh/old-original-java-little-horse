@@ -6,10 +6,10 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import little.horse.lib.Config;
-import little.horse.lib.Constants;
-import little.horse.lib.kafkaStreamsSerdes.LHSerdes;
-import little.horse.lib.schemas.TaskDefSchema;
+import little.horse.api.topology.serdes.LHSerdes;
+import little.horse.common.Config;
+import little.horse.common.objects.metadata.TaskDefSchema;
+import little.horse.common.util.Constants;
 
 public class TaskDefTopology {
 
