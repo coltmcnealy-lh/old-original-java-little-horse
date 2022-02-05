@@ -3,8 +3,9 @@ package little.horse.common.util;
 import java.io.IOException;
 
 import little.horse.common.Config;
-import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHLookupExceptionReason;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.ExternalEventDefSchema;
 import little.horse.common.objects.metadata.TaskDefSchema;
@@ -26,7 +27,7 @@ import okhttp3.Response;
 public class LHDatabaseClient {
 
     public static WFRunSchema lookupWfRun(String guid, Config config)
-    throws LHLookupException {
+    throws LHConnectionError {
 
         String url = config.getAPIUrlFor(Constants.WF_RUN_API_PATH) + "/" + guid;
         return (WFRunSchema) LookerUpper.lookupSchema(
@@ -35,7 +36,7 @@ public class LHDatabaseClient {
     }
 
     public static WFSpecSchema lookupWFSpec(String id, Config config)
-    throws LHLookupException {
+    throws LHConnectionError {
 
         String url = config.getAPIUrlFor(Constants.WF_SPEC_API_PATH) + "/" + id;
         return (WFSpecSchema) LookerUpper.lookupSchema(
@@ -45,7 +46,7 @@ public class LHDatabaseClient {
 
     public static TaskDefSchema lookupTaskDef(
         String id, Config config
-    ) throws LHLookupException {
+    ) throws LHConnectionError {
 
         String url = config.getAPIUrlFor(Constants.TASK_DEF_API_PATH) + "/" + id;
         return (TaskDefSchema) LookerUpper.lookupSchema(
@@ -54,7 +55,7 @@ public class LHDatabaseClient {
     }
 
     public static ExternalEventDefSchema lookupExternalEventDef(
-        String id, Config config) throws LHLookupException
+        String id, Config config) throws LHConnectionError
     {
 
         String url = config.getAPIUrlFor(
@@ -65,13 +66,72 @@ public class LHDatabaseClient {
             url, config, ExternalEventDefSchema.class
         );
     }
+
+    public static ExternalEventDefSchema lookupOrCreateExternalEventDef(
+        ExternalEventDefSchema externalEvent,
+        String name,
+        String guid,
+        Config config
+    ) throws LHValidationError, LHConnectionError {
+        throw new RuntimeException("Implement me!");
+    }
+
+    public static TaskDefSchema lookupOrCreateTaskDef(
+        TaskDefSchema taskDef,
+        String taskDefName,
+        String taskDefGuid,
+        Config config
+    ) throws LHValidationError, LHConnectionError {
+        // TODO: Need to do the actual creation.
+        if (taskDef != null) {
+            taskDef.fillOut(config);
+            // TODO: Here we should create it if it don't exist yet.
+            if (taskDefName != null && taskDefName == taskDef.name) {
+                throw new LHValidationError(
+                    "Task Def name doesn't match provided name"
+                );
+            } else {
+                taskDefName = taskDef.name;
+            }
+
+            if (taskDefGuid != null && taskDefGuid != taskDef.getDigest()) {
+                throw new LHValidationError(
+                    "Digest mismatch for provided guid and provided taskdef!"
+                );
+            } else {
+                taskDefGuid = taskDef.getDigest();
+            }
+        } else {
+            String id = taskDefGuid == null ? taskDefName : taskDefGuid;
+            if (id == null) {
+                throw new LHValidationError(
+                    "Node provides neither task def, name, nor guid to look up."
+                );
+            }
+
+            try {
+                taskDef = LHDatabaseClient.lookupTaskDef(
+                    id, config
+                );
+            } catch (LHConnectionError exn) {
+                if (exn.getReason() == LHLookupExceptionReason.OBJECT_NOT_FOUND) {
+                    throw new LHValidationError(
+                        "Failed to find task def from identifier " + id
+                    );
+                } else {
+                    throw exn;
+                }
+            }
+        }
+        return taskDef;
+    }
 }
 
 
 class LookerUpper {
     public static BaseSchema lookupSchema(
         String url, Config config, Class<? extends BaseSchema> valueType
-    ) throws LHLookupException {
+    ) throws LHConnectionError {
 
         LHUtil.logBack(
             2, "Making call to URL", url, "to look up", valueType.getName()
@@ -91,12 +151,12 @@ class LookerUpper {
             err += exn.getMessage() + ".\nWas trying to call URL " + url;
 
             LHUtil.logError(err);
-            throw new LHLookupException(exn, LHLookupExceptionReason.IO_FAILURE, err);
+            throw new LHConnectionError(exn, LHLookupExceptionReason.IO_FAILURE, err);
         }
 
         // Check response code.
         if (response.code() == 404) {
-            throw new LHLookupException(
+            throw new LHConnectionError(
                 null,
                 LHLookupExceptionReason.OBJECT_NOT_FOUND,
                 "Could not find object at URL " + url
@@ -105,7 +165,7 @@ class LookerUpper {
             if (responseBody == null) {
                 responseBody = "";
             }
-            throw new LHLookupException(
+            throw new LHConnectionError(
                 null,
                 LHLookupExceptionReason.OTHER_ERROR,
                 "API Returned an error: " + String.valueOf(response.code()) + " "
@@ -113,15 +173,17 @@ class LookerUpper {
             );
         }
 
-        BaseSchema out = BaseSchema.fromString(responseBody, valueType);
+        BaseSchema out = BaseSchema.fromString(
+            responseBody, valueType, config, false
+        );
         if (out == null) {
-            throw new LHLookupException(
+            // That means the response we got didn't match the proper schema.
+            throw new LHConnectionError(
                 null,
                 LHLookupExceptionReason.INVALID_RESPONSE,
                 "Got an unparseable response: " + responseBody
             );
         }
-        out.setConfig(config);
         return out;
     }
 }

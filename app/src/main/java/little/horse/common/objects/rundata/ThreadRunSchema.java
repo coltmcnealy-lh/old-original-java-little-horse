@@ -20,8 +20,7 @@ import little.horse.common.events.TaskRunStartedEventSchema;
 import little.horse.common.events.TaskScheduledEventSchema;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
-import little.horse.common.exceptions.LHLookupException;
-import little.horse.common.exceptions.LHNoConfigException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.VarSubOrzDash;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.EdgeConditionSchema;
@@ -83,7 +82,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     private ThreadSpecSchema getThreadSpec()
-    throws LHNoConfigException, LHLookupException {
+    throws LHNoConfigException, LHConnectionError {
         if (threadSpec != null) return threadSpec;
         if (wfRun == null) {
             throw new LHNoConfigException(
@@ -132,7 +131,7 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     public VariableLookupResult getVariableDefinition(
         String varName
-    ) throws LHNoConfigException, LHLookupException {
+    ) throws LHNoConfigException, LHConnectionError {
         if (wfRun == null) {
             throw new LHNoConfigException(
                 "wfRun was not set yet!"
@@ -158,7 +157,7 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     public Object getMutationRHS(
         VariableMutationSchema mutSchema, TaskRunSchema tr
-    ) throws LHNoConfigException, LHLookupException, VarSubOrzDash {
+    ) throws LHNoConfigException, LHConnectionError, VarSubOrzDash {
         if (mutSchema.copyDirectlyFromNodeOutput) {
             return tr.stdout;
         } else if (mutSchema.jsonPath != null) {
@@ -172,7 +171,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public Object assignVariable(VariableAssignmentSchema var)
-    throws LHNoConfigException, LHLookupException, VarSubOrzDash {
+    throws LHNoConfigException, LHConnectionError, VarSubOrzDash {
         if (var.literalValue != null) {
             return var.literalValue;
         }
@@ -231,24 +230,25 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public TaskRunSchema createNewTaskRun(NodeSchema node) 
-    throws LHNoConfigException, LHLookupException {
+    throws LHNoConfigException, LHConnectionError {
         TaskRunSchema tr = new TaskRunSchema();
         tr.status = LHStatus.PENDING;
         tr.threadID = id;
         tr.number = taskRuns.size();
         tr.nodeName = node.name;
-        tr.nodeGuid = node.guid;
-        tr.wfSpecGuid = wfRun.getWFSpec().guid;
+        // tr.nodeGuid = node.guid;
+        tr.wfSpecGuid = wfRun.getWFSpec().getGuid();
         tr.wfSpecName = wfRun.getWFSpec().name;
 
         tr.parentThread = this;
 
-        return tr;
+        throw new RuntimeException("Oops");
+        // return tr;
     }
 
     @JsonIgnore
     public void incorporateEvent(WFEventSchema wfEvent)
-    throws LHLookupException, LHNoConfigException {
+    throws LHConnectionError, LHNoConfigException {
         TaskRunEventSchema event = BaseSchema.fromString(
             wfEvent.content, TaskRunEventSchema.class
         );
@@ -287,7 +287,7 @@ public class ThreadRunSchema extends BaseSchema {
         String stderr,
         Date endTime,
         int returnCode
-    ) throws LHLookupException, LHNoConfigException {
+    ) throws LHConnectionError, LHNoConfigException {
         task.endTime = endTime;
         task.stdout = LHUtil.jsonifyIfPossible(stdout);
         task.stderr = LHUtil.jsonifyIfPossible(stderr);
@@ -323,7 +323,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     private void handleTaskEnded(TaskRunEventSchema trEvent)
-    throws LHLookupException, LHNoConfigException {
+    throws LHConnectionError, LHNoConfigException {
         TaskRunSchema tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunEndedEventSchema event = trEvent.endedEvent;
         LHStatus taskStatus = event.success ? LHStatus.COMPLETED : LHStatus.ERROR;
@@ -336,7 +336,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public void mutateVariables(TaskRunSchema tr) 
-    throws VarSubOrzDash, LHLookupException, LHNoConfigException {
+    throws VarSubOrzDash, LHConnectionError, LHNoConfigException {
 
         // We need to do this atomically—-i.e. if there's one variable substitution
         // failure, none of the variables get mutated at all. Therefore we compute
@@ -375,7 +375,7 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     private void handleException(
         String handlerSpecName, TaskRunSchema tr, LHFailureReason reason, String msg
-    ) throws LHLookupException, LHNoConfigException {
+    ) throws LHConnectionError, LHNoConfigException {
         tr.status = LHStatus.ERROR;
         tr.failureMessage = msg;
         tr.failureReason = reason;
@@ -400,7 +400,7 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     private void failTask(
         TaskRunSchema tr, LHFailureReason reason, String message
-    ) throws LHNoConfigException, LHLookupException {
+    ) throws LHNoConfigException, LHConnectionError {
         tr.status = LHStatus.ERROR;
         tr.failureMessage = message;
         tr.failureReason = reason;
@@ -422,7 +422,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     boolean evaluateEdge(EdgeConditionSchema condition)
-    throws VarSubOrzDash, LHNoConfigException, LHLookupException {
+    throws VarSubOrzDash, LHNoConfigException, LHConnectionError {
         if (condition == null) return true;
         Object lhs = assignVariable(condition.leftSide);
         Object rhs = assignVariable(condition.rightSide);
@@ -569,7 +569,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public boolean advance(WFEventSchema event)
-    throws LHLookupException, LHNoConfigException {
+    throws LHConnectionError, LHNoConfigException {
         if (status != WFRunStatus.RUNNING || upNext.size() == 0) {
             return false;
         }
@@ -643,7 +643,7 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     private boolean activateNode(
         NodeSchema node, WFEventSchema event)
-    throws LHLookupException, LHNoConfigException {
+    throws LHConnectionError, LHNoConfigException {
         if (node.nodeType == NodeType.TASK) {
             upNext = new ArrayList<EdgeSchema>();
             TaskRunSchema tr = createNewTaskRun(node);
@@ -674,17 +674,18 @@ public class ThreadRunSchema extends BaseSchema {
 
             TaskRunSchema tr = createNewTaskRun(node);
             taskRuns.add(tr);
-            correlSchema.assignedNodeGuid = node.guid;
-            correlSchema.assignedNodeName = node.name;
-            correlSchema.assignedTaskRunExecutionNumber = tr.number;
-            correlSchema.assignedThreadID = tr.threadID;
+            throw new RuntimeException("oops");
+            // correlSchema.assignedNodeGuid = node.guid;
+            // correlSchema.assignedNodeName = node.name;
+            // correlSchema.assignedTaskRunExecutionNumber = tr.number;
+            // correlSchema.assignedThreadID = tr.threadID;
 
-            completeTask(
-                tr, LHStatus.COMPLETED, correlSchema.event.content.toString(),
-                null, correlSchema.event.timestamp, 0
-            );
-            upNext = new ArrayList<EdgeSchema>();
-            return true; // Obviously something changed, we done did add a task.
+            // completeTask(
+            //     tr, LHStatus.COMPLETED, correlSchema.event.content.toString(),
+            //     null, correlSchema.event.timestamp, 0
+            // );
+            // upNext = new ArrayList<EdgeSchema>();
+            // return true; // Obviously something changed, we done did add a task.
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {
             upNext = new ArrayList<EdgeSchema>();
@@ -742,7 +743,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     private boolean handleWaitForThreadNode(
         NodeSchema node, WFEventSchema event
-    ) throws LHLookupException, LHNoConfigException {
+    ) throws LHConnectionError, LHNoConfigException {
         // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
         // If it's from the node we're waiting for and it's NOT done, then
         // this node does nothing. But if it's already done, we mark it as
@@ -908,7 +909,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public void handleInterrupt(ExternalEventPayloadSchema payload) throws
-    LHNoConfigException, LHLookupException {
+    LHNoConfigException, LHConnectionError {
 
         HashMap<String, InterruptDefSchema> idefs = getThreadSpec().interruptDefs;
         InterruptDefSchema idef = idefs.get(payload.externalEventDefName);
@@ -948,7 +949,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public void propagateInterrupt(ExternalEventPayloadSchema payload) throws
-    LHNoConfigException, LHLookupException {
+    LHNoConfigException, LHConnectionError {
         HashMap<String, InterruptDefSchema> idefs = getThreadSpec().interruptDefs;
         if (idefs != null && idefs.containsKey(payload.externalEventDefName)) {
             // Now we need to add thread!

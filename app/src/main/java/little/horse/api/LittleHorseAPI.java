@@ -22,7 +22,11 @@ public class LittleHorseAPI {
         this.wfRunAPI = new WFRunAPI(this.config, this.streams);
         this.externalEventDefAPI = new ExternalEventDefAPI(config, streams);
 
-        this.app = Javalin.create();
+        this.app = Javalin.create(javalinConf -> {
+            javalinConf.jsonMapper(new LHJavalinJson(config));
+            javalinConf.prefer405over404 = true;
+            javalinConf.enableCorsForAllOrigins();
+        });
 
         this.app.post("/wfSpec", this.wfSpecAPI::post);
         this.app.get("/wfSpec/{nameOrGuid}", this.wfSpecAPI::get);

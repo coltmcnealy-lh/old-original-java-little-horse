@@ -6,7 +6,7 @@ import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHNoConfigException;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.NodeSchema;
@@ -53,7 +53,7 @@ public class TaskRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public NodeSchema getNode() throws LHNoConfigException, LHLookupException {
+    public NodeSchema getNode() throws LHNoConfigException, LHConnectionError {
         if (parentThread == null) {
             throw new LHNoConfigException("Parent thread of taskrun was null!");
         }

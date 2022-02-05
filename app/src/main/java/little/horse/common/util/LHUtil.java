@@ -5,14 +5,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.hash.Hashing;
 import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.lang3.StringUtils;
@@ -40,15 +39,14 @@ public class LHUtil {
         return str;
     }
 
+    public static String fullDigestify(String str) {
+        return Hashing.sha256().hashString(
+            str, StandardCharsets.UTF_8
+        ).toString();
+    }
+
     public static String digestify(String str) {
-        MessageDigest digest = null;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch(NoSuchAlgorithmException exn) {
-            // LOL shouldn't happen
-        }
-        byte[] encodedhash = digest.digest(str.getBytes(StandardCharsets.UTF_8));
-        return encodedhash.toString().substring(0, 8);
+        return fullDigestify(str).substring(0, 8);
     }
 
     public static Date now() {

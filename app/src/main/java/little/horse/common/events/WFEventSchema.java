@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHNoConfigException;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.rundata.WFRunSchema;
@@ -27,7 +27,7 @@ public class WFEventSchema extends BaseSchema {
     @JsonIgnore
     public WFRunSchema wfRun;
 
-    public void record() throws LHNoConfigException, LHLookupException {
+    public void record() throws LHNoConfigException, LHConnectionError {
         if (wfRun == null || config == null) {
             throw new LHNoConfigException(
                 "Must set wfRun and Config for WFEventSchema before recording it!"

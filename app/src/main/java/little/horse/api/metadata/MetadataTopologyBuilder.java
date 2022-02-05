@@ -30,7 +30,7 @@ public class MetadataTopologyBuilder {
             sourceName,
             Serdes.String().deserializer(),
             serde.deserializer(),
-            T.getKafkaTopic(config)
+            T.getEventKafkaTopic(config)
         );
 
         // This step does two things:

@@ -2,44 +2,47 @@ package little.horse.common.objects.metadata;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.DigestIgnore;
 
 public class ThreadSpecSchema extends BaseSchema {
     public String name;
-    public String guid;
-
     public HashMap<String, WFRunVariableDefSchema> variableDefs;
     public HashMap<String, InterruptDefSchema> interruptDefs;
-    @JsonManagedReference
-    public HashMap<String, NodeSchema> nodes;
     public ArrayList<EdgeSchema> edges;
-
     public String entrypointNodeName;
 
     @JsonBackReference
+    @DigestIgnore
     public WFSpecSchema wfSpec;
 
-    @JsonIgnore
+    @JsonManagedReference
+    public HashMap<String, NodeSchema> nodes;
+
     @Override
-    public Config setConfig(Config config) {
-        super.setConfig(config);
-        if (nodes == null) nodes = new HashMap<>();
-        for (NodeSchema node: nodes.values()) {
-            node.setConfig(config);
-            node.threadSpec = this;
-        }
+    public void fillOut(Config config) throws LHValidationError {
+        throw new RuntimeException("This shouldn't be called.");
+    }
 
-        if (edges == null) edges = new ArrayList<>();
-        for (EdgeSchema edge: edges) {
-            edge.setConfig(config);
+    public void fillOut(Config config, WFSpecSchema parent)
+    throws LHValidationError, LHConnectionError {
+        wfSpec = parent;
+        setConfig(config);
+        for (Map.Entry<String, NodeSchema> p: nodes.entrySet()) {
+            NodeSchema node = p.getValue();
+            String nodeName = p.getKey();
+            node.name = nodeName;
+            node.fillOut(config, this);
         }
+        // There are no leaf CoreMetadata here, so we go on.
 
-        return this.config;
     }
 }

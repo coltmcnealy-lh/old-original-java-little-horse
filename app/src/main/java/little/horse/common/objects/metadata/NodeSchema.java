@@ -5,31 +5,20 @@ import java.util.HashMap;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.Config;
+import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.NodeSchema;
-import little.horse.common.util.Constants;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
-import little.horse.common.util.K8sStuff.Container;
-import little.horse.common.util.K8sStuff.Deployment;
-import little.horse.common.util.K8sStuff.DeploymentMetadata;
-import little.horse.common.util.K8sStuff.DeploymentSpec;
-import little.horse.common.util.K8sStuff.EnvEntry;
-import little.horse.common.util.K8sStuff.PodSpec;
-import little.horse.common.util.K8sStuff.Selector;
-import little.horse.common.util.K8sStuff.Template;
 
 public class NodeSchema extends BaseSchema {
     public String name;
     public NodeType nodeType;
     public String wfSpecGuid;
     public String threadSpecName;
-    public String guid;
 
     public ArrayList<EdgeSchema> outgoingEdges;
     public ArrayList<EdgeSchema> incomingEdges;
@@ -46,6 +35,8 @@ public class NodeSchema extends BaseSchema {
     public HashMap<String, VariableMutationSchema> variableMutations;
 
     public TaskDefSchema taskDef;
+    public String taskDefName;
+    public String taskDefGuid;
 
     @JsonBackReference
     public ThreadSpecSchema threadSpec;
@@ -58,12 +49,12 @@ public class NodeSchema extends BaseSchema {
 
     // Everything below doesn't show up in json.
     @JsonIgnore
+    private ExternalEventDefSchema externalEventDef;
+
+    @JsonIgnore
     public String getK8sName() {
         return LHUtil.toValidK8sName(threadSpec.wfSpec.k8sName + "-" + name);
     }
-
-    @JsonIgnore
-    private ExternalEventDefSchema externalEventDef;
 
     @JsonIgnore
     public ExceptionHandlerSpecSchema getHandlerSpec(String exceptionName) {
@@ -85,7 +76,7 @@ public class NodeSchema extends BaseSchema {
                 externalEventDef = LHDatabaseClient.lookupExternalEventDef(
                     externalEventDefGuid, config
                 );
-            } catch(LHLookupException exn) {
+            } catch(LHConnectionError exn) {
                 exn.printStackTrace();
             } catch(NullPointerException exn) {
                 exn.printStackTrace();
@@ -94,119 +85,147 @@ public class NodeSchema extends BaseSchema {
         return externalEventDef;
     }
 
-    @JsonIgnore
-    public String getNamespace() {
-        return threadSpec.wfSpec.namespace;
+    @Override
+    public void fillOut(Config config) throws LHValidationError {
+        throw new RuntimeException("Shouldn't be called!");
     }
 
-    @JsonIgnore
-    public int getReplicas() {
-        return config.getDefaultReplicas();
-    }
+    public void fillOut(Config config, ThreadSpecSchema parent)
+    throws LHValidationError, LHConnectionError {
+        setConfig(config);
+        threadSpec = parent;
 
-    @JsonIgnore
-    public int getPartitions() {
-        return config.getDefaultPartitions();
-    }
+        if (variableMutations == null) {
+            variableMutations = new HashMap<String, VariableMutationSchema>();
+        }
+        if (variables == null) {
+            variables = new HashMap<String, VariableAssignmentSchema>();
+        }
+        if (outgoingEdges == null) {
+            outgoingEdges = new ArrayList<EdgeSchema>();
+        }
+        if (incomingEdges == null) {
+            incomingEdges = new ArrayList<EdgeSchema>();
+        }
 
-    @JsonIgnore
-    public ArrayList<String> getTaskDaemonCommand() {
-        return config.getTaskDaemonCommand();
-    }
+        if (baseExceptionhandler != null) {
+            String handlerSpecName = baseExceptionhandler.handlerThreadSpecName;
+            if (handlerSpecName != null) {
+                ThreadSpecSchema handlerSpec = threadSpec.wfSpec.threadSpecs.get(
+                    handlerSpecName
+                );
+                if (handlerSpec == null) {
+                    throw new LHValidationError(
+                        "Exception handler on node " + name + " refers to " +
+                        "thread spec that doesn't exist: " + handlerSpecName
+                    );
+                }
+                // TODO: Maybe we should enforce "the exception handler thread
+                // can't have input variables"
+            }
+        }
 
-    @JsonIgnore
-    private ArrayList<String> getK8sEntrypointCommand() {
+        // We may have some leaf-level CoreMetadata objects here...
         if (nodeType == NodeType.TASK) {
-            return getTaskDaemonCommand();
-        } else {
-            LHUtil.logError("shouldn't be here");
-            return null;
+            fillOutTaskNode(config);
+        } else if (nodeType == NodeType.EXTERNAL_EVENT) {
+            fillOutExternalEventNode(config);
+        } else if (nodeType == NodeType.SPAWN_THREAD) {
+            fillOutSpawnThreadNode(config);
+        } else if (nodeType == NodeType.WAIT_FOR_THREAD) {
+            fillOutWaitForThreadNode(config);
         }
     }
 
-    @JsonIgnore
-    public Deployment getK8sDeployment() {
-        return null;
-        // if (nodeType != NodeType.TASK) {
-        //     return null;
-        //     // throw new RuntimeException("Shouldn't be calling getK8sDeployment for non-task nodes");
-        // }
-        // Deployment dp = new Deployment();
-        // dp.metadata = new DeploymentMetadata();
-        // dp.spec = new DeploymentSpec();
-        // dp.kind = "Deployment";
-        // dp.apiVersion = "apps/v1";
+    private void fillOutTaskNode(Config config)
+    throws LHValidationError, LHConnectionError {
+        try {
+            taskDef = LHDatabaseClient.lookupOrCreateTaskDef(
+                taskDef, taskDefName, taskDefGuid, config
+            );
+        } catch (Exception exn) {
+            String prefix = "Node " + name + ", thread " + threadSpecName;
+            if (exn instanceof LHValidationError) {
+                throw new LHValidationError(prefix + exn.getMessage());
+            } else if (exn instanceof LHConnectionError) {
+                throw new LHConnectionError(
+                    ((LHConnectionError) exn).parent(),
+                    ((LHConnectionError) exn).getReason(),
+                    ((LHConnectionError) exn).getMessage()
+                );
+            }
+            throw exn;
+        }
 
-        // dp.metadata.name = this.getK8sName();
-        // dp.metadata.labels = new HashMap<String, String>();
-        // dp.metadata.namespace = threadSpec.wfSpec.namespace;
-        // dp.metadata.labels.put("app", this.getK8sName());
-        // dp.metadata.labels.put("littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid);
-        // dp.metadata.labels.put("littlehorse.io/nodeGuid", this.guid);
-        // dp.metadata.labels.put("littlehorse.io/nodeName", this.name);
-        // dp.metadata.labels.put("littlehorse.io/wfSpecName", threadSpec.wfSpec.name);
-        // dp.metadata.labels.put("littlehorse.io/active", "true");
+        taskDefGuid = taskDef.getDigest();
+        taskDefName = taskDef.name;
+    }
 
-        // Container container = new Container();
-        // container.name = this.getK8sName();
-        // container.image = getTaskDef().dockerImage;
-        // container.imagePullPolicy = "IfNotPresent";
-        // container.command = getK8sEntrypointCommand();
-        // container.env = config.getBaseK8sEnv();
-        // container.env.add(new EnvEntry(
-        //     Constants.KAFKA_APPLICATION_ID_KEY,
-        //     this.guid
-        // ));
+    private void fillOutExternalEventNode(Config config)
+    throws LHValidationError, LHConnectionError {
+        try {
+            taskDef = LHDatabaseClient.lookupOrCreateTaskDef(
+                taskDef, taskDefName, taskDefGuid, config
+            );
+        } catch (Exception exn) {
+            String prefix = "Node " + name + ", thread " + threadSpecName;
+            if (exn instanceof LHValidationError) {
+                throw new LHValidationError(prefix + exn.getMessage());
+            } else if (exn instanceof LHConnectionError) {
+                throw new LHConnectionError(
+                    ((LHConnectionError) exn).parent(),
+                    ((LHConnectionError) exn).getReason(),
+                    ((LHConnectionError) exn).getMessage()
+                );
+            }
+            throw exn;
+        }
 
-        // container.env.add(new EnvEntry(Constants.WF_SPEC_GUID_KEY, wfSpecGuid));
-        // container.env.add(new EnvEntry(Constants.NODE_NAME_KEY, name));
-        // container.env.add(
-        //     new EnvEntry(Constants.THREAD_SPEC_NAME_KEY, threadSpecName));
+        taskDefGuid = taskDef.getDigest();
+        taskDefName = taskDef.name;
+    }
 
-        // Template template = new Template();
-        // template.metadata = new DeploymentMetadata();
-        // template.metadata.name = this.getK8sName();
-        // template.metadata.labels = new HashMap<String, String>();
-        // template.metadata.namespace = threadSpec.wfSpec.namespace;
-        // template.metadata.labels.put("app", this.getK8sName());
-        // template.metadata.labels.put("littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid);
-        // template.metadata.labels.put("littlehorse.io/nodeGuid", this.guid);
-        // template.metadata.labels.put("littlehorse.io/nodeName", this.name);
-        // template.metadata.labels.put("littlehorse.io/wfSpecName", threadSpec.wfSpec.name);
-        // template.metadata.labels.put("littlehorse.io/active", "true");
-        // template.metadata.labels.put(
-        //     "littlehorse.io/threadSpecName", this.threadSpecName
-        // );
+    private void fillOutSpawnThreadNode(Config config)
+    throws LHValidationError, LHConnectionError {
+        String tname = threadSpawnThreadSpecName;
+        if (tname == null) {
+            throw new LHValidationError(
+                "Thread Spawn Node " + name + " specifies no thread to spawn" +
+                " on thread " + threadSpecName
+            );
+        }
 
-        // template.spec = new PodSpec();
-        // template.spec.containers = new ArrayList<Container>();
-        // template.spec.containers.add(container);
+        ThreadSpecSchema tspec = threadSpec.wfSpec.threadSpecs.get(tname);
+        if (tspec == null) {
+            throw new LHValidationError(
+                "Thread Spawn Node " + name + " on thread spec " + threadSpecName +
+                " specified unknown thread to spawn: " + tname
+            );
+        }
+    }
 
-        // dp.spec.template = template;
-        // dp.spec.replicas = this.getReplicas();
-        // dp.spec.selector = new Selector();
-        // dp.spec.selector.matchLabels = new HashMap<String, String>();
-        // dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        // dp.spec.selector.matchLabels.put(
-        //     "littlehorse.io/wfSpecGuid", threadSpec.wfSpec.guid
-        // );
-        // dp.spec.selector.matchLabels.put("littlehorse.io/nodeGuid", this.guid);
-        // dp.spec.selector.matchLabels.put("littlehorse.io/nodeName", this.name);
-        // dp.spec.selector.matchLabels.put(
-        //     "littlehorse.io/threadSpecName", this.threadSpecName
-        // );
-        // dp.spec.selector.matchLabels.put(
-        //     "littlehorse.io/wfSpecName", threadSpec.wfSpec.name
-        // );
+    private void fillOutWaitForThreadNode(Config config)
+    throws LHValidationError, LHConnectionError {
+        NodeSchema sourceNode = threadSpec.nodes.get(threadWaitSourceNodeName);
 
-        // ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        // try {
-        //     String result = mapper.writeValueAsString(dp);
-        //     LHUtil.log("Node tok8s: ", result);
-        // } catch (JsonProcessingException exn) {
-        //     LHUtil.logError(exn.getMessage());
-        // }
+        if (sourceNode == null) {
+            throw new LHValidationError(
+                "Wait for thread node " + name + "has no valid source node " +
+                "from the same thread specified."
+            );
+        }
+        if (sourceNode.nodeType != NodeType.SPAWN_THREAD) {
+            throw new LHValidationError(
+                "Wait For Thread Node " + name + " references a node that is" +
+                " not of type SPAWN_THREAD: " + sourceNode.name + ": " +
+                sourceNode.nodeType
+            );
+        }
 
-        // return dp;
+        // TODO: Throw an error if the WAIT_FOR_THREAD node doesn't come after
+        // the SPAWN_THREAD node. Can figure this out by doing analysis on the
+        // graph of nodes/edges on the ThreadSpec.
+
+        threadWaitSourceNodeName = sourceNode.name;
     }
 }

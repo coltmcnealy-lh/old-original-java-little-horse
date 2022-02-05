@@ -9,7 +9,7 @@ import little.horse.common.Config;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequestSchema;
-import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHNoConfigException;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFSpecSchema;
@@ -46,7 +46,7 @@ public class WFRuntime
     }
 
     private void processHelper(final Record<String, WFEventSchema> record)
-    throws LHLookupException, LHNoConfigException {
+    throws LHConnectionError, LHNoConfigException {
         String wfRunGuid = record.key();
         WFEventSchema event = record.value();
 
@@ -103,7 +103,7 @@ public class WFRuntime
         wfRunStore.put(wfRun.guid, wfRun);
     }
 
-    private WFSpecSchema getWFSpec(String guid) throws LHLookupException, LHNoConfigException {
+    private WFSpecSchema getWFSpec(String guid) throws LHConnectionError, LHNoConfigException {
         return guid == null ? null : wfSpecStore.get(guid);
     }
 
@@ -111,12 +111,13 @@ public class WFRuntime
         WFRunRequestSchema req = BaseSchema.fromString(
             event.content, WFRunRequestSchema.class
         );
-        if (req.wfSpec != null) {
-            wfSpecStore.put(req.wfSpec.guid, req.wfSpec);
-            event.wfSpecGuid = req.wfSpec.guid;
-            return req.wfSpec;
-        }
+        
+        // if (req.wfSpec != null) {
+        //     wfSpecStore.put(req.wfSpec.guid, req.wfSpec);
+        //     event.wfSpecGuid = req.wfSpec.guid;
+        //     return req.wfSpec;
+        // }
 
-        return null;
+        throw new RuntimeException("Oops");
     }
 }

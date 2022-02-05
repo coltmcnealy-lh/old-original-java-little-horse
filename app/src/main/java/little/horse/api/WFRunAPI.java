@@ -11,9 +11,7 @@ import little.horse.common.Config;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequestSchema;
-import little.horse.common.exceptions.LHLookupException;
 import little.horse.common.exceptions.LHValidationError;
-import little.horse.common.objects.metadata.WFSpecSchema;
 import little.horse.common.objects.rundata.LHStatus;
 import little.horse.common.objects.rundata.WFRunSchema;
 import little.horse.common.util.LHDatabaseClient;
@@ -93,7 +91,6 @@ public class WFRunAPI {
     public void stopWFRun(Context ctx) {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         WFEventSchema event = new WFEventSchema();
-        event.setConfig(config);
         event.wfRunGuid = wfRunGuid;
         event.threadID = 0;
         event.type = WFEventType.WF_RUN_STOP_REQUEST;

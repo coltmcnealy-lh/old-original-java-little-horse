@@ -3,7 +3,10 @@
  */
 package little.horse;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import com.jayway.jsonpath.JsonPath;
@@ -17,7 +20,12 @@ import little.horse.api.runtime.WFRunTopology;
 import little.horse.api.util.APIStreamsContext;
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.DigestIgnore;
+import little.horse.common.objects.metadata.EdgeConditionSchema;
+import little.horse.common.objects.metadata.EdgeSchema;
 import little.horse.common.objects.metadata.NodeSchema;
+import little.horse.common.objects.metadata.VariableAssignmentSchema;
+import little.horse.common.objects.metadata.WFRunVariableDefSchema;
 import little.horse.common.objects.rundata.ThreadRunSchema;
 import little.horse.common.objects.rundata.WFRunSchema;
 import little.horse.common.util.Constants;
@@ -93,8 +101,22 @@ class FrontendAPIApp {
 
 
 class Thing {
+    // @IncludeInDigest
     public String mystring;
+    @DigestIgnore
     public Object foobar;
+
+    @DigestIgnore
+    public int myint = 123;
+
+    public void printDigest() throws IllegalAccessException {
+        for (Field field: this.getClass().getDeclaredFields()) {
+            field.setAccessible(true);
+            if (field.isAnnotationPresent(DigestIgnore.class)) {
+                System.out.println(field.get(this).toString());
+            }
+        }
+    }
 }
 
 public class App {
@@ -103,24 +125,40 @@ public class App {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else {
-            String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
-            Object obj = JsonPath.parse(json).read("$.foo");
-            System.out.println(obj.getClass());
-            // System.out.println(((Comparable)obj).compareTo(Integer.valueOf(-100)));
-
-            ArrayList<Object> thing = new ArrayList<Object>();
             NodeSchema node = new NodeSchema();
-            node.guid = "asdf;";
-            thing.add(node);
-            System.out.println(thing.toString());
+            node.name = "asdf";
+            node.outgoingEdges = new ArrayList<>();
+            node.outgoingEdges.add(new EdgeSchema());
+            node.outgoingEdges.get(0).sourceNodeGuid = "asasdfdf";
+            node.outgoingEdges.get(0).sinkNodeGuid = "asdf";
 
-            System.out.println("\n\n\n\n\n\n\n");
+            node.variables = new HashMap<>();
+            VariableAssignmentSchema assn = new VariableAssignmentSchema();
+            assn.defaultValue = "default";
+            node.variables.put("foobar", assn);
 
-            String data = "{\"threadRuns\":[{\"id\":0}]}";
-            WFRunSchema schema = BaseSchema.fromString(data, WFRunSchema.class);
-            ThreadRunSchema tr = schema.threadRuns.get(0);
+            node.variables.put("notfoobar", assn);
+            System.out.println(node.getDigest());
 
-            LHUtil.log(tr.threadSpec);
+            System.out.println(node.getDigest());
+
+            // String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
+            // Object obj = JsonPath.parse(json).read("$.foo");
+            // System.out.println(obj.getClass());
+
+            // ArrayList<Object> thing = new ArrayList<Object>();
+            // NodeSchema node = new NodeSchema();
+            // // node.guid = "asdf;";
+            // thing.add(node);
+            // System.out.println(thing.toString());
+
+            // System.out.println("\n\n\n\n\n\n\n");
+
+            // String data = "{\"threadRuns\":[{\"id\":0}]}";
+            // WFRunSchema schema = BaseSchema.fromString(data, WFRunSchema.class);
+            // ThreadRunSchema tr = schema.threadRuns.get(0);
+
+            // LHUtil.log(tr.threadSpec);
             
         }
     }

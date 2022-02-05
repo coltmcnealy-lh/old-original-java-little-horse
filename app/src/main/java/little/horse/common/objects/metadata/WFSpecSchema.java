@@ -1,18 +1,12 @@
 package little.horse.common.objects.metadata;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.processor.api.Record;
 
@@ -20,9 +14,7 @@ import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrelSchema;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFRunRequestSchema;
-import little.horse.common.exceptions.LHDeployError;
-import little.horse.common.exceptions.LHLookupException;
-import little.horse.common.exceptions.LHNoConfigException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.rundata.LHStatus;
@@ -32,11 +24,10 @@ import little.horse.common.objects.rundata.WFRunSchema;
 import little.horse.common.objects.rundata.WFRunStatus;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
-import little.horse.common.util.K8sStuff.Deployment;
 
-public class WFSpecSchema extends BaseSchema {
+public class WFSpecSchema extends CoreMetadata {
     public String name;
-    public String guid;
+    private String guid;
     public LHStatus status;
     public String kafkaTopic;
     public String entrypointThreadName;
@@ -60,7 +51,7 @@ public class WFSpecSchema extends BaseSchema {
      * @throws LHValidationError if there's an invalid spec.
      */
     public void cleanupAndValidate(Config config) throws LHValidationError {
-        setConfig(config);
+        this.config = config;
 
         if (guid == null) guid = LHUtil.generateGuid();
         if (kafkaTopic == null) {
@@ -273,14 +264,8 @@ public class WFSpecSchema extends BaseSchema {
     }
 
     private void cleanupEdge(EdgeSchema edge, ThreadSpecSchema thread) {
-        edge.wfSpecGuid = guid;
-        if (edge.guid == null) {
-            edge.guid = LHUtil.generateGuid();
-        }
         NodeSchema source = thread.nodes.get(edge.sourceNodeName);
         NodeSchema sink = thread.nodes.get(edge.sinkNodeName);
-        edge.sourceNodeGuid = source.guid;
-        edge.sinkNodeGuid = sink.guid;
 
         boolean alreadyHasEdge = false;
         for (EdgeSchema candidate : source.outgoingEdges) {
@@ -324,9 +309,6 @@ public class WFSpecSchema extends BaseSchema {
     throws LHValidationError {
         node.threadSpecName = thread.name;
         node.wfSpecGuid = guid;
-        if (node.guid == null) {
-            node.guid = LHUtil.generateGuid();
-        }
         
         if (node.name == null) {
             node.name = name;
@@ -370,7 +352,7 @@ public class WFSpecSchema extends BaseSchema {
             node.externalEventDefGuid;
         try {
             eed = LHDatabaseClient.lookupExternalEventDef(id, config);
-        } catch (LHLookupException exn) {
+        } catch (LHConnectionError exn) {
             throw new LHValidationError(
                 "Could not find externaleventdef " + node.externalEventDefGuid +
                 " / " + node.externalEventDefName + "\n" + exn.getMessage()
@@ -420,7 +402,6 @@ public class WFSpecSchema extends BaseSchema {
         // the SPAWN_THREAD node. Can figure this out by doing analysis on the
         // graph of nodes/edges on the ThreadSpec.
 
-        node.threadWaitSourceNodeGuid = sourceNode.guid;
         node.threadWaitSourceNodeName = sourceNode.name;
     }
 
@@ -439,11 +420,11 @@ public class WFSpecSchema extends BaseSchema {
     @JsonIgnore
     public WFRunSchema newRun(
         final Record<String, WFEventSchema> record
-    ) throws LHNoConfigException, LHLookupException {
+    ) throws LHConnectionError {
         WFRunSchema wfRun = new WFRunSchema();
         WFEventSchema event = record.value();
         WFRunRequestSchema runRequest = BaseSchema.fromString(
-            event.content, WFRunRequestSchema.class
+            event.content, WFRunRequestSchema.class, config, true
         );
 
         wfRun.guid = record.key();
@@ -476,93 +457,6 @@ public class WFSpecSchema extends BaseSchema {
         return (short) config.getDefaultReplicas();
     }
 
-    public void deploy() throws LHDeployError {
-        config.createKafkaTopic(new NewTopic(kafkaTopic, getPartitions(),
-            getReplicationFactor()));
-        
-        ArrayList<String> ymlStrings = new ArrayList<String>();
-
-        for (ThreadSpecSchema tspec: threadSpecs.values()) {
-            for (NodeSchema node: tspec.nodes.values()) {
-                try {
-                    Deployment dp = node.getK8sDeployment();
-                    if (dp != null) {
-                        ymlStrings.add(new ObjectMapper(
-                            new YAMLFactory()).writeValueAsString(dp));
-                    }
-                } catch (JsonProcessingException exn) {
-                    exn.printStackTrace();
-                    throw new LHDeployError("Had an orzdash");
-                }
-            }
-        }
-
-        for (String yml : ymlStrings) {
-            try {
-                LHUtil.log("About to apply this: ", yml, "\n\n");
-                Process process = Runtime.getRuntime().exec("kubectl apply -f -");
-
-                process.getOutputStream().write(yml.getBytes());
-                process.getOutputStream().close();
-                process.waitFor();
-
-                BufferedReader input = new BufferedReader(
-                    new InputStreamReader(process.getInputStream())
-                );
-                String line = null;
-                while ((line = input.readLine()) != null) {
-                    LHUtil.log(line);
-                }
-
-                BufferedReader error = new BufferedReader(
-                    new InputStreamReader(process.getErrorStream())
-                );
-                line = null;
-                while ((line = error.readLine()) != null) {
-                    LHUtil.log(line);
-                }
-
-            } catch (Exception exn) {
-                exn.printStackTrace();
-                throw new LHDeployError("had an orzdash");
-            }
-        }
-        status = LHStatus.RUNNING;
-        record();
-    }
-
-    public void undeploy() {
-        try {
-            Process process = Runtime.getRuntime().exec(
-                "kubectl delete deploy -llittlehorse.io/wfSpecGuid=" + guid
-            );
-            process.getOutputStream().close();
-            process.waitFor();
-            BufferedReader input = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
-            );
-            String line = null;
-            while ((line = input.readLine()) != null) {
-                LHUtil.log(line);
-            }
-
-            BufferedReader error = new BufferedReader(
-                new InputStreamReader(process.getErrorStream())
-            );
-            line = null;
-            while ((line = error.readLine()) != null) {
-                LHUtil.log(line);
-            }
-
-            this.status = LHStatus.REMOVED;
-        } catch (Exception exn) {
-            exn.printStackTrace();
-            this.status = LHStatus.ERROR;
-        }
-
-        this.record();
-    }
-
     @JsonIgnore
     public void record() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
@@ -571,15 +465,56 @@ public class WFSpecSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public Config setConfig(Config config) {
-        super.setConfig(config);
-        for (ThreadSpecSchema threadSpec: threadSpecs.values()) {
-            threadSpec.setConfig(config);
-            if (threadSpec.wfSpec == null) {
-                threadSpec.wfSpec = this;
+    public void deploy() {
+        throw new RuntimeException("Implement me!");
+    }
+
+    @JsonIgnore
+    public void undeploy() {
+        throw new RuntimeException("Implement me!");
+    }
+
+    @JsonIgnore
+    public void remove() {
+        throw new RuntimeException("Implement me!");
+    }
+
+    @Override
+    public void processChange(CoreMetadata old) {
+        if (!(old instanceof WFSpecSchema)) {
+            throw new RuntimeException(
+                "Called processChange on a non-WFSpecSchema."
+            );
+        }
+
+        WFSpecSchema oldSpec = (WFSpecSchema) old;
+        if (oldSpec.status != desiredStatus) {
+            if (desiredStatus == LHStatus.RUNNING) {
+                deploy();
+            } else if (desiredStatus == LHStatus.REMOVED) {
+                remove();
+            } else if (desiredStatus == LHStatus.STOPPED) {
+                undeploy();
             }
         }
-        
-        return this.config;
+    }
+
+    @Override
+    public void fillOut(Config config) throws LHValidationError, LHConnectionError {
+        setConfig(config);
+        if (status == null) status = LHStatus.STOPPED;
+        if (desiredStatus == null) desiredStatus = LHStatus.RUNNING;
+        if (namespace == null) namespace = "default";  // Trololol
+
+        for (ThreadSpecSchema thread: this.threadSpecs.values()) {
+            thread.fillOut(config, this);
+        }
+        // No leaf-level CoreMetadata's here, so nothing else to do.
+
+        validateVariables();
+
+        if (kafkaTopic == null) {
+            kafkaTopic = config.getWFRunTopicPrefix() + name + "-" + getDigest();
+        }
     }
 }

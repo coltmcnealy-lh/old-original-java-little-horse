@@ -16,8 +16,7 @@ import little.horse.common.events.ExternalEventPayloadSchema;
 import little.horse.common.events.WFEventIDSchema;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
-import little.horse.common.exceptions.LHLookupException;
-import little.horse.common.exceptions.LHNoConfigException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.EdgeSchema;
 import little.horse.common.objects.metadata.NodeSchema;
@@ -58,17 +57,11 @@ public class WFRunSchema extends BaseSchema {
     @JsonIgnore
     public void setWFSpec(WFSpecSchema spec) {
         wfSpec = spec;
-        passConfig(spec);
     }
 
     @JsonIgnore
-    public WFSpecSchema getWFSpec() throws LHNoConfigException, LHLookupException {
+    public WFSpecSchema getWFSpec() throws LHConnectionError {
         if (wfSpec == null) {
-            if (config == null) {
-                throw new LHNoConfigException(
-                    "Tried to get WFSpec but no config provided. OrzDash!"
-                );
-            }
             String id = (wfSpecGuid == null) ? wfSpecName : wfSpecGuid;
             wfSpec = LHDatabaseClient.lookupWFSpec(id, config);
         }
@@ -78,7 +71,7 @@ public class WFRunSchema extends BaseSchema {
     @JsonIgnore
     public ThreadRunSchema createThreadClientAdds(
         String threadName, Map<String, Object> variables, ThreadRunSchema parent
-    ) throws LHNoConfigException, LHLookupException {
+    ) throws LHConnectionError {
         getWFSpec();  // just make sure the thing isn't null;
 
         // Since the wfSpec has already been validated (at the time it was created)
@@ -86,7 +79,7 @@ public class WFRunSchema extends BaseSchema {
         // return a ThreadSpecSchema (otherwise there would've been an error thrown
         // at WFSpec creation time).
         ThreadSpecSchema tspec = wfSpec.threadSpecs.get(threadName);
-        passConfig(tspec);
+        // TODO: do the fillOut() and linkUp() here.
 
         ThreadRunSchema trun = new ThreadRunSchema();
         setConfig(config); // this will populate the ThreadRun as well
@@ -110,37 +103,38 @@ public class WFRunSchema extends BaseSchema {
         trun.upNext = new ArrayList<EdgeSchema>();
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
-        trun.threadSpecGuid = trun.threadSpec.guid;
-        trun.errorMessage = "";
+        // trun.threadSpecGuid = trun.threadSpec.guid;
+        throw new RuntimeException("Oops");
+        // trun.errorMessage = "";
 
-        trun.activeInterruptThreadIDs = new ArrayList<Integer>();
-        trun.handledInterruptThreadIDs = new ArrayList<Integer>();
+        // trun.activeInterruptThreadIDs = new ArrayList<Integer>();
+        // trun.handledInterruptThreadIDs = new ArrayList<Integer>();
 
-        // Now add the entrypoint taskRun
-        EdgeSchema fakeEdge = new EdgeSchema();
-        fakeEdge.sinkNodeName = tspec.entrypointNodeName;
-        trun.addEdgeToUpNext(fakeEdge);
+        // // Now add the entrypoint taskRun
+        // EdgeSchema fakeEdge = new EdgeSchema();
+        // fakeEdge.sinkNodeName = tspec.entrypointNodeName;
+        // trun.addEdgeToUpNext(fakeEdge);
 
-        trun.childThreadIDs = new ArrayList<>();
-        trun.wfRun = this;
-        trun.variableLocks = new HashMap<String, Integer>();
+        // trun.childThreadIDs = new ArrayList<>();
+        // trun.wfRun = this;
+        // trun.variableLocks = new HashMap<String, Integer>();
 
-        trun.completedExeptionHandlerThreads = new ArrayList<Integer>();
+        // trun.completedExeptionHandlerThreads = new ArrayList<Integer>();
 
-        trun.haltReasons = new HashSet<>();
+        // trun.haltReasons = new HashSet<>();
 
-        if (parent != null) {
-            parent.childThreadIDs.add(trun.id);
-            trun.parentThreadID = parent.id;
+        // if (parent != null) {
+        //     parent.childThreadIDs.add(trun.id);
+        //     trun.parentThreadID = parent.id;
 
-            if (parent.status == WFRunStatus.HALTED ||
-                parent.status == WFRunStatus.HALTING
-            ) {
-                trun.haltReasons.add(WFHaltReasonEnum.PARENT_STOPPED);
-            }
-        }
+        //     if (parent.status == WFRunStatus.HALTED ||
+        //         parent.status == WFRunStatus.HALTING
+        //     ) {
+        //         trun.haltReasons.add(WFHaltReasonEnum.PARENT_STOPPED);
+        //     }
+        // }
 
-        return trun;
+        // return trun;
     }
 
     @JsonIgnore
@@ -159,7 +153,7 @@ public class WFRunSchema extends BaseSchema {
 
     @JsonIgnore
     private void handleExternalEvent(WFEventSchema event) throws
-    LHNoConfigException, LHLookupException {
+    LHNoConfigException, LHConnectionError {
         ExternalEventPayloadSchema payload = BaseSchema.fromString(
             event.content, ExternalEventPayloadSchema.class);
         
@@ -197,7 +191,7 @@ public class WFRunSchema extends BaseSchema {
 
     @JsonIgnore
     public void incorporateEvent(WFEventSchema event)
-    throws LHNoConfigException, LHLookupException {
+    throws LHNoConfigException, LHConnectionError {
         if (event.type == WFEventType.WF_RUN_STARTED) {
             throw new RuntimeException(
                 "This shouldn't happen, colty you're programming like you're drunk"

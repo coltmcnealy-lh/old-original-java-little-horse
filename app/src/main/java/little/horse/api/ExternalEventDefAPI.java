@@ -11,7 +11,7 @@ import little.horse.common.Config;
 import little.horse.common.events.ExternalEventPayloadSchema;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
-import little.horse.common.exceptions.LHLookupException;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHNoConfigException;
 import little.horse.common.objects.metadata.ExternalEventDefSchema;
 import little.horse.common.objects.metadata.WFSpecSchema;
@@ -78,7 +78,7 @@ public class ExternalEventDefAPI {
             wfRun.setConfig(config);
             wfSpec = wfRun.getWFSpec();
             evd = LHDatabaseClient.lookupExternalEventDef(externalEventDefID, config);
-        } catch(LHLookupException exn) {
+        } catch(LHConnectionError exn) {
             ctx.status(404);
             LHAPIError error = new LHAPIError("Orzdash: " + exn.getMessage());
             ctx.json(error);
