@@ -28,6 +28,6 @@ public class ThreadRunMetaSchema extends BaseSchema {
         this.parentThreadID = task.threadID;
         this.threadSpecName = task.parentThread.threadSpecName;
 
-        thread.passConfig(this);
+        thread.setConfig(config);
     }
 }

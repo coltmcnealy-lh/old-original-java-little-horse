@@ -164,8 +164,9 @@ public class NodeSchema extends BaseSchema {
     private void fillOutExternalEventNode(Config config)
     throws LHValidationError, LHConnectionError {
         try {
-            taskDef = LHDatabaseClient.lookupOrCreateTaskDef(
-                taskDef, taskDefName, taskDefGuid, config
+            externalEventDef = LHDatabaseClient.lookupOrCreateExternalEventDef(
+                externalEventDef, externalEventDefName,
+                externalEventDefGuid, config
             );
         } catch (Exception exn) {
             String prefix = "Node " + name + ", thread " + threadSpecName;

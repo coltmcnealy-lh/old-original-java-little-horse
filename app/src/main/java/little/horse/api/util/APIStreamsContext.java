@@ -1,10 +1,12 @@
 package little.horse.api.util;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
+import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDefSchema;
 import little.horse.common.objects.metadata.TaskDefSchema;
 import little.horse.common.objects.metadata.WFSpecSchema;
@@ -134,5 +136,16 @@ public class APIStreamsContext {
                 QueryableStoreTypes.keyValueStore()
             )
         );
+    }
+
+    public <T extends CoreMetadata> void waitForProcessing(
+        RecordMetadata record, Class<T> cls
+    ) {
+        // TODO: wait until the record has been processed.
+        // Can start with a simple polling implementation, but later on
+        // we will replace it with actual proper thread stuff.
+        try {
+            Thread.sleep(100);
+        } catch (Exception exn) {}
     }
 }

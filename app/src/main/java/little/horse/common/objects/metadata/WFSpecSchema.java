@@ -4,12 +4,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.util.concurrent.ExecutionError;
 
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.streams.processor.api.Record;
 
+import little.horse.api.util.APIStreamsContext;
+import little.horse.api.util.LHAPIPostResult;
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrelSchema;
 import little.horse.common.events.WFEventSchema;
@@ -17,6 +22,7 @@ import little.horse.common.events.WFRunRequestSchema;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.LHSerdeError;
 import little.horse.common.objects.rundata.LHStatus;
 import little.horse.common.objects.rundata.ThreadRunMetaSchema;
 import little.horse.common.objects.rundata.ThreadRunSchema;
@@ -41,95 +47,6 @@ public class WFSpecSchema extends CoreMetadata {
     // All fields below ignored by Json
     @JsonIgnore
     private HashMap<String, HashMap<String, WFRunVariableDefSchema>> allVarDefs;
-
-    /**
-     * Called by the API when creating a new WFSpec. Infers some fields and ensures
-     * that we have a valid spec. It checks that variable definitions and references
-     * are kosher, all task/externalEvent definitions exist, the edges in the spec
-     * make sense, etc.
-     * @param config is a little.horse.lib.Config.
-     * @throws LHValidationError if there's an invalid spec.
-     */
-    public void cleanupAndValidate(Config config) throws LHValidationError {
-        this.config = config;
-
-        if (guid == null) guid = LHUtil.generateGuid();
-        if (kafkaTopic == null) {
-            kafkaTopic = config.getWFRunTopicPrefix() + name + "-" + guid;
-        }
-        if (status == null) status = LHStatus.STOPPED;
-        if (desiredStatus == null) desiredStatus = LHStatus.RUNNING;
-        allVarDefs = new HashMap<String, HashMap<String, WFRunVariableDefSchema>>();
-        if (namespace == null) namespace = "default";
-
-        for (Map.Entry<String, ThreadSpecSchema> pair: threadSpecs.entrySet()) {
-            cleanupThreadSpec(pair.getValue(), pair.getKey());
-        }
-        validateVariables();
-        k8sName = LHUtil.toValidK8sName(name + "-" + LHUtil.digestify(guid));
-    }
-
-    private void cleanupThreadSpec(ThreadSpecSchema spec, String name) throws LHValidationError {
-        spec.name = name;
-        
-        if (spec.variableDefs == null) {
-            spec.variableDefs = new HashMap<String, WFRunVariableDefSchema>();
-        }
-        if (spec.interruptDefs == null) {
-            spec.interruptDefs = new HashMap<String, InterruptDefSchema>();
-        }
-        
-        // Light Clean up the node (i.e. give it a guid if it doesn't have one, etc), validate that
-        // its taskdef exist
-        for (Map.Entry<String, NodeSchema> pair: spec.nodes.entrySet()) {
-            cleanupNode(pair.getKey(), pair.getValue(), spec);
-        }
-        // Now do the deep clean.
-        for (Map.Entry<String, NodeSchema> pair: spec.nodes.entrySet()) {
-            NodeSchema node = pair.getValue();
-            if (node.nodeType == NodeType.TASK) {
-                cleanupTaskNode(node);
-            } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
-                cleanupExternalEventNode(node);
-            } else if (node.nodeType == NodeType.SPAWN_THREAD) {
-                cleanupSpawnThreadNode(node);
-            } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
-                cleanupWaitForThreadNode(node);
-            }
-        }
-
-        // validate interrupt handlers.
-        // TODO: More fancy validation where we make sure there's only one input
-        // variable.
-        interruptEvents = new HashSet<String>();
-        for (Map.Entry<String, InterruptDefSchema> p: spec.interruptDefs.entrySet()) {
-            interruptEvents.add(p.getKey()); // know to handle this event as interrupt
-            String tspecName = p.getValue().threadSpecName;
-            if (!threadSpecs.containsKey(tspecName)) {
-                throw new LHValidationError(
-                    "Interrupt handler " + p.getKey() + " references nonexistent" +
-                    "thread named " + tspecName
-                );
-            }
-        }
-
-        if (spec.edges == null) {
-            spec.edges = new ArrayList<EdgeSchema>();
-        }
-        for (EdgeSchema edge : spec.edges) {
-            cleanupEdge(edge, spec);
-        }
-
-        spec.entrypointNodeName = calculateEntrypointNode(spec);
-
-        // Now, iterate through variables and add them to the allVarDefs map.
-        if (allVarDefs.containsKey(name)) {
-            throw new LHValidationError(
-                "Thread name " + name + " used twice in the workflow! OrzDash!"
-            );
-        }
-        allVarDefs.put(name, spec.variableDefs);
-    }
 
     /**
      * Validates that:
@@ -253,158 +170,6 @@ public class WFSpecSchema extends CoreMetadata {
         }
     }
 
-    private void cleanupTaskNode(NodeSchema node) throws LHValidationError {
-        if (node.taskDef == null) {
-            LHUtil.log(node);
-            throw new LHValidationError(
-                "Node " + node.name + " is type TASK but provides no TaskDef"
-            );
-        }
-        node.taskDef.validateAndCleanup(config);
-    }
-
-    private void cleanupEdge(EdgeSchema edge, ThreadSpecSchema thread) {
-        NodeSchema source = thread.nodes.get(edge.sourceNodeName);
-        NodeSchema sink = thread.nodes.get(edge.sinkNodeName);
-
-        boolean alreadyHasEdge = false;
-        for (EdgeSchema candidate : source.outgoingEdges) {
-            if (candidate.sinkNodeName.equals(sink.name)) {
-                alreadyHasEdge = true;
-                break;
-            }
-        }
-        if (!alreadyHasEdge) {
-            source.outgoingEdges.add(edge);
-            sink.incomingEdges.add(edge);
-        }
-    }
-
-    @JsonIgnore
-    private String calculateEntrypointNode(ThreadSpecSchema thread) throws LHValidationError {
-        if (thread.entrypointNodeName != null) {
-            return thread.entrypointNodeName;
-        }
-        NodeSchema entrypoint = null;
-        for (Map.Entry<String, NodeSchema> pair: thread.nodes.entrySet()) {
-            NodeSchema node = pair.getValue();
-            if (node.incomingEdges.size() == 0) {
-                if (entrypoint != null) {
-                    throw new LHValidationError(
-                        "Invalid WFSpec: More than one node without incoming edges."
-                        );
-                    }
-                entrypoint = node;
-            }
-        }
-        if (entrypoint == null) {
-            throw new LHValidationError(
-                "No entrypoint specified and no node present without incoming edges."
-            );
-        }
-        return entrypoint.name;
-    }
-
-    private void cleanupNode(String name, NodeSchema node, ThreadSpecSchema thread)
-    throws LHValidationError {
-        node.threadSpecName = thread.name;
-        node.wfSpecGuid = guid;
-        
-        if (node.name == null) {
-            node.name = name;
-        } else if (!node.name.equals(name)) {
-            throw new LHValidationError(
-                "Node name didn't match for node " + name
-            );
-        }
-        if (node.variableMutations == null) {
-            node.variableMutations = new HashMap<String, VariableMutationSchema>();
-        }
-        if (node.variables == null) {
-            node.variables = new HashMap<String, VariableAssignmentSchema>();
-        }
-        if (node.outgoingEdges == null) {
-            node.outgoingEdges = new ArrayList<EdgeSchema>();
-        }
-        if (node.incomingEdges == null) {
-            node.incomingEdges = new ArrayList<EdgeSchema>();
-        }
-
-        if (node.baseExceptionhandler != null) {
-            String handlerSpecName = node.baseExceptionhandler.handlerThreadSpecName;
-            if (handlerSpecName != null) {
-                ThreadSpecSchema handlerSpec = threadSpecs.get(handlerSpecName);
-                if (handlerSpec == null) {
-                    throw new LHValidationError(
-                        "Exception handler on node " + node.name + " refers to " +
-                        "thread spec that doesn't exist: " + handlerSpecName
-                    );
-                }
-                // TODO: Maybe we should enforce "the exception handler thread
-                // can't have input variables"
-            }
-        }
-    }
-
-    private void cleanupExternalEventNode(NodeSchema node) throws LHValidationError {
-        ExternalEventDefSchema eed = null;
-        String id = node.externalEventDefGuid == null ? node.externalEventDefName :
-            node.externalEventDefGuid;
-        try {
-            eed = LHDatabaseClient.lookupExternalEventDef(id, config);
-        } catch (LHConnectionError exn) {
-            throw new LHValidationError(
-                "Could not find externaleventdef " + node.externalEventDefGuid +
-                " / " + node.externalEventDefName + "\n" + exn.getMessage()
-            );
-        }
-
-        node.externalEventDefGuid = eed.guid;
-        node.externalEventDefName = eed.name;
-    }
-
-    private void cleanupSpawnThreadNode(NodeSchema node) throws LHValidationError {
-        String tname = node.threadSpawnThreadSpecName;
-        if (tname == null) {
-            throw new LHValidationError(
-                "Thread Spawn Node " + node.name + " specifies no thread to spawn."
-            );
-        }
-
-        ThreadSpecSchema tspec = this.threadSpecs.get(tname);
-        if (tspec == null) {
-            throw new LHValidationError(
-                "Thread Spawn Node " + node.name + " specified unknown thread to" +
-                " spawn: " + tname
-            );
-        }
-    }
-
-    private void cleanupWaitForThreadNode(NodeSchema node) throws LHValidationError {
-        ThreadSpecSchema thread = this.threadSpecs.get(node.threadSpecName);
-        NodeSchema sourceNode = thread.nodes.get(node.threadWaitSourceNodeName);
-
-        if (sourceNode == null) {
-            throw new LHValidationError(
-                "Wait for thread node " + node.name + "has no valid source node " +
-                "from the same thread specified."
-            );
-        }
-        if (sourceNode.nodeType != NodeType.SPAWN_THREAD) {
-            throw new LHValidationError(
-                "Wait For Thread Node " + node.name + " references a node that is" +
-                " not of type SPAWN_THREAD: " + sourceNode.name + ": " +
-                sourceNode.nodeType
-            );
-        }
-
-        // TODO: Throw an error if the WAIT_FOR_THREAD node doesn't come after
-        // the SPAWN_THREAD node. Can figure this out by doing analysis on the
-        // graph of nodes/edges on the ThreadSpec.
-
-        node.threadWaitSourceNodeName = sourceNode.name;
-    }
-
     @JsonIgnore
     public ArrayList<Map.Entry<String, NodeSchema>> allNodePairs() {
         ArrayList<Map.Entry<String, NodeSchema>> out = new ArrayList<>();
@@ -423,9 +188,15 @@ public class WFSpecSchema extends CoreMetadata {
     ) throws LHConnectionError {
         WFRunSchema wfRun = new WFRunSchema();
         WFEventSchema event = record.value();
-        WFRunRequestSchema runRequest = BaseSchema.fromString(
-            event.content, WFRunRequestSchema.class, config, true
-        );
+        WFRunRequestSchema runRequest;
+        try {
+            runRequest = BaseSchema.fromString(
+                event.content, WFRunRequestSchema.class, config, true
+            );
+        } catch (LHSerdeError exn) {
+            exn.printStackTrace();
+            throw new RuntimeException("TODO: Handle when the runRequest is invalid");
+        }
 
         wfRun.guid = record.key();
         wfRun.wfSpecGuid = event.wfSpecGuid;
@@ -455,13 +226,6 @@ public class WFSpecSchema extends CoreMetadata {
     @JsonIgnore
     public short getReplicationFactor() {
         return (short) config.getDefaultReplicas();
-    }
-
-    @JsonIgnore
-    public void record() {
-        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            this.config.getWFSpecTopic(), guid, this.toString());
-        this.config.send(record);
     }
 
     @JsonIgnore
@@ -506,15 +270,135 @@ public class WFSpecSchema extends CoreMetadata {
         if (desiredStatus == null) desiredStatus = LHStatus.RUNNING;
         if (namespace == null) namespace = "default";  // Trololol
 
+        // TODO: This doesn't yet support lookUpOrCreateExternalEvent.
+        // In the future, we'll want to support that use case.
+        interruptEvents = new HashSet<String>();
         for (ThreadSpecSchema thread: this.threadSpecs.values()) {
             thread.fillOut(config, this);
+
+            if (allVarDefs.containsKey(name)) {
+                throw new LHValidationError(
+                    "Thread name " + name + " used twice in the workflow! OrzDash!"
+                );
+            }
+            allVarDefs.put(name, thread.variableDefs);
+
+            for (Map.Entry<String, InterruptDefSchema> p:
+                thread.interruptDefs.entrySet()
+            ) {
+                // know to handle this event as interrupt
+                interruptEvents.add(p.getKey());
+                String tspecName = p.getValue().threadSpecName;
+                if (!threadSpecs.containsKey(tspecName)) {
+                    throw new LHValidationError(
+                        "Interrupt handler " + p.getKey() + " references nonexistent"
+                        + "thread named " + tspecName
+                    );
+                }
+            }
         }
         // No leaf-level CoreMetadata's here, so nothing else to do.
 
         validateVariables();
-
+        
+        guid = getDigest();
         if (kafkaTopic == null) {
-            kafkaTopic = config.getWFRunTopicPrefix() + name + "-" + getDigest();
+            kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
+                + guid.substring(0, 8);
         }
+        k8sName = LHUtil.toValidK8sName(name + "-" + LHUtil.digestify(guid));
     }
+
+    @JsonIgnore
+    public HashSet<NodeSchema> getAllNodes() {
+        HashSet<NodeSchema> out = new HashSet<NodeSchema>();
+        for (ThreadSpecSchema thread: threadSpecs.values()) {
+            for (NodeSchema node: thread.nodes.values()) {
+                out.add(node);
+            }
+        }
+        return out;
+    }
+
+    @Override
+    @JsonIgnore
+    @SuppressWarnings("unchecked")  // TODO: Figure out how to not have to do this.
+    public LHAPIPostResult<WFSpecSchema> createIfNotExists(APIStreamsContext ctx)
+    throws LHConnectionError, LHValidationError {
+        LHAPIPostResult<WFSpecSchema> out = new LHAPIPostResult<WFSpecSchema>();
+
+        // First, see if the thing already exists.
+        WFSpecSchema old = LHDatabaseClient.lookupMeta(
+            getDigest(), config, WFSpecSchema.class
+        );
+        if (old != null) {
+            out.spec = old;
+            out.record = null;
+            out.name = old.name;
+            out.guid = old.getDigest();
+            out.status = old.status;
+            return out;
+        }
+
+        // Ok, so the WFSpec doesn't already exist; now we have to go make it
+        // and block until we know whether it was created or it orzdashed.
+
+        // There's a bunch of TaskDef's here, let's create those if they don't exist.
+        for (NodeSchema node: getAllNodes()) {
+            // We know that node.fillOut() will have already been called. This means
+            // that the node's taskDefGuid, taskDefName, and taskDef are all set.
+            // But we don't yet know if the node's taskDef was created yet.
+            // In the FUTURE, we MIGHT add some optimization to that. But for now,
+            // we have to throw the taskDef at the API and see what sticks.
+
+            // TODO: parallelize this.
+            LHAPIPostResult<TaskDefSchema> result = node.taskDef.createIfNotExists(
+                ctx
+            );
+
+            // TODO: Clean this error handling up.
+            if (result.message != null) {
+                throw new LHValidationError(
+                    "Was unable to create taskDef " + node.taskDefName + ": " + 
+                    result.message
+                );
+            }
+            if (result.spec == null || !result.spec.isEqualTo(node.taskDef)) {
+                throw new LHValidationError(
+                    "The taskDef " + node.taskDefName + " was not able to be created."
+                );
+            }
+        }
+
+        // TODO: Create externalEventDef's as well.
+
+        // At this point, we've created all of the TaskDefs/ExternalEventDefs that our
+        // WFSpec needs. Now we need to create the actual WFSpec.
+        Future<RecordMetadata> fut = record();
+        RecordMetadata meta;
+        try {
+            meta = fut.get();
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            LHUtil.logError("need to figure out something smart to do");
+            throw new RuntimeException("orzdash");
+        }
+
+        ctx.waitForProcessing(meta, WFSpecSchema.class);
+
+        old = LHDatabaseClient.lookupMeta(
+            getDigest(), config, WFSpecSchema.class
+        );
+        if (old != null) {
+            out.spec = old;
+            out.record = null;
+            out.name = old.name;
+            out.guid = old.getDigest();
+            out.status = old.status;
+            return out;
+        }
+        throw new RuntimeException("Argh, wtf?");
+    }
+
+    
 }

@@ -165,7 +165,12 @@ public class Config {
     }
 
     public String getAPIUrlFor(String extension) {
-        return this.getAPIUrl() + "/" + extension;
+        String out = this.getAPIUrl();
+        if (!extension.startsWith("/")) {
+            out += "/";
+        }
+        out += extension;
+        return out;
     }
 
     public String getAPIUrl() {

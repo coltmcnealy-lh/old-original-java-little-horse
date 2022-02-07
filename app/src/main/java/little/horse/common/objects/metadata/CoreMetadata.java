@@ -1,9 +1,14 @@
 package little.horse.common.objects.metadata;
 
+import java.util.concurrent.Future;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 
+import little.horse.api.util.APIStreamsContext;
+import little.horse.api.util.LHAPIPostResult;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
@@ -41,34 +46,37 @@ public abstract class CoreMetadata extends BaseSchema {
         return typeName + "__offset";
     }
 
+    public static String getAPIPath() {
+        return "/" + typeName;
+    }
+
     public abstract void processChange(CoreMetadata old);
 
     @JsonIgnore
-    public void record() {
+    public Future<RecordMetadata> record() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             getEventKafkaTopic(this.config), getDigest(), this.toString());
-        this.config.send(record);
-    }  
-    
-    @JsonIgnore
-    public CoreMetadata lookupOrCreate(
-        String name,
-        String guid,
-        CoreMetadata spec,
-        Class<? extends CoreMetadata> cls
-    ) throws LHValidationError, LHConnectionError {
-        throw new RuntimeException("Implement me!");
-
-        /*
-        if (spec != null) {
-            if (guid != null && spec.getGuid() != guid) {
-                throw new LHValidationError("Guid and spec don't match!");
-            }
-        }
-
-        if (spec != null) return spec;
-
-        CoreMetadata old = LHDatabaseClient.lookupMetadata(name, guid, cls);
-        */
+        return this.config.send(record);
     }
+
+    /**
+     * Creates a CoreMetadata objct from this thing's spec if it doesn't exist. If it
+     * __does__ already exist, then:
+     * - if this spec clashes with existings, throws an LHValidationError.
+     * - if this spec doesn't clash, updates if needed and returns nothing.
+     * 
+     * Should only be called by the LittleHorseAPI, and can only be called by that
+     * as it requires the APIStreamsContext parameter.
+     * @param context APIStreamsContext provided by the LittleHorseAPI object.
+     * @return An LHAPIPostResult containing information about the thing that was
+     * created.
+     * @throws LHValidationError when this spec is invalid or if there is a conflict.
+     * @throws LHConnectionError if we can't connect to some needed system.
+     */
+    @JsonIgnore
+    public abstract<T extends CoreMetadata> LHAPIPostResult<T> createIfNotExists(
+        APIStreamsContext context
+    ) throws LHValidationError, LHConnectionError;
+
+    public abstract boolean isEqualTo(CoreMetadata other);
 }

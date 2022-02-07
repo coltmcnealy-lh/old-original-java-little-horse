@@ -30,13 +30,13 @@ public class WFRunTopology {
         String updateProcessorName = "WFRun Update Surfacer";
 
         LHSerdes<WFEventSchema> eventSerde = new LHSerdes<>(
-            WFEventSchema.class
+            WFEventSchema.class, config
         );
         LHSerdes<WFRunSchema> runSerde = new LHSerdes<>(
-            WFRunSchema.class
+            WFRunSchema.class, config
         );
         LHSerdes<WFSpecSchema> specSerde = new LHSerdes<>(
-            WFSpecSchema.class
+            WFSpecSchema.class, config
         );
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

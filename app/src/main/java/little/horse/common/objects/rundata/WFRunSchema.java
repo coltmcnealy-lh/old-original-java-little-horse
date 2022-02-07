@@ -140,6 +140,7 @@ public class WFRunSchema extends BaseSchema {
     @JsonIgnore
     public WFEventSchema newWFEvent(WFEventType type, BaseSchema content) {
         WFEventSchema event = new WFEventSchema();
+        event.setConfig(config);
         event.type = type;
         event.wfRunGuid = guid;
         event.wfSpecGuid = wfSpecGuid;
@@ -147,15 +148,15 @@ public class WFRunSchema extends BaseSchema {
         event.timestamp = LHUtil.now();
         event.content = content.toString();
         event.wfRun = this;
-        passConfig(event);
         return event;
     }
 
     @JsonIgnore
     private void handleExternalEvent(WFEventSchema event) throws
-    LHNoConfigException, LHConnectionError {
+    LHConnectionError {
         ExternalEventPayloadSchema payload = BaseSchema.fromString(
-            event.content, ExternalEventPayloadSchema.class);
+            event.content, ExternalEventPayloadSchema.class, config, false
+        );
         
         if (wfSpec.interruptEvents.contains(payload.externalEventDefName)) {
             // This is an interrupt. Find the appropriate thread and interrupt it.
@@ -191,7 +192,7 @@ public class WFRunSchema extends BaseSchema {
 
     @JsonIgnore
     public void incorporateEvent(WFEventSchema event)
-    throws LHNoConfigException, LHConnectionError {
+    throws LHConnectionError {
         if (event.type == WFEventType.WF_RUN_STARTED) {
             throw new RuntimeException(
                 "This shouldn't happen, colty you're programming like you're drunk"

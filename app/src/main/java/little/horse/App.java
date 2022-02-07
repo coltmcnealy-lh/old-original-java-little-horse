@@ -129,8 +129,6 @@ public class App {
             node.name = "asdf";
             node.outgoingEdges = new ArrayList<>();
             node.outgoingEdges.add(new EdgeSchema());
-            node.outgoingEdges.get(0).sourceNodeGuid = "asasdfdf";
-            node.outgoingEdges.get(0).sinkNodeGuid = "asdf";
 
             node.variables = new HashMap<>();
             VariableAssignmentSchema assn = new VariableAssignmentSchema();

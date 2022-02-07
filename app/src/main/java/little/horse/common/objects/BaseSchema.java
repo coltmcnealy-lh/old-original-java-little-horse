@@ -102,7 +102,7 @@ public class BaseSchema {
     public static <T> T fromString(
         String src, Class<? extends BaseSchema> valueType,
         Config config, boolean validate
-    ) {
+    ) throws LHSerdeError {
         Object result;
         try {
             result = LHUtil.mapper.readValue(src, valueType);
@@ -114,14 +114,18 @@ public class BaseSchema {
         if (result.getClass() == valueType) {
             @SuppressWarnings("unchecked") T out = (T) result;
             return out;
+        } else {
+            throw new LHSerdeError(
+                "Class of the result, " + result.getClass().getName() + ", doesn't" +
+                " match the desired value type, " + valueType.getName()
+            );
         }
-        return null;
     }
 
     public static <T> T fromBytes(
         byte[] src, Class<? extends BaseSchema> valueType,
         Config config, boolean validate
-    ) {
+    ) throws LHSerdeError {
         Object result;
         try {
             result = LHUtil.mapper.readValue(src, valueType);

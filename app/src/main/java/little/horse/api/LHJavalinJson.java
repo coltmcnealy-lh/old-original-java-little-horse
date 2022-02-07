@@ -50,7 +50,7 @@ public class LHJavalinJson implements JsonMapper {
 
             @SuppressWarnings("unchecked")
             Class<? extends BaseSchema> jedi = (Class<? extends BaseSchema>)targetClass;
-            return BaseSchema.fromString(json, jedi, config);
+            return BaseSchema.fromString(json, jedi, config, false);
 
         } else {
             try {
@@ -70,7 +70,7 @@ public class LHJavalinJson implements JsonMapper {
 
                 @SuppressWarnings("unchecked")
                 Class<? extends BaseSchema> jedi = (Class<? extends BaseSchema>)targetClass;
-                return BaseSchema.fromBytes(json.readAllBytes(), jedi, config);
+                return BaseSchema.fromBytes(json.readAllBytes(), jedi, config, false);
 
             } else {
                 try {

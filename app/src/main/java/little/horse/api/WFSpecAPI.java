@@ -5,6 +5,7 @@ import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIError;
 import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.metadata.WFSpecSchema;
 import little.horse.common.objects.rundata.LHStatus;
@@ -28,18 +29,26 @@ public class WFSpecAPI {
             ctx.json(error);
             return;
         }
+        
         try {
-            spec.cleanupAndValidate(config);
+            spec.fillOut(config);
         } catch (LHValidationError exn) {
             ctx.status(400);
             LHAPIError err = new LHAPIError(exn.getMessage());
             ctx.json(err);
             return;
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            LHAPIError error = new LHAPIError("Internal error: " + exn.getMessage());
+            ctx.status(500);
+            ctx.json(error);
+            return;
         }
+
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = spec.getGuid();
+        response.guid = spec.getDigest();
         response.status = spec.status;
         response.name = spec.name;
         ctx.json(response);
@@ -84,7 +93,7 @@ public class WFSpecAPI {
         ctx.status(202);
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = schema.getGuid();
+        response.guid = schema.getDigest();
         response.name = schema.name;
         response.status = schema.status;
 

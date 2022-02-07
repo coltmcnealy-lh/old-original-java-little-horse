@@ -12,7 +12,6 @@ import little.horse.common.events.ExternalEventPayloadSchema;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.exceptions.LHNoConfigException;
 import little.horse.common.objects.metadata.ExternalEventDefSchema;
 import little.horse.common.objects.metadata.WFSpecSchema;
 import little.horse.common.objects.rundata.WFRunSchema;
@@ -83,7 +82,7 @@ public class ExternalEventDefAPI {
             LHAPIError error = new LHAPIError("Orzdash: " + exn.getMessage());
             ctx.json(error);
             return;
-        } catch(LHNoConfigException exn) {exn.printStackTrace(); return;}
+        }
 
         WFRunSchema schema = wfRun;
         ExternalEventDefSchema evdSchema = evd;

@@ -7,6 +7,7 @@ import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIError;
 import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.metadata.TaskDefSchema;
 
@@ -23,11 +24,16 @@ public class TaskDefAPI {
         TaskDefSchema spec = ctx.bodyAsClass(TaskDefSchema.class);
 
         try {
-            spec.validateAndCleanup(config);
-        }
-        catch (LHValidationError exn) {
+            spec.fillOut(config);
+        } catch (LHValidationError exn) {
             ctx.status(400);
             LHAPIError error = new LHAPIError(exn.getMessage());
+            ctx.json(error);
+            return;
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            LHAPIError error = new LHAPIError("Internal error: " + exn.getMessage());
+            ctx.status(500);
             ctx.json(error);
             return;
         }

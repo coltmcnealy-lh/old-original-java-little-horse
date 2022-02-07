@@ -16,13 +16,14 @@ public class MetadataTopologyBuilder {
     public static<T extends CoreMetadata> void addStuff(
         Topology topology, Config config, Class<T> cls
     ) {
-        LHSerdes<T> serde = new LHSerdes<>(cls);
+        LHSerdes<T> serde = new LHSerdes<>(cls, config);
 
         String sourceName = T.typeName + "Metadata Events";
         String byGuidProcessorName = T.typeName + " Guid Processor";
         String byNameProcessorName = T.typeName + " Name Processor";
         String nameKeyedSink = T.typeName + " Name Keyed Sink";
         String nameKeyedSource = T.typeName + " Name Keyed Source";
+        String offsetProcessorName = T.typeName + " Offset Processor";
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {serde.close();}));
 
@@ -31,6 +32,13 @@ public class MetadataTopologyBuilder {
             Serdes.String().deserializer(),
             serde.deserializer(),
             T.getEventKafkaTopic(config)
+        );
+
+        // Store the offsets.
+        topology.addProcessor(
+            offsetProcessorName,
+            () -> {return new OffsetProcessor<T>();},
+            sourceName
         );
 
         // This step does two things:
@@ -83,7 +91,15 @@ public class MetadataTopologyBuilder {
                 serde
         );
 
+        StoreBuilder<KeyValueStore<Integer, Long>> offsetStoreBuilder =
+            Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore(T.getOffsetStoreName()),
+                Serdes.Integer(),
+                Serdes.Long()
+        );
+
         topology.addStateStore(guidStoreBuilder, byGuidProcessorName);
         topology.addStateStore(nameStoreBuilder, byNameProcessorName);
+        topology.addStateStore(offsetStoreBuilder, offsetProcessorName);
     }
 }

@@ -11,7 +11,6 @@ import little.horse.common.Config;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequestSchema;
-import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.rundata.LHStatus;
 import little.horse.common.objects.rundata.WFRunSchema;
 import little.horse.common.util.LHDatabaseClient;
@@ -41,17 +40,20 @@ public class WFRunAPI {
 
     public void post(Context ctx) {
         WFRunRequestSchema request = ctx.bodyAsClass(WFRunRequestSchema.class);
+        
+        // TODO: Create the WFSpec if spec but not guid is provided.
+        
         // String wfSpecId = ctx.pathParam("wfSpec");
-        if (request.wfSpec != null) {
-            try {
-                request.wfSpec.cleanupAndValidate(config);
-            } catch (LHValidationError exn) {
-                ctx.status(400);
-                LHAPIError err = new LHAPIError(exn.getMessage());
-                ctx.json(err);
-                return;
-            }
-        }
+        // if (request.wfSpec != null) {
+        //     try {
+        //         request.wfSpec.fillOut(config);
+        //     } catch (LHValidationError exn) {
+        //         ctx.status(400);
+        //         LHAPIError err = new LHAPIError(exn.getMessage());
+        //         ctx.json(err);
+        //         return;
+        //     }
+        // }
 
         WFEventSchema event = new WFEventSchema();
 

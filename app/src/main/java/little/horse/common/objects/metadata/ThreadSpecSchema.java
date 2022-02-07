@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import little.horse.common.Config;
@@ -34,15 +35,71 @@ public class ThreadSpecSchema extends BaseSchema {
 
     public void fillOut(Config config, WFSpecSchema parent)
     throws LHValidationError, LHConnectionError {
-        wfSpec = parent;
         setConfig(config);
+
+        wfSpec = parent;
+        if (variableDefs == null) {
+            variableDefs = new HashMap<String, WFRunVariableDefSchema>();
+        }
+        if (interruptDefs == null) {
+            interruptDefs = new HashMap<String, InterruptDefSchema>();
+        }
+
+        if (edges == null) edges = new ArrayList<EdgeSchema>();
+        for (EdgeSchema edge : edges) {
+            cleanupEdge(edge);
+        }
+
         for (Map.Entry<String, NodeSchema> p: nodes.entrySet()) {
             NodeSchema node = p.getValue();
             String nodeName = p.getKey();
             node.name = nodeName;
             node.fillOut(config, this);
         }
-        // There are no leaf CoreMetadata here, so we go on.
 
+        entrypointNodeName = calculateEntrypointNode();
+        // There are no leaf CoreMetadata here, so we go on.
+    }
+
+    private void cleanupEdge(EdgeSchema edge) {
+        NodeSchema source = nodes.get(edge.sourceNodeName);
+        NodeSchema sink = nodes.get(edge.sinkNodeName);
+
+        boolean alreadyHasEdge = false;
+        for (EdgeSchema candidate : source.outgoingEdges) {
+            if (candidate.sinkNodeName.equals(sink.name)) {
+                alreadyHasEdge = true;
+                break;
+            }
+        }
+        if (!alreadyHasEdge) {
+            source.outgoingEdges.add(edge);
+            sink.incomingEdges.add(edge);
+        }
+    }
+
+    @JsonIgnore
+    private String calculateEntrypointNode() throws LHValidationError {
+        if (entrypointNodeName != null) {
+            return entrypointNodeName;
+        }
+        NodeSchema entrypoint = null;
+        for (Map.Entry<String, NodeSchema> pair: nodes.entrySet()) {
+            NodeSchema node = pair.getValue();
+            if (node.incomingEdges.size() == 0) {
+                if (entrypoint != null) {
+                    throw new LHValidationError(
+                        "Invalid WFSpec: More than one node without incoming edges."
+                        );
+                    }
+                entrypoint = node;
+            }
+        }
+        if (entrypoint == null) {
+            throw new LHValidationError(
+                "No entrypoint specified and no node present without incoming edges."
+            );
+        }
+        return entrypoint.name;
     }
 }
