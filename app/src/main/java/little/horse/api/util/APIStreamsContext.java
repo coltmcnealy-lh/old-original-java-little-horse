@@ -7,10 +7,10 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import little.horse.common.objects.metadata.CoreMetadata;
-import little.horse.common.objects.metadata.ExternalEventDefSchema;
-import little.horse.common.objects.metadata.TaskDefSchema;
-import little.horse.common.objects.metadata.WFSpecSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.metadata.ExternalEventDef;
+import little.horse.common.objects.metadata.TaskDef;
+import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.WFRun;
 
 public class APIStreamsContext {
     private String wfSpecNameStoreName;
@@ -75,7 +75,7 @@ public class APIStreamsContext {
         this.wfSpecGuidStoreName = name;
     }
 
-    public ReadOnlyKeyValueStore<String, WFSpecSchema> getWFSpecNameStore() {
+    public ReadOnlyKeyValueStore<String, WFSpec> getWFSpecNameStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.wfSpecNameStoreName,
@@ -84,7 +84,7 @@ public class APIStreamsContext {
         );
     }
 
-    public ReadOnlyKeyValueStore<String, WFSpecSchema> getWFSpecGuidStore() {
+    public ReadOnlyKeyValueStore<String, WFSpec> getWFSpecGuidStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.wfSpecGuidStoreName,
@@ -93,7 +93,7 @@ public class APIStreamsContext {
         );
     }
 
-    public ReadOnlyKeyValueStore<String, TaskDefSchema> getTaskDefNameStore() {
+    public ReadOnlyKeyValueStore<String, TaskDef> getTaskDefNameStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefNameStoreName,
@@ -102,7 +102,7 @@ public class APIStreamsContext {
         );
     }
 
-    public ReadOnlyKeyValueStore<String, TaskDefSchema> getTaskDefGuidStore() {
+    public ReadOnlyKeyValueStore<String, TaskDef> getTaskDefGuidStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.taskDefGuidStoreName,
@@ -111,7 +111,7 @@ public class APIStreamsContext {
         );
     }
 
-    public ReadOnlyKeyValueStore<String, ExternalEventDefSchema> getExternalEventDefNameStore() {
+    public ReadOnlyKeyValueStore<String, ExternalEventDef> getExternalEventDefNameStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.externalEventDefNameStoreName,
@@ -120,7 +120,7 @@ public class APIStreamsContext {
         );
     }
 
-    public ReadOnlyKeyValueStore<String, ExternalEventDefSchema> getExternalEventDefGuidStore() {
+    public ReadOnlyKeyValueStore<String, ExternalEventDef> getExternalEventDefGuidStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.externalEventDefGuidStoreName,
@@ -129,7 +129,7 @@ public class APIStreamsContext {
         );
     }
 
-    public ReadOnlyKeyValueStore<String, WFRunSchema> getWFRunStore() {
+    public ReadOnlyKeyValueStore<String, WFRun> getWFRunStore() {
         return streams.store(
             StoreQueryParameters.fromNameAndType(
                 this.wfRunStoreName,

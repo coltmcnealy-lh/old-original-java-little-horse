@@ -2,7 +2,7 @@ package little.horse.common.objects.rundata;
 
 import little.horse.common.objects.BaseSchema;
 
-public class ThreadRunMetaSchema extends BaseSchema {
+public class ThreadRunMeta extends BaseSchema {
     public int threadID;
     public int parentThreadID;
     public String threadSpecName;
@@ -16,12 +16,12 @@ public class ThreadRunMetaSchema extends BaseSchema {
     public int timesAwaited = 0;
 
 
-    public ThreadRunMetaSchema() {
+    public ThreadRunMeta() {
 
     }
 
-    public ThreadRunMetaSchema(TaskRunSchema task, ThreadRunSchema thread) {
-        this.sourceNodeGuid = task.nodeGuid;
+    public ThreadRunMeta(TaskRun task, ThreadRun thread) {
+        this.sourceNodeGuid = task.nodeDigest;
         this.sourceNodeName = task.nodeName;
         this.threadID = thread.id;
         this.timesAwaited = 0;

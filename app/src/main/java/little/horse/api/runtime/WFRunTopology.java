@@ -10,8 +10,8 @@ import org.apache.kafka.streams.state.Stores;
 
 import little.horse.common.Config;
 import little.horse.common.events.WFEventSchema;
-import little.horse.common.objects.metadata.WFSpecSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
 import little.horse.common.util.serdes.LHSerdes;
 
@@ -32,11 +32,11 @@ public class WFRunTopology {
         LHSerdes<WFEventSchema> eventSerde = new LHSerdes<>(
             WFEventSchema.class, config
         );
-        LHSerdes<WFRunSchema> runSerde = new LHSerdes<>(
-            WFRunSchema.class, config
+        LHSerdes<WFRun> runSerde = new LHSerdes<>(
+            WFRun.class, config
         );
-        LHSerdes<WFSpecSchema> specSerde = new LHSerdes<>(
-            WFSpecSchema.class, config
+        LHSerdes<WFSpec> specSerde = new LHSerdes<>(
+            WFSpec.class, config
         );
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -58,7 +58,7 @@ public class WFRunTopology {
             topoSource
         );
 
-        StoreBuilder<KeyValueStore<String, WFRunSchema>> wfRunStoreBuilder =
+        StoreBuilder<KeyValueStore<String, WFRun>> wfRunStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(Constants.WF_RUN_STORE),
                 Serdes.String(),
@@ -67,7 +67,7 @@ public class WFRunTopology {
 
         topology.addStateStore(wfRunStoreBuilder, updateProcessorName);
 
-        StoreBuilder<KeyValueStore<String, WFSpecSchema>> wfSpecStoreBuilder =
+        StoreBuilder<KeyValueStore<String, WFSpec>> wfSpecStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(Constants.WF_SPEC_GUID_STORE),
                 Serdes.String(),

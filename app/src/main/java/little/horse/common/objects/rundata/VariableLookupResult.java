@@ -1,14 +1,14 @@
 package little.horse.common.objects.rundata;
 
-import little.horse.common.objects.metadata.WFRunVariableDefSchema;
+import little.horse.common.objects.metadata.WFRunVariableDef;
 
 public class VariableLookupResult {
-    public WFRunVariableDefSchema varDef;
-    public ThreadRunSchema thread;
+    public WFRunVariableDef varDef;
+    public ThreadRun thread;
     public Object value;
 
     public VariableLookupResult(
-        WFRunVariableDefSchema varDef, ThreadRunSchema thread, Object value
+        WFRunVariableDef varDef, ThreadRun thread, Object value
     ) {
         this.value = value;
         this.varDef = varDef;

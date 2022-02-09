@@ -20,7 +20,7 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
 import little.horse.common.util.K8sStuff.EnvEntry;
 import okhttp3.OkHttpClient;
@@ -308,11 +308,11 @@ public class Config {
         return this.threadSpecName;
     }
 
-    public KafkaConsumer<String, WFRunSchema> getWFRunConsumer(
+    public KafkaConsumer<String, WFRun> getWFRunConsumer(
         ArrayList<String> topics, String appIdSuffix
     ) {
         Properties consumerConfig = getConsumerConfig(appIdSuffix);
-        KafkaConsumer<String, WFRunSchema> cons = new KafkaConsumer<String, WFRunSchema>(
+        KafkaConsumer<String, WFRun> cons = new KafkaConsumer<String, WFRun>(
             consumerConfig
         );
         Runtime.getRuntime().addShutdownHook(new Thread(cons::close));

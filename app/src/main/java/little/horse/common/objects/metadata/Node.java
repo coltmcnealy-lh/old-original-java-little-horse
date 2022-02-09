@@ -2,54 +2,134 @@ package little.horse.common.objects.metadata;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.NodeSchema;
+import little.horse.common.objects.DigestIgnore;
+import little.horse.common.objects.metadata.Node;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
+import little.horse.common.util.json.JsonMapKey;
 
-public class NodeSchema extends BaseSchema {
+@JsonIdentityInfo(
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "name"
+)
+public class Node extends BaseSchema {
+    @JsonMapKey
     public String name;
+
     public NodeType nodeType;
-    public String wfSpecGuid;
-    public String threadSpecName;
+    
+    private ArrayList<Edge> outgoingEdges;
+    private ArrayList<Edge> incomingEdges;
 
-    public ArrayList<EdgeSchema> outgoingEdges;
-    public ArrayList<EdgeSchema> incomingEdges;
+    public ArrayList<Edge> getOutgoingEdges() {
+        if (outgoingEdges == null) {
+            outgoingEdges = new ArrayList<>();
+            for (Edge edge: threadSpec.edges) {
+                if (edge.sourceNodeName == name) {
+                    outgoingEdges.add(edge);
+                }
+            }
+        }
+        return outgoingEdges;
+    }
 
-    public HashMap<String, VariableAssignmentSchema> variables;
+    public ArrayList<Edge> getIncomingEdges() {
+        if (incomingEdges == null) {
+            incomingEdges = new ArrayList<>();
+            for (Edge edge: threadSpec.edges) {
+                if (edge.sinkNodeName == name) {
+                    incomingEdges.add(edge);
+                }
+            }
+        }
+        return incomingEdges;
+    }
+
+    @JsonManagedReference
+    public HashMap<String, VariableAssignment> variables;
+
+    @DigestIgnore
+    @JsonBackReference
+    public ThreadSpec threadSpec;
 
     public String externalEventDefName;
-    public String externalEventDefGuid;
+    public String externalEventDefDigest;
 
     public String threadWaitSourceNodeName;
-    public String threadWaitSourceNodeGuid;
-
     public String threadSpawnThreadSpecName;
-    public HashMap<String, VariableMutationSchema> variableMutations;
 
-    public TaskDefSchema taskDef;
+    @JsonManagedReference
+    public HashMap<String, VariableMutation> variableMutations;
+
+    public TaskDef taskDef;
     public String taskDefName;
-    public String taskDefGuid;
-
-    @JsonBackReference
-    public ThreadSpecSchema threadSpec;
+    public String taskDefDigest;
 
     // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
     public String exceptionToThrow;
 
-    public ExceptionHandlerSpecSchema baseExceptionhandler;
-    public HashMap<String, ExceptionHandlerSpecSchema> customExceptionHandlers;
+    public ExceptionHandlerSpec baseExceptionhandler;
+
+    @JsonManagedReference
+    public HashMap<String, ExceptionHandlerSpec> customExceptionHandlers;
 
     // Everything below doesn't show up in json.
     @JsonIgnore
-    private ExternalEventDefSchema externalEventDef;
+    private ExternalEventDef externalEventDef;
+
+    public HashSet<String> getNeededVars() {
+        HashSet<String> neededVars = new HashSet<String>();
+        // first figure out which variables we need as input
+        for (VariableAssignment var: this.variables.values()) {
+            if (var.wfRunVariableName != null) {
+                neededVars.add(var.wfRunVariableName);
+            }
+        }
+
+        // Now see which variables we need as output
+        for (Map.Entry<String, VariableMutation> p:
+            this.variableMutations.entrySet()
+        ) {
+            // Add the variable that gets mutated
+            neededVars.add(p.getKey());
+
+            VariableAssignment rhsVarAssign = p.getValue().sourceVariable;
+            if (rhsVarAssign != null) {
+                if (rhsVarAssign.wfRunVariableName != null) {
+                    neededVars.add(rhsVarAssign.wfRunVariableName);
+                }
+            }
+        }
+        return neededVars;
+    }
+
+    public ExternalEventDef getExeternalEventDef() throws LHConnectionError {
+        if (externalEventDef != null) {
+            return externalEventDef;
+        }
+
+        if (externalEventDefDigest != null || externalEventDefName != null) {
+            String eedGuid = (externalEventDefDigest == null) ?
+                externalEventDefName : externalEventDefDigest;
+            externalEventDef = LHDatabaseClient.lookupMeta(
+                eedGuid, config, ExternalEventDef.class
+            );
+        }
+        return externalEventDef;
+    }
 
     @JsonIgnore
     public String getK8sName() {
@@ -57,7 +137,7 @@ public class NodeSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public ExceptionHandlerSpecSchema getHandlerSpec(String exceptionName) {
+    public ExceptionHandlerSpec getHandlerSpec(String exceptionName) {
         if (exceptionName == null) {
             return baseExceptionhandler;
         } else {
@@ -65,53 +145,33 @@ public class NodeSchema extends BaseSchema {
         }
     }
 
-    public TaskDefSchema getTaskDef() {
-        return taskDef;
-    }
-
-    @JsonIgnore
-    public ExternalEventDefSchema getExternalEventDef() {
-        if (externalEventDef == null) {
-            try {
-                externalEventDef = LHDatabaseClient.lookupExternalEventDef(
-                    externalEventDefGuid, config
-                );
-            } catch(LHConnectionError exn) {
-                exn.printStackTrace();
-            } catch(NullPointerException exn) {
-                exn.printStackTrace();
-            }
-        }
-        return externalEventDef;
-    }
-
     @Override
-    public void fillOut(Config config) throws LHValidationError {
+    public void validate(Config config) throws LHValidationError {
         throw new RuntimeException("Shouldn't be called!");
     }
 
-    public void fillOut(Config config, ThreadSpecSchema parent)
+    public void fillOut(Config config, ThreadSpec parent)
     throws LHValidationError, LHConnectionError {
         setConfig(config);
         threadSpec = parent;
 
         if (variableMutations == null) {
-            variableMutations = new HashMap<String, VariableMutationSchema>();
+            variableMutations = new HashMap<String, VariableMutation>();
         }
         if (variables == null) {
-            variables = new HashMap<String, VariableAssignmentSchema>();
+            variables = new HashMap<String, VariableAssignment>();
         }
         if (outgoingEdges == null) {
-            outgoingEdges = new ArrayList<EdgeSchema>();
+            outgoingEdges = new ArrayList<Edge>();
         }
         if (incomingEdges == null) {
-            incomingEdges = new ArrayList<EdgeSchema>();
+            incomingEdges = new ArrayList<Edge>();
         }
 
         if (baseExceptionhandler != null) {
             String handlerSpecName = baseExceptionhandler.handlerThreadSpecName;
             if (handlerSpecName != null) {
-                ThreadSpecSchema handlerSpec = threadSpec.wfSpec.threadSpecs.get(
+                ThreadSpec handlerSpec = threadSpec.wfSpec.threadSpecs.get(
                     handlerSpecName
                 );
                 if (handlerSpec == null) {
@@ -141,10 +201,10 @@ public class NodeSchema extends BaseSchema {
     throws LHValidationError, LHConnectionError {
         try {
             taskDef = LHDatabaseClient.lookupOrCreateTaskDef(
-                taskDef, taskDefName, taskDefGuid, config
+                taskDef, taskDefName, taskDefDigest, config
             );
         } catch (Exception exn) {
-            String prefix = "Node " + name + ", thread " + threadSpecName;
+            String prefix = "Node " + name + ", thread " + threadSpec.name;
             if (exn instanceof LHValidationError) {
                 throw new LHValidationError(prefix + exn.getMessage());
             } else if (exn instanceof LHConnectionError) {
@@ -157,7 +217,7 @@ public class NodeSchema extends BaseSchema {
             throw exn;
         }
 
-        taskDefGuid = taskDef.getDigest();
+        taskDefDigest = taskDef.getDigest();
         taskDefName = taskDef.name;
     }
 
@@ -166,10 +226,10 @@ public class NodeSchema extends BaseSchema {
         try {
             externalEventDef = LHDatabaseClient.lookupOrCreateExternalEventDef(
                 externalEventDef, externalEventDefName,
-                externalEventDefGuid, config
+                externalEventDefDigest, config
             );
         } catch (Exception exn) {
-            String prefix = "Node " + name + ", thread " + threadSpecName;
+            String prefix = "Node " + name + ", thread " + threadSpec.name;
             if (exn instanceof LHValidationError) {
                 throw new LHValidationError(prefix + exn.getMessage());
             } else if (exn instanceof LHConnectionError) {
@@ -182,7 +242,7 @@ public class NodeSchema extends BaseSchema {
             throw exn;
         }
 
-        taskDefGuid = taskDef.getDigest();
+        taskDefDigest = taskDef.getDigest();
         taskDefName = taskDef.name;
     }
 
@@ -192,14 +252,14 @@ public class NodeSchema extends BaseSchema {
         if (tname == null) {
             throw new LHValidationError(
                 "Thread Spawn Node " + name + " specifies no thread to spawn" +
-                " on thread " + threadSpecName
+                " on thread " + threadSpec.name
             );
         }
 
-        ThreadSpecSchema tspec = threadSpec.wfSpec.threadSpecs.get(tname);
+        ThreadSpec tspec = threadSpec.wfSpec.threadSpecs.get(tname);
         if (tspec == null) {
             throw new LHValidationError(
-                "Thread Spawn Node " + name + " on thread spec " + threadSpecName +
+                "Thread Spawn Node " + name + " on thread spec " + threadSpec.name +
                 " specified unknown thread to spawn: " + tname
             );
         }
@@ -207,7 +267,7 @@ public class NodeSchema extends BaseSchema {
 
     private void fillOutWaitForThreadNode(Config config)
     throws LHValidationError, LHConnectionError {
-        NodeSchema sourceNode = threadSpec.nodes.get(threadWaitSourceNodeName);
+        Node sourceNode = threadSpec.nodes.get(threadWaitSourceNodeName);
 
         if (sourceNode == null) {
             throw new LHValidationError(

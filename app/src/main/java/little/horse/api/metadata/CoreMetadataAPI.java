@@ -12,11 +12,11 @@ import little.horse.common.objects.metadata.CoreMetadata;
 
 public class CoreMetadataAPI<T extends CoreMetadata> {
     private Config config;
-    private Class<? extends CoreMetadata> cls;
+    private Class<T> cls;
     private APIStreamsContext streamContext;
 
     public CoreMetadataAPI(
-        Config config, Class<? extends CoreMetadata> cls, APIStreamsContext context) {
+        Config config, Class<T> cls, APIStreamsContext context) {
         this.config = config;
         this.cls = cls;
         this.streamContext = context;
@@ -30,7 +30,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         T t;
         try {
             t = BaseSchema.fromBytes(
-                ctx.bodyAsBytes(), this.cls, config, true
+                ctx.bodyAsBytes(), this.cls, config
             );
         } catch (LHSerdeError exn) {
             exn.printStackTrace();

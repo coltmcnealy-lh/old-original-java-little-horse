@@ -21,13 +21,13 @@ import little.horse.api.util.APIStreamsContext;
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
-import little.horse.common.objects.metadata.EdgeConditionSchema;
-import little.horse.common.objects.metadata.EdgeSchema;
-import little.horse.common.objects.metadata.NodeSchema;
-import little.horse.common.objects.metadata.VariableAssignmentSchema;
-import little.horse.common.objects.metadata.WFRunVariableDefSchema;
-import little.horse.common.objects.rundata.ThreadRunSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.metadata.EdgeCondition;
+import little.horse.common.objects.metadata.Edge;
+import little.horse.common.objects.metadata.Node;
+import little.horse.common.objects.metadata.VariableAssignment;
+import little.horse.common.objects.metadata.WFRunVariableDef;
+import little.horse.common.objects.rundata.ThreadRun;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 
@@ -125,13 +125,13 @@ public class App {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else {
-            NodeSchema node = new NodeSchema();
+            Node node = new Node();
             node.name = "asdf";
             node.outgoingEdges = new ArrayList<>();
-            node.outgoingEdges.add(new EdgeSchema());
+            node.outgoingEdges.add(new Edge());
 
             node.variables = new HashMap<>();
-            VariableAssignmentSchema assn = new VariableAssignmentSchema();
+            VariableAssignment assn = new VariableAssignment();
             assn.defaultValue = "default";
             node.variables.put("foobar", assn);
 

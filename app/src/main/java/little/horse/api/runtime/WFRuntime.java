@@ -11,18 +11,18 @@ import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequestSchema;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.WFSpecSchema;
-import little.horse.common.objects.rundata.ThreadRunSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.ThreadRun;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 
 
 public class WFRuntime
-    implements Processor<String, WFEventSchema, String, WFRunSchema>
+    implements Processor<String, WFEventSchema, String, WFRun>
 {
-    private KeyValueStore<String, WFRunSchema> wfRunStore;
-    private KeyValueStore<String, WFSpecSchema> wfSpecStore;
+    private KeyValueStore<String, WFRun> wfRunStore;
+    private KeyValueStore<String, WFSpec> wfSpecStore;
     private Config config;
 
     public WFRuntime(Config config) {
@@ -30,7 +30,7 @@ public class WFRuntime
     }
 
     @Override
-    public void init(final ProcessorContext<String, WFRunSchema> context) {
+    public void init(final ProcessorContext<String, WFRun> context) {
         wfRunStore = context.getStateStore(Constants.WF_RUN_STORE);
         wfSpecStore = context.getStateStore(Constants.WF_SPEC_GUID_STORE);
     }
@@ -49,8 +49,8 @@ public class WFRuntime
         String wfRunGuid = record.key();
         WFEventSchema event = record.value();
 
-        WFRunSchema wfRun = wfRunStore.get(wfRunGuid);
-        WFSpecSchema wfSpec = getWFSpec(event.wfSpecGuid);
+        WFRun wfRun = wfRunStore.get(wfRunGuid);
+        WFSpec wfSpec = getWFSpec(event.wfSpecDigest);
 
         if (wfSpec == null && event.type == WFEventType.WF_RUN_STARTED) {
             throw new RuntimeException("Implement wfspec lookup");
@@ -92,7 +92,7 @@ public class WFRuntime
             wfRun.updateStatuses(event);
             boolean didAdvance = false;
             for (int i = 0; i < wfRun.threadRuns.size(); i++) {
-                ThreadRunSchema thread = wfRun.threadRuns.get(i);
+                ThreadRun thread = wfRun.threadRuns.get(i);
                 didAdvance = thread.advance(event) || didAdvance;
             }
             shouldAdvance = didAdvance;
@@ -102,7 +102,7 @@ public class WFRuntime
         wfRunStore.put(wfRun.guid, wfRun);
     }
 
-    private WFSpecSchema getWFSpec(String guid) throws LHConnectionError {
+    private WFSpec getWFSpec(String guid) throws LHConnectionError {
         return guid == null ? null : wfSpecStore.get(guid);
     }
 

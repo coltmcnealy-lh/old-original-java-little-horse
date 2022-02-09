@@ -3,7 +3,7 @@ package little.horse.common.objects.metadata;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.rundata.WFRunMetadataEnum;
 
-public class VariableAssignmentSchema extends BaseSchema {
+public class VariableAssignment extends BaseSchema {
     // A Task-level variable can be assigned to one of three things:
     // 1. A WFRunVariable
     // 2. A literal value

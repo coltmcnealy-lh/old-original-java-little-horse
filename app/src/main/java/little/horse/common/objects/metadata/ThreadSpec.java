@@ -5,53 +5,63 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
+import little.horse.common.util.json.JsonMapKey;
 
-public class ThreadSpecSchema extends BaseSchema {
+
+@JsonIdentityInfo(
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "name"
+)
+public class ThreadSpec extends BaseSchema {
+    @JsonMapKey
     public String name;
-    public HashMap<String, WFRunVariableDefSchema> variableDefs;
-    public HashMap<String, InterruptDefSchema> interruptDefs;
-    public ArrayList<EdgeSchema> edges;
     public String entrypointNodeName;
+
+    @JsonManagedReference
+    public HashMap<String, WFRunVariableDef> variableDefs;
+    
+    @JsonManagedReference
+    public HashMap<String, InterruptDef> interruptDefs;
+    
+    @JsonManagedReference
+    public ArrayList<Edge> edges;
 
     @JsonBackReference
     @DigestIgnore
-    public WFSpecSchema wfSpec;
+    public WFSpec wfSpec;
 
     @JsonManagedReference
-    public HashMap<String, NodeSchema> nodes;
+    public HashMap<String, Node> nodes;
 
-    @Override
-    public void fillOut(Config config) throws LHValidationError {
-        throw new RuntimeException("This shouldn't be called.");
-    }
-
-    public void fillOut(Config config, WFSpecSchema parent)
+    public void fillOut(Config config, WFSpec parent)
     throws LHValidationError, LHConnectionError {
         setConfig(config);
 
         wfSpec = parent;
         if (variableDefs == null) {
-            variableDefs = new HashMap<String, WFRunVariableDefSchema>();
+            variableDefs = new HashMap<String, WFRunVariableDef>();
         }
         if (interruptDefs == null) {
-            interruptDefs = new HashMap<String, InterruptDefSchema>();
+            interruptDefs = new HashMap<String, InterruptDef>();
         }
 
-        if (edges == null) edges = new ArrayList<EdgeSchema>();
-        for (EdgeSchema edge : edges) {
+        if (edges == null) edges = new ArrayList<Edge>();
+        for (Edge edge : edges) {
             cleanupEdge(edge);
         }
 
-        for (Map.Entry<String, NodeSchema> p: nodes.entrySet()) {
-            NodeSchema node = p.getValue();
+        for (Map.Entry<String, Node> p: nodes.entrySet()) {
+            Node node = p.getValue();
             String nodeName = p.getKey();
             node.name = nodeName;
             node.fillOut(config, this);
@@ -61,12 +71,12 @@ public class ThreadSpecSchema extends BaseSchema {
         // There are no leaf CoreMetadata here, so we go on.
     }
 
-    private void cleanupEdge(EdgeSchema edge) {
-        NodeSchema source = nodes.get(edge.sourceNodeName);
-        NodeSchema sink = nodes.get(edge.sinkNodeName);
+    private void cleanupEdge(Edge edge) {
+        Node source = nodes.get(edge.sourceNodeName);
+        Node sink = nodes.get(edge.sinkNodeName);
 
         boolean alreadyHasEdge = false;
-        for (EdgeSchema candidate : source.outgoingEdges) {
+        for (Edge candidate : source.outgoingEdges) {
             if (candidate.sinkNodeName.equals(sink.name)) {
                 alreadyHasEdge = true;
                 break;
@@ -83,9 +93,9 @@ public class ThreadSpecSchema extends BaseSchema {
         if (entrypointNodeName != null) {
             return entrypointNodeName;
         }
-        NodeSchema entrypoint = null;
-        for (Map.Entry<String, NodeSchema> pair: nodes.entrySet()) {
-            NodeSchema node = pair.getValue();
+        Node entrypoint = null;
+        for (Map.Entry<String, Node> pair: nodes.entrySet()) {
+            Node node = pair.getValue();
             if (node.incomingEdges.size() == 0) {
                 if (entrypoint != null) {
                     throw new LHValidationError(

@@ -9,7 +9,7 @@ import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
-import little.horse.common.objects.metadata.TaskDefSchema;
+import little.horse.common.objects.metadata.TaskDef;
 
 public class TaskDefAPI {
     private Config config;
@@ -21,10 +21,10 @@ public class TaskDefAPI {
     }
 
     public void post(Context ctx) {
-        TaskDefSchema spec = ctx.bodyAsClass(TaskDefSchema.class);
+        TaskDef spec = ctx.bodyAsClass(TaskDef.class);
 
         try {
-            spec.fillOut(config);
+            spec.validate(config);
         } catch (LHValidationError exn) {
             ctx.status(400);
             LHAPIError error = new LHAPIError(exn.getMessage());
@@ -41,18 +41,18 @@ public class TaskDefAPI {
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = "";
+        response.digest = "";
         response.name = "";
         ctx.json(response);
     }
 
     public void get(Context ctx) {
-        ReadOnlyKeyValueStore<String, TaskDefSchema> nStore = streams.getTaskDefNameStore();
-        ReadOnlyKeyValueStore<String, TaskDefSchema> gStore = streams.getTaskDefGuidStore();
+        ReadOnlyKeyValueStore<String, TaskDef> nStore = streams.getTaskDefNameStore();
+        ReadOnlyKeyValueStore<String, TaskDef> gStore = streams.getTaskDefGuidStore();
         String id = ctx.pathParam("nameOrGuid");
 
-        TaskDefSchema schemaFromName = nStore.get(id);
-        TaskDefSchema schemaFromGuid = gStore.get(id);
+        TaskDef schemaFromName = nStore.get(id);
+        TaskDef schemaFromGuid = gStore.get(id);
         if (schemaFromName != null) {
             ctx.json(schemaFromName);
             return;

@@ -20,24 +20,31 @@ implements Processor<String, T, String, T> {
 
     @Override
     public void process(final Record<String, T> record) {
-        T t = record.value();
-        if (t == null) {
+        T newMeta = record.value();
+        T old = kvStore.get(record.key());
+
+        if (newMeta == null) {
+            if (old != null) {
+                old.remove();
+            }
             kvStore.delete(record.key());
             return;
         }
 
-        T old = kvStore.get(record.key());
-        Thread thread = new Thread(
-            // This is where the actual deployment happens.
-            () -> {t.processChange(old);}
-        );
-        thread.start();
+        // It is somewhat frowned upon to do this within Kafka Streams. However,
+        // the processChange is an idempotent, level-triggered method; so repeated
+        // calls are not destructive. Furthermore, the deployment of TaskQueue's
+        // needn't be super-low latency from when the original API call comes in,
+        // because a) creating TaskQueue/deploying WFSpec goes through slow Kafka and
+        // Kubernetes API's, and b) the expected throughput of Metadata changes is
+        // low, so we don't have to be super fast.
+        newMeta.processChange(old);
 
-        kvStore.put(record.key(), t);
+        kvStore.put(record.key(), newMeta);
         // Now, we re-key it.
         Record<String, T> nameKeyedRecord = new Record<>(
-            t.name,
-            t,
+            newMeta.name,
+            newMeta,
             record.timestamp()
         );
         context.forward(nameKeyedRecord);

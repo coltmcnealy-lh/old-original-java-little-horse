@@ -8,25 +8,25 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.NodeSchema;
+import little.horse.common.objects.metadata.Node;
 
-public class TaskRunSchema extends BaseSchema {
+public class TaskRun extends BaseSchema {
     @JsonBackReference
-    public ThreadRunSchema parentThread;
+    public ThreadRun parentThread;
 
     public int number;
-    public String wfSpecGuid;
+    public String wfSpecDigest;
     public String wfSpecName;
     public int threadID;
 
     public String nodeName;
-    public String nodeGuid;
+    public String nodeDigest;
 
     public ArrayList<String> bashCommand;
     public Object stdin;
     public int attemptNumber = 1;
 
-    public LHStatus status;
+    public LHDeployStatus status;
     public Object stdout;
     public Object stderr;
     public int returnCode;
@@ -41,18 +41,18 @@ public class TaskRunSchema extends BaseSchema {
 
     @JsonIgnore
     public boolean isTerminated() {
-        return (status == LHStatus.COMPLETED || status == LHStatus.ERROR);
+        return (status == LHDeployStatus.COMPLETED || status == LHDeployStatus.ERROR);
     }
 
     @JsonIgnore
     public boolean isCompleted() {
         return (
-            status == LHStatus.COMPLETED || status == LHStatus.FAILED_AND_HANDLED
+            status == LHDeployStatus.COMPLETED || status == LHDeployStatus.FAILED_AND_HANDLED
         );
     }
 
     @JsonIgnore
-    public NodeSchema getNode() throws LHConnectionError {
+    public Node getNode() throws LHConnectionError {
         if (parentThread == null) {
             throw new RuntimeException("Parent thread of taskrun was null!");
         }

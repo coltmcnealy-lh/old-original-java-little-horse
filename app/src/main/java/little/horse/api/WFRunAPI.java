@@ -11,8 +11,8 @@ import little.horse.common.Config;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequestSchema;
-import little.horse.common.objects.rundata.LHStatus;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.rundata.LHDeployStatus;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
@@ -26,10 +26,10 @@ public class WFRunAPI {
     }
 
     public void get(Context ctx) {
-        ReadOnlyKeyValueStore<String, WFRunSchema> store = wfRunStreams.getWFRunStore();
+        ReadOnlyKeyValueStore<String, WFRun> store = wfRunStreams.getWFRunStore();
         String wfRunGuid = ctx.pathParam("wfRunGuid");
 
-        WFRunSchema wfRun = store.get(wfRunGuid);
+        WFRun wfRun = store.get(wfRunGuid);
         if (wfRun == null) {
             ctx.status(404);
             return;
@@ -83,8 +83,8 @@ public class WFRunAPI {
         config.send(record); // TODO: Some checking that it went through.
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = guid;
-        response.status = LHStatus.PENDING;
+        response.digest = guid;
+        response.status = LHDeployStatus.PENDING;
 
         ctx.status(201);
         ctx.json(response);
@@ -99,7 +99,7 @@ public class WFRunAPI {
 
         try {
             event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
-            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecDigest = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
         } catch(Exception exn) {
@@ -113,7 +113,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = wfRunGuid;
+        response.digest = wfRunGuid;
         response.status = null;
 
         ctx.json(response);
@@ -129,7 +129,7 @@ public class WFRunAPI {
         try {
             event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
             event.threadID = 0;
-            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecDigest = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
         } catch(Exception exn) {
@@ -143,7 +143,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = wfRunGuid;
+        response.digest = wfRunGuid;
         response.status = null;
 
         ctx.json(response);
@@ -160,7 +160,7 @@ public class WFRunAPI {
         try {
             event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
             event.threadID = tid;
-            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecDigest = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
         } catch(Exception exn) {
@@ -174,7 +174,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = wfRunGuid;
+        response.digest = wfRunGuid;
         response.status = null;
 
         ctx.json(response);
@@ -190,7 +190,7 @@ public class WFRunAPI {
 
         try {
             event.wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
-            event.wfSpecGuid = event.wfRun.wfSpecGuid;
+            event.wfSpecDigest = event.wfRun.wfSpecDigest;
             event.threadID = tid;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
@@ -205,7 +205,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = wfRunGuid;
+        response.digest = wfRunGuid;
         response.status = null;
 
         ctx.json(response);

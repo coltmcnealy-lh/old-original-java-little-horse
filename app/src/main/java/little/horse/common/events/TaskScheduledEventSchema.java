@@ -9,7 +9,7 @@ import little.horse.common.objects.BaseSchema;
 
 public class TaskScheduledEventSchema extends BaseSchema {
     public String wfRunGuid;
-    public String wfSpecGuid;
+    public String wfSpecDigest;
     public String wfSpecName;
     public String taskType;
     public String taskQueueName;

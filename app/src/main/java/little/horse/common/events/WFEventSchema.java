@@ -8,10 +8,10 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.rundata.WFRun;
 
 public class WFEventSchema extends BaseSchema {
-    public String wfSpecGuid;
+    public String wfSpecDigest;
     public String wfSpecName;
     public String wfRunGuid;
     public Date timestamp;
@@ -24,7 +24,7 @@ public class WFEventSchema extends BaseSchema {
     public String content;
 
     @JsonIgnore
-    public WFRunSchema wfRun;
+    public WFRun wfRun;
 
     public void record() throws LHConnectionError {
         if (wfRun == null || config == null) {

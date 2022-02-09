@@ -7,8 +7,8 @@ import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
-import little.horse.common.objects.metadata.WFSpecSchema;
-import little.horse.common.objects.rundata.LHStatus;
+import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.LHDeployStatus;
 
 public class WFSpecAPI {
     private Config config;
@@ -20,9 +20,9 @@ public class WFSpecAPI {
     }
 
     public void post(Context ctx) {
-        WFSpecSchema spec;
+        WFSpec spec;
         try {
-            spec = ctx.bodyAsClass(WFSpecSchema.class);
+            spec = ctx.bodyAsClass(WFSpec.class);
         } catch(Exception exn) {
             ctx.status(400);
             LHAPIError error = new LHAPIError("Bad input value: " + exn.getMessage());
@@ -31,7 +31,7 @@ public class WFSpecAPI {
         }
         
         try {
-            spec.fillOut(config);
+            spec.validate(config);
         } catch (LHValidationError exn) {
             ctx.status(400);
             LHAPIError err = new LHAPIError(exn.getMessage());
@@ -48,14 +48,14 @@ public class WFSpecAPI {
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = spec.getDigest();
+        response.digest = spec.getDigest();
         response.status = spec.status;
         response.name = spec.name;
         ctx.json(response);
     }
 
-    private WFSpecSchema getFromIdentifier(String wfSpecId) {
-        WFSpecSchema schema = streams.getWFSpecGuidStore().get(wfSpecId);
+    private WFSpec getFromIdentifier(String wfSpecId) {
+        WFSpec schema = streams.getWFSpecGuidStore().get(wfSpecId);
         if (schema != null) {
             return schema;
         }
@@ -67,7 +67,7 @@ public class WFSpecAPI {
     public void get(Context ctx) {
         String wfSpecId = ctx.pathParam("nameOrGuid");
 
-        WFSpecSchema schema = getFromIdentifier(wfSpecId);
+        WFSpec schema = getFromIdentifier(wfSpecId);
         if (schema != null) {
             ctx.json(schema);
             return;
@@ -80,7 +80,7 @@ public class WFSpecAPI {
     public void delete(Context ctx) {
         String wfSpecId = ctx.pathParam("nameOrGuid");
 
-        WFSpecSchema schema = getFromIdentifier(wfSpecId);
+        WFSpec schema = getFromIdentifier(wfSpecId);
         
         if (schema == null) {
             ctx.status(404);
@@ -88,12 +88,12 @@ public class WFSpecAPI {
         }
         schema.setConfig(config);
         
-        schema.desiredStatus = LHStatus.REMOVED;
+        schema.desiredStatus = LHDeployStatus.REMOVED;
         schema.record();
         ctx.status(202);
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = schema.getDigest();
+        response.digest = schema.getDigest();
         response.name = schema.name;
         response.status = schema.status;
 

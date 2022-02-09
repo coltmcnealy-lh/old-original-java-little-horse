@@ -4,17 +4,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.util.concurrent.ExecutionError;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.streams.processor.api.Record;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
 import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIPostResult;
+import little.horse.api.util.LHDeployException;
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrelSchema;
 import little.horse.common.events.WFEventSchema;
@@ -22,31 +24,41 @@ import little.horse.common.events.WFRunRequestSchema;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.DigestIgnore;
 import little.horse.common.objects.LHSerdeError;
-import little.horse.common.objects.rundata.LHStatus;
-import little.horse.common.objects.rundata.ThreadRunMetaSchema;
-import little.horse.common.objects.rundata.ThreadRunSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
-import little.horse.common.objects.rundata.WFRunStatus;
+import little.horse.common.objects.rundata.LHDeployStatus;
+import little.horse.common.objects.rundata.ThreadRunMeta;
+import little.horse.common.objects.rundata.ThreadRun;
+import little.horse.common.objects.rundata.WFRun;
+import little.horse.common.objects.rundata.LHExecutionStatus;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
-public class WFSpecSchema extends CoreMetadata {
+
+// Just scoping for the purposes of the json parser
+@JsonIdentityInfo(
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "name"
+)
+public class WFSpec extends CoreMetadata {
+    public static String typeName = "wfSpec";
+
     public String name;
-    private String guid;
-    public LHStatus status;
+    public String myDigest;
+    public LHDeployStatus status;
     public String kafkaTopic;
     public String entrypointThreadName;
-    public LHStatus desiredStatus;
+    public LHDeployStatus desiredStatus;
     public String k8sName;
     public String namespace;
-
-    public HashMap<String, ThreadSpecSchema> threadSpecs;
     public HashSet<String> interruptEvents;
 
-    // All fields below ignored by Json
+    @JsonManagedReference
+    public HashMap<String, ThreadSpec> threadSpecs;
+
     @JsonIgnore
-    private HashMap<String, HashMap<String, WFRunVariableDefSchema>> allVarDefs;
+    @DigestIgnore
+    private HashMap<String, HashMap<String, WFRunVariableDef>> allVarDefs;
 
     /**
      * Validates that:
@@ -70,7 +82,6 @@ public class WFSpecSchema extends CoreMetadata {
             visibleVariables,
             this.entrypointThreadName
         );
-        
     }
 
     /**
@@ -92,7 +103,7 @@ public class WFSpecSchema extends CoreMetadata {
             return;
         }
 
-        ThreadSpecSchema thread = this.threadSpecs.get(threadName);
+        ThreadSpec thread = this.threadSpecs.get(threadName);
         for (String varName: thread.variableDefs.keySet()) {
             if (seenVars.containsKey(varName)) {
                 throw new LHValidationError(
@@ -106,9 +117,9 @@ public class WFSpecSchema extends CoreMetadata {
 
         // Now iterate through all of the tasks in this thread and see if the
         // variables are defined.
-        for (NodeSchema node: thread.nodes.values()) {
+        for (Node node: thread.nodes.values()) {
             for (String varName: node.variables.keySet()) {
-                VariableAssignmentSchema assign = node.variables.get(varName);
+                VariableAssignment assign = node.variables.get(varName);
                 if (assign.wfRunVariableName == null) {
                     continue;
                 }
@@ -133,7 +144,7 @@ public class WFSpecSchema extends CoreMetadata {
         }
 
         // Now process every potential child thread.
-        for (NodeSchema node: thread.nodes.values()) {
+        for (Node node: thread.nodes.values()) {
             if (node.nodeType == NodeType.SPAWN_THREAD) {
                 String nextThreadName = node.threadSpawnThreadSpecName;
                 validateVariablesHelper(seenThreads, seenVars, nextThreadName);
@@ -156,7 +167,7 @@ public class WFSpecSchema extends CoreMetadata {
     private void makeSureNoDuplicateVarNames() throws LHValidationError {
         HashSet<String> seen = new HashSet<String>();
         for (Map.Entry<
-                String, HashMap<String, WFRunVariableDefSchema>
+                String, HashMap<String, WFRunVariableDef>
             > e: allVarDefs.entrySet()
         ) {
             for (String varName: e.getValue().keySet()) {
@@ -171,11 +182,11 @@ public class WFSpecSchema extends CoreMetadata {
     }
 
     @JsonIgnore
-    public ArrayList<Map.Entry<String, NodeSchema>> allNodePairs() {
-        ArrayList<Map.Entry<String, NodeSchema>> out = new ArrayList<>();
-        for (Map.Entry<String, ThreadSpecSchema> tp: threadSpecs.entrySet()) {
-            ThreadSpecSchema t = tp.getValue();
-            for (Map.Entry<String, NodeSchema> np: t.nodes.entrySet()) {
+    public ArrayList<Map.Entry<String, Node>> allNodePairs() {
+        ArrayList<Map.Entry<String, Node>> out = new ArrayList<>();
+        for (Map.Entry<String, ThreadSpec> tp: threadSpecs.entrySet()) {
+            ThreadSpec t = tp.getValue();
+            for (Map.Entry<String, Node> np: t.nodes.entrySet()) {
                 out.add(np);
             }
         }
@@ -183,15 +194,15 @@ public class WFSpecSchema extends CoreMetadata {
     }
 
     @JsonIgnore
-    public WFRunSchema newRun(
+    public WFRun newRun(
         final Record<String, WFEventSchema> record
     ) throws LHConnectionError {
-        WFRunSchema wfRun = new WFRunSchema();
+        WFRun wfRun = new WFRun();
         WFEventSchema event = record.value();
         WFRunRequestSchema runRequest;
         try {
             runRequest = BaseSchema.fromString(
-                event.content, WFRunRequestSchema.class, config, true
+                event.content, WFRunRequestSchema.class, config
             );
         } catch (LHSerdeError exn) {
             exn.printStackTrace();
@@ -199,17 +210,17 @@ public class WFSpecSchema extends CoreMetadata {
         }
 
         wfRun.guid = record.key();
-        wfRun.wfSpecGuid = event.wfSpecGuid;
+        wfRun.wfSpecDigest = event.wfSpecDigest;
         wfRun.wfSpecName = event.wfSpecName;
         wfRun.setWFSpec(this);
 
-        wfRun.status = WFRunStatus.RUNNING;
-        wfRun.threadRuns = new ArrayList<ThreadRunSchema>();
+        wfRun.status = LHExecutionStatus.RUNNING;
+        wfRun.threadRuns = new ArrayList<ThreadRun>();
         wfRun.correlatedEvents =
             new HashMap<String, ArrayList<ExternalEventCorrelSchema>>();
 
         wfRun.startTime = event.timestamp;
-        wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMetaSchema>>();
+        wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMeta>>();
 
         wfRun.threadRuns.add(wfRun.createThreadClientAdds(
             entrypointThreadName, runRequest.variables, null
@@ -229,11 +240,6 @@ public class WFSpecSchema extends CoreMetadata {
     }
 
     @JsonIgnore
-    public void deploy() {
-        throw new RuntimeException("Implement me!");
-    }
-
-    @JsonIgnore
     public void undeploy() {
         throw new RuntimeException("Implement me!");
     }
@@ -245,35 +251,35 @@ public class WFSpecSchema extends CoreMetadata {
 
     @Override
     public void processChange(CoreMetadata old) {
-        if (!(old instanceof WFSpecSchema)) {
+        if (!(old instanceof WFSpec)) {
             throw new RuntimeException(
                 "Called processChange on a non-WFSpecSchema."
             );
         }
 
-        WFSpecSchema oldSpec = (WFSpecSchema) old;
+        WFSpec oldSpec = (WFSpec) old;
         if (oldSpec.status != desiredStatus) {
-            if (desiredStatus == LHStatus.RUNNING) {
+            if (desiredStatus == LHDeployStatus.RUNNING) {
                 deploy();
-            } else if (desiredStatus == LHStatus.REMOVED) {
+            } else if (desiredStatus == LHDeployStatus.REMOVED) {
                 remove();
-            } else if (desiredStatus == LHStatus.STOPPED) {
+            } else if (desiredStatus == LHDeployStatus.STOPPED) {
                 undeploy();
             }
         }
     }
 
     @Override
-    public void fillOut(Config config) throws LHValidationError, LHConnectionError {
+    public void validate(Config config) throws LHValidationError, LHConnectionError {
         setConfig(config);
-        if (status == null) status = LHStatus.STOPPED;
-        if (desiredStatus == null) desiredStatus = LHStatus.RUNNING;
+        if (status == null) status = LHDeployStatus.STOPPED;
+        if (desiredStatus == null) desiredStatus = LHDeployStatus.RUNNING;
         if (namespace == null) namespace = "default";  // Trololol
 
         // TODO: This doesn't yet support lookUpOrCreateExternalEvent.
         // In the future, we'll want to support that use case.
         interruptEvents = new HashSet<String>();
-        for (ThreadSpecSchema thread: this.threadSpecs.values()) {
+        for (ThreadSpec thread: this.threadSpecs.values()) {
             thread.fillOut(config, this);
 
             if (allVarDefs.containsKey(name)) {
@@ -283,12 +289,12 @@ public class WFSpecSchema extends CoreMetadata {
             }
             allVarDefs.put(name, thread.variableDefs);
 
-            for (Map.Entry<String, InterruptDefSchema> p:
+            for (Map.Entry<String, InterruptDef> p:
                 thread.interruptDefs.entrySet()
             ) {
                 // know to handle this event as interrupt
                 interruptEvents.add(p.getKey());
-                String tspecName = p.getValue().threadSpecName;
+                String tspecName = p.getValue().handlerThreadName;
                 if (!threadSpecs.containsKey(tspecName)) {
                     throw new LHValidationError(
                         "Interrupt handler " + p.getKey() + " references nonexistent"
@@ -301,35 +307,46 @@ public class WFSpecSchema extends CoreMetadata {
 
         validateVariables();
         
-        guid = getDigest();
+        myDigest = getDigest();
         if (kafkaTopic == null) {
             kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
-                + guid.substring(0, 8);
+                + myDigest.substring(0, 8);
         }
-        k8sName = LHUtil.toValidK8sName(name + "-" + LHUtil.digestify(guid));
+        k8sName = LHUtil.toValidK8sName(name + "-" + LHUtil.digestify(myDigest));
     }
 
     @JsonIgnore
-    public HashSet<NodeSchema> getAllNodes() {
-        HashSet<NodeSchema> out = new HashSet<NodeSchema>();
-        for (ThreadSpecSchema thread: threadSpecs.values()) {
-            for (NodeSchema node: thread.nodes.values()) {
+    public HashSet<Node> getAllNodes() {
+        HashSet<Node> out = new HashSet<Node>();
+        for (ThreadSpec thread: threadSpecs.values()) {
+            for (Node node: thread.nodes.values()) {
                 out.add(node);
             }
         }
         return out;
     }
 
-    @Override
     @JsonIgnore
     @SuppressWarnings("unchecked")  // TODO: Figure out how to not have to do this.
-    public LHAPIPostResult<WFSpecSchema> createIfNotExists(APIStreamsContext ctx)
-    throws LHConnectionError, LHValidationError {
-        LHAPIPostResult<WFSpecSchema> out = new LHAPIPostResult<WFSpecSchema>();
+    public LHAPIPostResult<WFSpec> createIfNotExists(APIStreamsContext ctx)
+    throws LHDeployException {
+        try {
+            return createHelper(ctx);
+        } catch (LHValidationError exn) {
+            throw new LHDeployException(exn, exn.getMessage(), 400);
+        } catch (LHConnectionError exn) {
+            throw new LHDeployException(exn, exn.getMessage(), 500);
+        }
+    }
+
+    @JsonIgnore
+    private LHAPIPostResult<WFSpec> createHelper(APIStreamsContext ctx)
+    throws LHValidationError, LHConnectionError, LHDeployException {
+        LHAPIPostResult<WFSpec> out = new LHAPIPostResult<WFSpec>();
 
         // First, see if the thing already exists.
-        WFSpecSchema old = LHDatabaseClient.lookupMeta(
-            getDigest(), config, WFSpecSchema.class
+        WFSpec old = LHDatabaseClient.lookupMeta(
+            getDigest(), config, WFSpec.class
         );
         if (old != null) {
             out.spec = old;
@@ -344,7 +361,7 @@ public class WFSpecSchema extends CoreMetadata {
         // and block until we know whether it was created or it orzdashed.
 
         // There's a bunch of TaskDef's here, let's create those if they don't exist.
-        for (NodeSchema node: getAllNodes()) {
+        for (Node node: getAllNodes()) {
             // We know that node.fillOut() will have already been called. This means
             // that the node's taskDefGuid, taskDefName, and taskDef are all set.
             // But we don't yet know if the node's taskDef was created yet.
@@ -352,7 +369,7 @@ public class WFSpecSchema extends CoreMetadata {
             // we have to throw the taskDef at the API and see what sticks.
 
             // TODO: parallelize this.
-            LHAPIPostResult<TaskDefSchema> result = node.taskDef.createIfNotExists(
+            LHAPIPostResult<TaskDef> result = node.taskDef.createIfNotExists(
                 ctx
             );
 
@@ -384,11 +401,12 @@ public class WFSpecSchema extends CoreMetadata {
             throw new RuntimeException("orzdash");
         }
 
-        ctx.waitForProcessing(meta, WFSpecSchema.class);
+        ctx.waitForProcessing(meta, WFSpec.class);
 
         old = LHDatabaseClient.lookupMeta(
-            getDigest(), config, WFSpecSchema.class
+            getDigest(), config, WFSpec.class
         );
+
         if (old != null) {
             out.spec = old;
             out.record = null;
@@ -399,6 +417,4 @@ public class WFSpecSchema extends CoreMetadata {
         }
         throw new RuntimeException("Argh, wtf?");
     }
-
-    
 }

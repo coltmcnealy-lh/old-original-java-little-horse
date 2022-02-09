@@ -8,8 +8,10 @@ import java.util.HashSet;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrelSchema;
@@ -23,29 +25,37 @@ import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.VarSubOrzDash;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.EdgeConditionSchema;
-import little.horse.common.objects.metadata.EdgeSchema;
-import little.horse.common.objects.metadata.ExceptionHandlerSpecSchema;
-import little.horse.common.objects.metadata.InterruptDefSchema;
-import little.horse.common.objects.metadata.NodeSchema;
+import little.horse.common.objects.LHSerdeError;
+import little.horse.common.objects.metadata.EdgeCondition;
+import little.horse.common.objects.metadata.Edge;
+import little.horse.common.objects.metadata.ExceptionHandlerSpec;
+import little.horse.common.objects.metadata.InterruptDef;
+import little.horse.common.objects.metadata.Node;
 import little.horse.common.objects.metadata.NodeType;
-import little.horse.common.objects.metadata.ThreadSpecSchema;
-import little.horse.common.objects.metadata.VariableAssignmentSchema;
+import little.horse.common.objects.metadata.ThreadSpec;
+import little.horse.common.objects.metadata.VariableAssignment;
 import little.horse.common.objects.metadata.VariableMutationOperation;
-import little.horse.common.objects.metadata.VariableMutationSchema;
-import little.horse.common.objects.metadata.WFRunVariableDefSchema;
+import little.horse.common.objects.metadata.VariableMutation;
+import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFRunVariableTypeEnum;
-import little.horse.common.objects.metadata.WFSpecSchema;
+import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHUtil;
 
-public class ThreadRunSchema extends BaseSchema {
+
+@JsonIdentityInfo(
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "id"
+)
+public class ThreadRun extends BaseSchema {
     public String threadSpecName;
-    public String threadSpecGuid;
+
+    @JsonBackReference
+    public WFRun wfRun;
 
     @JsonManagedReference
-    public ArrayList<TaskRunSchema> taskRuns;
-    public ArrayList<EdgeSchema> upNext;
-    public WFRunStatus status;
+    public ArrayList<TaskRun> taskRuns;
+    public ArrayList<Edge> upNext;
+    public LHExecutionStatus status;
 
     public HashMap<String, Object> variables;
 
@@ -72,25 +82,14 @@ public class ThreadRunSchema extends BaseSchema {
     public HashSet<WFHaltReasonEnum> haltReasons;
 
     @JsonIgnore
-    private ThreadSpecSchema privateThreadSpec;
-
-    @JsonBackReference
-    public WFRunSchema wfRun;
+    private ThreadSpec privateThreadSpec;
 
     @JsonIgnore
-    public ThreadSpecSchema threadSpec;
+    public ThreadSpec threadSpec;
 
     @JsonIgnore
-    private ThreadSpecSchema getThreadSpec()
-    throws LHConnectionError {
-        if (threadSpec != null) return threadSpec;
-        if (wfRun == null) {
-            throw new RuntimeException(
-                "parent wfRun isn't set and config isn't set!!"
-            );
-        }
-        threadSpec = wfRun.getWFSpec().threadSpecs.get(threadSpecName);
-        return threadSpec;
+    private ThreadSpec getThreadSpec() throws LHConnectionError {
+        return wfRun.getWFSpec().threadSpecs.get(threadSpecName);
     }
 
     /**
@@ -112,7 +111,7 @@ public class ThreadRunSchema extends BaseSchema {
 
         // Yay, recursion!
         if (parentThreadID != null) {
-            ThreadRunSchema parent = wfRun.threadRuns.get(parentThreadID);
+            ThreadRun parent = wfRun.threadRuns.get(parentThreadID);
             out.putAll(parent.getAllVariables());
         }
 
@@ -135,16 +134,16 @@ public class ThreadRunSchema extends BaseSchema {
         if (wfRun == null) {
             throw new RuntimeException("wfRun was not set yet!");
         }
-        WFSpecSchema wfSpec = wfRun.getWFSpec();
-        ThreadSpecSchema threadSchema = wfSpec.threadSpecs.get(threadSpecName);
+        WFSpec wfSpec = wfRun.getWFSpec();
+        ThreadSpec threadSchema = wfSpec.threadSpecs.get(threadSpecName);
 
-        WFRunVariableDefSchema varDef = threadSchema.variableDefs.get(varName);
+        WFRunVariableDef varDef = threadSchema.variableDefs.get(varName);
         if (varDef != null) {
             return new VariableLookupResult(varDef, this, variables.get(varName));
         }
 
         if (parentThreadID != null) {
-            ThreadRunSchema parent = wfRun.threadRuns.get(parentThreadID);
+            ThreadRun parent = wfRun.threadRuns.get(parentThreadID);
             return parent.getVariableDefinition(varName);
         }
 
@@ -154,7 +153,7 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public Object getMutationRHS(
-        VariableMutationSchema mutSchema, TaskRunSchema tr
+        VariableMutation mutSchema, TaskRun tr
     ) throws LHConnectionError, VarSubOrzDash {
         if (mutSchema.copyDirectlyFromNodeOutput) {
             return tr.stdout;
@@ -168,7 +167,7 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public Object assignVariable(VariableAssignmentSchema var)
+    public Object assignVariable(VariableAssignment var)
     throws LHConnectionError, VarSubOrzDash {
         if (var.literalValue != null) {
             return var.literalValue;
@@ -191,7 +190,7 @@ public class ThreadRunSchema extends BaseSchema {
             if (var.wfRunMetadata == WFRunMetadataEnum.WF_RUN_GUID) {
                 return wfRun.guid;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_GUID) {
-                return wfRun.wfSpecGuid;
+                return wfRun.wfSpecDigest;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
                 return wfRun.wfSpecName;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_GUID) {
@@ -222,20 +221,20 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public void addEdgeToUpNext(EdgeSchema edge) {
+    public void addEdgeToUpNext(Edge edge) {
         upNext.add(edge);
     }
 
     @JsonIgnore
-    public TaskRunSchema createNewTaskRun(NodeSchema node) 
+    public TaskRun createNewTaskRun(Node node) 
     throws LHConnectionError {
-        TaskRunSchema tr = new TaskRunSchema();
-        tr.status = LHStatus.PENDING;
+        TaskRun tr = new TaskRun();
+        tr.status = LHDeployStatus.PENDING;
         tr.threadID = id;
         tr.number = taskRuns.size();
         tr.nodeName = node.name;
-        // tr.nodeGuid = node.guid;
-        tr.wfSpecGuid = wfRun.getWFSpec().getDigest();
+        // tr.nodeGuid = node.guid; // this was there prolly for some reason...
+        tr.wfSpecDigest = wfRun.getWFSpec().getDigest();
         tr.wfSpecName = wfRun.getWFSpec().name;
 
         tr.parentThread = this;
@@ -247,9 +246,14 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     public void incorporateEvent(WFEventSchema wfEvent)
     throws LHConnectionError {
-        TaskRunEventSchema event = BaseSchema.fromString(
-            wfEvent.content, TaskRunEventSchema.class, config, false
-        );
+        TaskRunEventSchema event;
+        try {
+            event = BaseSchema.fromString(
+                wfEvent.content, TaskRunEventSchema.class, config
+            );
+        } catch (LHSerdeError exn) {
+            throw new RuntimeException("Not possible");
+        }
         if (event.startedEvent != null) {
             handleTaskStarted(event);
         } else if (event.endedEvent != null) {
@@ -261,10 +265,10 @@ public class ThreadRunSchema extends BaseSchema {
     // but I'm not sure I wanna deal with jumping back and forth like that.
     @JsonIgnore
     private void handleTaskStarted(TaskRunEventSchema trEvent) {
-        TaskRunSchema tr = taskRuns.get(trEvent.taskRunNumber);
+        TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunStartedEventSchema event = trEvent.startedEvent;
 
-        tr.status = LHStatus.RUNNING;
+        tr.status = LHDeployStatus.RUNNING;
         tr.startTime = trEvent.timestamp;
         tr.bashCommand = event.bashCommand;
         tr.stdin = event.stdin;
@@ -279,8 +283,8 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     private void completeTask(
-        TaskRunSchema task,
-        LHStatus taskStatus,
+        TaskRun task,
+        LHDeployStatus taskStatus,
         String stdout,
         String stderr,
         Date endTime,
@@ -296,12 +300,12 @@ public class ThreadRunSchema extends BaseSchema {
 
         // Need the up next to be set whether or not the task fails/there is
         // a retry/it succeeds.
-        upNext = new ArrayList<EdgeSchema>();
-        for (EdgeSchema edge: task.getNode().outgoingEdges) {
+        upNext = new ArrayList<Edge>();
+        for (Edge edge: task.getNode().outgoingEdges) {
             upNext.add(edge);
         }
 
-        if (taskStatus == LHStatus.COMPLETED) {
+        if (taskStatus == LHDeployStatus.COMPLETED) {
             try {
                 mutateVariables(task);
             } catch(VarSubOrzDash exn) {
@@ -322,9 +326,9 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     private void handleTaskEnded(TaskRunEventSchema trEvent)
     throws LHConnectionError {
-        TaskRunSchema tr = taskRuns.get(trEvent.taskRunNumber);
+        TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunEndedEventSchema event = trEvent.endedEvent;
-        LHStatus taskStatus = event.success ? LHStatus.COMPLETED : LHStatus.ERROR;
+        LHDeployStatus taskStatus = event.success ? LHDeployStatus.COMPLETED : LHDeployStatus.ERROR;
 
         completeTask(
             tr, taskStatus, event.stdout, event.stderr, trEvent.timestamp,
@@ -333,7 +337,7 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public void mutateVariables(TaskRunSchema tr) 
+    public void mutateVariables(TaskRun tr) 
     throws VarSubOrzDash, LHConnectionError {
 
         // We need to do this atomically—-i.e. if there's one variable substitution
@@ -342,15 +346,15 @@ public class ThreadRunSchema extends BaseSchema {
         // there are no VarSubOrzDash's.
         ArrayList<Mutation> mutations = new ArrayList<Mutation>();
 
-        for (Map.Entry<String, VariableMutationSchema> pair:
+        for (Map.Entry<String, VariableMutation> pair:
             tr.getNode().variableMutations.entrySet())
         {
             String varName = pair.getKey();
-            VariableMutationSchema mutSchema = pair.getValue();
+            VariableMutation mutSchema = pair.getValue();
             VariableLookupResult varLookup = getVariableDefinition(varName);
 
-            WFRunVariableDefSchema varDef = varLookup.varDef;
-            ThreadRunSchema thread = varLookup.thread;
+            WFRunVariableDef varDef = varLookup.varDef;
+            ThreadRun thread = varLookup.thread;
             Object lhs = varLookup.value;
             Object rhs = getMutationRHS(mutSchema, tr);
             VariableMutationOperation op = mutSchema.operation;
@@ -372,13 +376,13 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     private void handleException(
-        String handlerSpecName, TaskRunSchema tr, LHFailureReason reason, String msg
+        String handlerSpecName, TaskRun tr, LHFailureReason reason, String msg
     ) throws LHConnectionError {
-        tr.status = LHStatus.ERROR;
+        tr.status = LHDeployStatus.ERROR;
         tr.failureMessage = msg;
         tr.failureReason = reason;
 
-        ThreadRunSchema handler = wfRun.createThreadClientAdds(
+        ThreadRun handler = wfRun.createThreadClientAdds(
             handlerSpecName,
             // In the future we may pass info to the handler thread.
             new HashMap<String, Object>(),
@@ -397,9 +401,9 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     private void failTask(
-        TaskRunSchema tr, LHFailureReason reason, String message
+        TaskRun tr, LHFailureReason reason, String message
     ) throws LHConnectionError {
-        tr.status = LHStatus.ERROR;
+        tr.status = LHDeployStatus.ERROR;
         tr.failureMessage = message;
         tr.failureReason = reason;
 
@@ -419,7 +423,7 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    boolean evaluateEdge(EdgeConditionSchema condition)
+    boolean evaluateEdge(EdgeCondition condition)
     throws VarSubOrzDash, LHConnectionError {
         if (condition == null) return true;
         Object lhs = assignVariable(condition.leftSide);
@@ -445,33 +449,33 @@ public class ThreadRunSchema extends BaseSchema {
 
     public void updateStatus() {
         if (isCompleted()) return;
-        if (upNext == null) upNext = new ArrayList<EdgeSchema>();
+        if (upNext == null) upNext = new ArrayList<Edge>();
 
-        if (status == WFRunStatus.RUNNING) {
+        if (status == LHExecutionStatus.RUNNING) {
             // If there are no pending taskruns and the last one executed was
             // COMPLETED, then the thread is now completed.
             if (upNext == null || upNext.size() == 0) {
-                TaskRunSchema lastTr = taskRuns.size() > 0 ?
+                TaskRun lastTr = taskRuns.size() > 0 ?
                     taskRuns.get(taskRuns.size() - 1) : null;
                 if (lastTr == null || lastTr.isCompleted()) {
-                    status = WFRunStatus.COMPLETED;
+                    status = LHExecutionStatus.COMPLETED;
                 }
             } else {
                 if (taskRuns.size() > 0) {
-                    TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
-                    if (lastTr.status == LHStatus.ERROR) {
-                        status = WFRunStatus.HALTED;
+                    TaskRun lastTr = taskRuns.get(taskRuns.size() - 1);
+                    if (lastTr.status == LHDeployStatus.ERROR) {
+                        status = LHExecutionStatus.HALTED;
                     }
                 }
             }
 
-        } else if (status == WFRunStatus.HALTED) {
+        } else if (status == LHExecutionStatus.HALTED) {
             // Check if interrupt handlers are done now (:
             for (int i = activeInterruptThreadIDs.size() - 1; i >= 0; i--) {
                 int tid = activeInterruptThreadIDs.get(i);
                 if (tid >= wfRun.threadRuns.size()) continue;
 
-                ThreadRunSchema intHandler = wfRun.threadRuns.get(tid);
+                ThreadRun intHandler = wfRun.threadRuns.get(tid);
                 if (intHandler.isCompleted()) {
                     activeInterruptThreadIDs.remove(i);
                     handledInterruptThreadIDs.add(intHandler.id);
@@ -485,7 +489,7 @@ public class ThreadRunSchema extends BaseSchema {
 
             // Check if we just fixed an exception handler
             if (exceptionHandlerThread != null) {
-                ThreadRunSchema handler = wfRun.threadRuns.get(
+                ThreadRun handler = wfRun.threadRuns.get(
                     exceptionHandlerThread
                 );
 
@@ -500,12 +504,12 @@ public class ThreadRunSchema extends BaseSchema {
                     LHUtil.log("waiting for exception handler to finish");
                 }
             }
-        } else if (status == WFRunStatus.HALTING) {
+        } else if (status == LHExecutionStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
             if (taskRuns.size() == 0 || taskRuns.get(
                     taskRuns.size() - 1
             ).isTerminated()) {
-                status = WFRunStatus.HALTED;
+                status = LHExecutionStatus.HALTED;
             }
         }
     }
@@ -542,8 +546,8 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public boolean lockVariables(NodeSchema n, int threadID) {
-        HashSet<String> neededVars = WFRunSchema.getNeededVars(n);
+    public boolean lockVariables(Node n, int threadID) {
+        HashSet<String> neededVars = WFRun.getNeededVars(n);
 
         // Now check to make sure that no one is using the variables we need.
         for (String var: neededVars) {
@@ -559,8 +563,8 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public void unlockVariables(NodeSchema n) {
-        for (String var: WFRunSchema.getNeededVars(n)) {
+    public void unlockVariables(Node n) {
+        for (String var: WFRun.getNeededVars(n)) {
             unlock(var);
         }
     }
@@ -568,7 +572,7 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     public boolean advance(WFEventSchema event)
     throws LHConnectionError {
-        if (status != WFRunStatus.RUNNING || upNext.size() == 0) {
+        if (status != LHExecutionStatus.RUNNING || upNext.size() == 0) {
             return false;
         }
 
@@ -581,11 +585,11 @@ public class ThreadRunSchema extends BaseSchema {
         // Now we have the green light to determine whether any of the edges will
         // fire.
         boolean shouldClear = true;
-        NodeSchema activatedNode = null;
-        for (EdgeSchema edge: upNext) {
+        Node activatedNode = null;
+        for (Edge edge: upNext) {
             try {
                 if (evaluateEdge(edge.condition)) {
-                    NodeSchema n = getThreadSpec().nodes.get(edge.sinkNodeName);
+                    Node n = getThreadSpec().nodes.get(edge.sinkNodeName);
                     if (lockVariables(n, id)) {
                         activatedNode = n;
                         break;
@@ -598,7 +602,7 @@ public class ThreadRunSchema extends BaseSchema {
                 // If we got here without returning, then we know that there are no
                 // taskRuns left.
             } catch(VarSubOrzDash exn) {
-                TaskRunSchema lastTr = taskRuns.get(taskRuns.size() - 1);
+                TaskRun lastTr = taskRuns.get(taskRuns.size() - 1);
                 exn.printStackTrace();
                 failTask(
                     lastTr,
@@ -611,7 +615,7 @@ public class ThreadRunSchema extends BaseSchema {
         }
 
         if (activatedNode == null && shouldClear) {
-            upNext = new ArrayList<EdgeSchema>();
+            upNext = new ArrayList<Edge>();
             return true;
         }
 
@@ -624,13 +628,13 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    private void scheduleTask(TaskRunSchema tr, NodeSchema node) {
+    private void scheduleTask(TaskRun tr, Node node) {
         TaskScheduledEventSchema te = new TaskScheduledEventSchema();
         te.setConfig(config);
         te.taskType = node.taskDef.taskType;
         te.taskQueueName = node.taskDef.taskQueueName;
         te.wfRunGuid = wfRun.guid;
-        te.wfSpecGuid = wfRun.wfSpecGuid;
+        te.wfSpecDigest = wfRun.wfSpecDigest;
         te.wfSpecName = wfRun.wfSpecName;
         te.taskExecutionGuid = wfRun.guid + "_" + String.valueOf(id) + "_" +
             String.valueOf(taskRuns.size());
@@ -640,11 +644,11 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     private boolean activateNode(
-        NodeSchema node, WFEventSchema event)
+        Node node, WFEventSchema event)
     throws LHConnectionError {
         if (node.nodeType == NodeType.TASK) {
-            upNext = new ArrayList<EdgeSchema>();
-            TaskRunSchema tr = createNewTaskRun(node);
+            upNext = new ArrayList<Edge>();
+            TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
             log("Adding node on ", tr.nodeName, "length is ", taskRuns.size());
             LHUtil.log("actor.act", id, tr.nodeName);
@@ -670,7 +674,7 @@ public class ThreadRunSchema extends BaseSchema {
             }
             if (correlSchema == null) return false;  // Still waiting nothing changed
 
-            TaskRunSchema tr = createNewTaskRun(node);
+            TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
             throw new RuntimeException("oops");
             // correlSchema.assignedNodeGuid = node.guid;
@@ -686,11 +690,11 @@ public class ThreadRunSchema extends BaseSchema {
             // return true; // Obviously something changed, we done did add a task.
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {
-            upNext = new ArrayList<EdgeSchema>();
+            upNext = new ArrayList<Edge>();
             HashMap<String, Object> inputVars = new HashMap<String, Object>();
-            TaskRunSchema tr = createNewTaskRun(node);
+            TaskRun tr = createNewTaskRun(node);
             try {
-                for (Map.Entry<String, VariableAssignmentSchema> pair:
+                for (Map.Entry<String, VariableAssignment> pair:
                     node.variables.entrySet()
                 ) {
                     inputVars.put(pair.getKey(), assignVariable(pair.getValue()));
@@ -705,33 +709,33 @@ public class ThreadRunSchema extends BaseSchema {
                 return true;
             }
 
-            ThreadRunSchema thread = wfRun.createThreadClientAdds(
+            ThreadRun thread = wfRun.createThreadClientAdds(
                 node.threadSpawnThreadSpecName, inputVars, this
             );
             wfRun.threadRuns.add(thread);
     
             if (wfRun.awaitableThreads.get(tr.nodeName) == null) {
                 wfRun.awaitableThreads.put(
-                    tr.nodeName, new ArrayList<ThreadRunMetaSchema>()
+                    tr.nodeName, new ArrayList<ThreadRunMeta>()
                 );
             }
 
-            ThreadRunMetaSchema meta = new ThreadRunMetaSchema(tr, thread);
+            ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
             wfRun.awaitableThreads.get(tr.nodeName).add(meta);
             taskRuns.add(tr);
             completeTask(
-                tr, LHStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
+                tr, LHDeployStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
             );
             return true;
 
         } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
             return handleWaitForThreadNode(node, event);
         } else if (node.nodeType == NodeType.THROW_EXCEPTION) {
-            TaskRunSchema tr = createNewTaskRun(node);
+            TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
             exceptionName = node.exceptionToThrow;
             completeTask(
-                tr, LHStatus.ERROR, "", "Throwing exception " + exceptionName,
+                tr, LHDeployStatus.ERROR, "", "Throwing exception " + exceptionName,
                 event.timestamp, -1
             );
             return true;
@@ -740,15 +744,15 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     private boolean handleWaitForThreadNode(
-        NodeSchema node, WFEventSchema event
+        Node node, WFEventSchema event
     ) throws LHConnectionError {
         // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
         // If it's from the node we're waiting for and it's NOT done, then
         // this node does nothing. But if it's already done, we mark it as
         // awaited and continue on. If all of the relevant threads are done,
         // then this node completes.
-        TaskRunSchema tr = createNewTaskRun(node);
-        ArrayList<ThreadRunMetaSchema> awaitables = wfRun.awaitableThreads.get(
+        TaskRun tr = createNewTaskRun(node);
+        ArrayList<ThreadRunMeta> awaitables = wfRun.awaitableThreads.get(
             node.threadWaitSourceNodeName
         );
 
@@ -765,8 +769,8 @@ public class ThreadRunSchema extends BaseSchema {
         boolean allTerminated = true;
         boolean allCompleted = true;
 
-        for (ThreadRunMetaSchema meta: awaitables) {
-            ThreadRunSchema thread = wfRun.threadRuns.get(meta.threadID);
+        for (ThreadRunMeta meta: awaitables) {
+            ThreadRun thread = wfRun.threadRuns.get(meta.threadID);
             if (!thread.isCompleted()) {
                 allCompleted = false;
             }
@@ -785,7 +789,7 @@ public class ThreadRunSchema extends BaseSchema {
         if (allCompleted) {
             taskRuns.add(tr);
             completeTask(
-                tr, LHStatus.COMPLETED, awaitables.toString(),
+                tr, LHDeployStatus.COMPLETED, awaitables.toString(),
                 null, event.timestamp, 0
             );
         } else {
@@ -799,12 +803,12 @@ public class ThreadRunSchema extends BaseSchema {
                 );
             }
 
-            ThreadRunSchema thread = wfRun.threadRuns.get(awaitables.get(0).threadID);
+            ThreadRun thread = wfRun.threadRuns.get(awaitables.get(0).threadID);
             if (thread.isCompleted() || !thread.isTerminated()) {
                 throw new RuntimeException("should be impossible");
             }
 
-            ExceptionHandlerSpecSchema hspec = node.getHandlerSpec(
+            ExceptionHandlerSpec hspec = node.getHandlerSpec(
                 thread.exceptionName
             );
             if (hspec == null) {
@@ -815,7 +819,7 @@ public class ThreadRunSchema extends BaseSchema {
                 " we are handling it.";
 
                 completeTask(
-                    tr, LHStatus.ERROR, awaitables.toString(), msg, event.timestamp, 1
+                    tr, LHDeployStatus.ERROR, awaitables.toString(), msg, event.timestamp, 1
                 );
                 handleException(
                     hspec.handlerThreadSpecName, tr, LHFailureReason.TASK_FAILURE, msg
@@ -838,8 +842,8 @@ public class ThreadRunSchema extends BaseSchema {
     }
 
     @JsonIgnore
-    public ArrayList<ThreadRunSchema> getChildren() {
-        ArrayList<ThreadRunSchema> out = new ArrayList<ThreadRunSchema>();
+    public ArrayList<ThreadRun> getChildren() {
+        ArrayList<ThreadRun> out = new ArrayList<ThreadRun>();
         for (int tid: childThreadIDs) {
             out.add(wfRun.threadRuns.get(tid));
         }
@@ -852,8 +856,8 @@ public class ThreadRunSchema extends BaseSchema {
      */
     @JsonIgnore
     public void halt(WFHaltReasonEnum reason, String message) {
-        if (status == WFRunStatus.RUNNING) {
-            status = WFRunStatus.HALTING;
+        if (status == LHExecutionStatus.RUNNING) {
+            status = LHExecutionStatus.HALTING;
             errorMessage += message + "\n";
         } else if (isCompleted()) {
             LHUtil.log(
@@ -864,7 +868,7 @@ public class ThreadRunSchema extends BaseSchema {
         }
         haltReasons.add(reason);
 
-        for (ThreadRunSchema kid: getChildren()) {
+        for (ThreadRun kid: getChildren()) {
             if (kid.isInterruptThread && reason == WFHaltReasonEnum.INTERRUPT) {
                 continue;
             }
@@ -882,12 +886,12 @@ public class ThreadRunSchema extends BaseSchema {
         haltReasons.remove(reason);
 
         if (haltReasons.isEmpty()) {
-            if (status == WFRunStatus.HALTED || status == WFRunStatus.HALTING) {
-                status = WFRunStatus.RUNNING;
+            if (status == LHExecutionStatus.HALTED || status == LHExecutionStatus.HALTING) {
+                status = LHExecutionStatus.RUNNING;
                 errorMessage = "";
             }
 
-            for (ThreadRunSchema kid: getChildren()) {
+            for (ThreadRun kid: getChildren()) {
                 kid.removeHaltReason(WFHaltReasonEnum.PARENT_STOPPED);
             }
         } else if (haltReasons.size() == 1
@@ -896,7 +900,7 @@ public class ThreadRunSchema extends BaseSchema {
             // In this case, the only thing holding up the parent is one (or more)
             // interrupt threads. Those threads shouldn't be blocked by the parent
             // at this point, so we unblock them.
-            for (ThreadRunSchema kid: getChildren()) {
+            for (ThreadRun kid: getChildren()) {
                 // Only unblock the interrupts!!!
                 if (kid.isInterruptThread) {
                     kid.removeHaltReason(WFHaltReasonEnum.PARENT_INTERRUPTED);
@@ -909,13 +913,13 @@ public class ThreadRunSchema extends BaseSchema {
     public void handleInterrupt(ExternalEventPayloadSchema payload) throws
     LHConnectionError {
 
-        HashMap<String, InterruptDefSchema> idefs = getThreadSpec().interruptDefs;
-        InterruptDefSchema idef = idefs.get(payload.externalEventDefName);
-        String tspecname = idef.threadSpecName;
+        HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
+        InterruptDef idef = idefs.get(payload.externalEventDefName);
+        String tspecname = idef.handlerThreadName;
 
         // crucial to create the thread BEFORE calling halt(), as the call to halt()
         // adds a WFHaltReason which we dont wanna propagate to the interrupt thread.
-        ThreadRunSchema trun = wfRun.createThreadClientAdds(
+        ThreadRun trun = wfRun.createThreadClientAdds(
             tspecname,
             LHUtil.unsplat(payload.content),
             this
@@ -930,14 +934,14 @@ public class ThreadRunSchema extends BaseSchema {
 
     @JsonIgnore
     public boolean isFailed() {
-        return (status == WFRunStatus.HALTED && haltReasons.contains(
+        return (status == LHExecutionStatus.HALTED && haltReasons.contains(
             WFHaltReasonEnum.FAILED
         ));
     }
 
     @JsonIgnore
     public boolean isCompleted() {
-        return (status == WFRunStatus.COMPLETED);
+        return (status == LHExecutionStatus.COMPLETED);
     }
 
     @JsonIgnore
@@ -948,12 +952,12 @@ public class ThreadRunSchema extends BaseSchema {
     @JsonIgnore
     public void propagateInterrupt(ExternalEventPayloadSchema payload) throws
     LHConnectionError {
-        HashMap<String, InterruptDefSchema> idefs = getThreadSpec().interruptDefs;
+        HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
         if (idefs != null && idefs.containsKey(payload.externalEventDefName)) {
             // Now we need to add thread!
             handleInterrupt(payload);
         } else {
-            for (ThreadRunSchema kid: getChildren()) {
+            for (ThreadRun kid: getChildren()) {
                 kid.propagateInterrupt(payload);
             }
         }
@@ -965,7 +969,7 @@ public class ThreadRunSchema extends BaseSchema {
         super.setConfig(config);
 
         if (taskRuns == null) taskRuns = new ArrayList<>();
-        for (TaskRunSchema taskRun: taskRuns) {
+        for (TaskRun taskRun: taskRuns) {
             taskRun.setConfig(config);
             taskRun.parentThread = this;
         }
@@ -979,13 +983,13 @@ class Mutation {
     public Object lhs;
     public Object rhs;
     public VariableMutationOperation op;
-    public ThreadRunSchema tr;
-    public WFRunVariableDefSchema varDef;
+    public ThreadRun tr;
+    public WFRunVariableDef varDef;
     public String varName;
 
     public Mutation(
-        Object lhs, Object rhs, VariableMutationOperation op, ThreadRunSchema tr,
-        WFRunVariableDefSchema varDef, String varName
+        Object lhs, Object rhs, VariableMutationOperation op, ThreadRun tr,
+        WFRunVariableDef varDef, String varName
     ) {
         this.lhs = lhs;
         this.rhs = rhs;

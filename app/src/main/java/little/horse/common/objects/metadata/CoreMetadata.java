@@ -7,18 +7,17 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
-import little.horse.api.util.APIStreamsContext;
-import little.horse.api.util.LHAPIPostResult;
 import little.horse.common.Config;
-import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.rundata.LHStatus;
+import little.horse.common.objects.rundata.LHDeployStatus;
+import little.horse.common.util.LHUtil;
 
 public abstract class CoreMetadata extends BaseSchema {
     public String name;
-    public LHStatus desiredStatus;
-    public LHStatus status;
+    public LHDeployStatus desiredStatus;
+    public LHDeployStatus status;
+    
+    @JsonIgnore
     public static String typeName;
 
     @JsonIgnore
@@ -51,6 +50,14 @@ public abstract class CoreMetadata extends BaseSchema {
     }
 
     public abstract void processChange(CoreMetadata old);
+    
+    /**
+     * Idempotent cleanup of resources when the CoreMetadata is deleted from the API.
+     * For example, undeploys the WFRuntime deployer on WFSpec.
+     */
+    public void remove() {
+        // Nothing to do in default.
+    }
 
     @JsonIgnore
     public Future<RecordMetadata> record() {
@@ -59,24 +66,7 @@ public abstract class CoreMetadata extends BaseSchema {
         return this.config.send(record);
     }
 
-    /**
-     * Creates a CoreMetadata objct from this thing's spec if it doesn't exist. If it
-     * __does__ already exist, then:
-     * - if this spec clashes with existings, throws an LHValidationError.
-     * - if this spec doesn't clash, updates if needed and returns nothing.
-     * 
-     * Should only be called by the LittleHorseAPI, and can only be called by that
-     * as it requires the APIStreamsContext parameter.
-     * @param context APIStreamsContext provided by the LittleHorseAPI object.
-     * @return An LHAPIPostResult containing information about the thing that was
-     * created.
-     * @throws LHValidationError when this spec is invalid or if there is a conflict.
-     * @throws LHConnectionError if we can't connect to some needed system.
-     */
-    @JsonIgnore
-    public abstract<T extends CoreMetadata> LHAPIPostResult<T> createIfNotExists(
-        APIStreamsContext context
-    ) throws LHValidationError, LHConnectionError;
-
-    public abstract boolean isEqualTo(CoreMetadata other);
+    public void undeploy() {
+        LHUtil.log("TODO: write this function.");
+    }
 }

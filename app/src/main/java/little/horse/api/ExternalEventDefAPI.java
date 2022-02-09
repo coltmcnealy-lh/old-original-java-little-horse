@@ -12,9 +12,9 @@ import little.horse.common.events.ExternalEventPayloadSchema;
 import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.metadata.ExternalEventDefSchema;
-import little.horse.common.objects.metadata.WFSpecSchema;
-import little.horse.common.objects.rundata.WFRunSchema;
+import little.horse.common.objects.metadata.ExternalEventDef;
+import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
@@ -28,24 +28,24 @@ public class ExternalEventDefAPI {
     }
 
     public void post(Context ctx) {
-        ExternalEventDefSchema spec = ctx.bodyAsClass(ExternalEventDefSchema.class);
+        ExternalEventDef spec = ctx.bodyAsClass(ExternalEventDef.class);
         spec.setConfig(config);
         spec.validateAndCleanup();
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = spec.guid;
+        response.digest = spec.guid;
         response.name = spec.name;
         ctx.json(response);
     }
 
     public void get(Context ctx) {
-        ReadOnlyKeyValueStore<String, ExternalEventDefSchema> nStore = streams.getExternalEventDefNameStore();
-        ReadOnlyKeyValueStore<String, ExternalEventDefSchema> gStore = streams.getExternalEventDefGuidStore();
+        ReadOnlyKeyValueStore<String, ExternalEventDef> nStore = streams.getExternalEventDefNameStore();
+        ReadOnlyKeyValueStore<String, ExternalEventDef> gStore = streams.getExternalEventDefGuidStore();
         String id = ctx.pathParam("nameOrGuid");
 
-        ExternalEventDefSchema schemaFromName = nStore.get(id);
-        ExternalEventDefSchema schemaFromGuid = gStore.get(id);
+        ExternalEventDef schemaFromName = nStore.get(id);
+        ExternalEventDef schemaFromGuid = gStore.get(id);
         if (schemaFromName != null) {
             ctx.json(schemaFromName);
             return;
@@ -68,12 +68,12 @@ public class ExternalEventDefAPI {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         String externalEventDefID = ctx.pathParam("externalEventDefID");
         Object eventContent = ctx.bodyAsClass(Object.class);
-        WFRunSchema wfRun;
-        WFSpecSchema wfSpec;
-        ExternalEventDefSchema evd;
+        WFRun wfRun;
+        WFSpec wfSpec;
+        ExternalEventDef evd;
 
         try {
-            wfRun = LHDatabaseClient.lookupWfRun(wfRunGuid, config);
+            wfRun = LHDatabaseClient.lookupMeta(wfRunGuid, config);
             wfRun.setConfig(config);
             wfSpec = wfRun.getWFSpec();
             evd = LHDatabaseClient.lookupExternalEventDef(externalEventDefID, config);
@@ -84,8 +84,8 @@ public class ExternalEventDefAPI {
             return;
         }
 
-        WFRunSchema schema = wfRun;
-        ExternalEventDefSchema evdSchema = evd;
+        WFRun schema = wfRun;
+        ExternalEventDef evdSchema = evd;
         String externalEventGuid = LHUtil.generateGuid();
 
         ExternalEventPayloadSchema payload = new ExternalEventPayloadSchema();
@@ -96,7 +96,7 @@ public class ExternalEventDefAPI {
 
         WFEventSchema wfEvent = new WFEventSchema();
         wfEvent.wfRunGuid = schema.guid;
-        wfEvent.wfSpecGuid = schema.wfSpecGuid;
+        wfEvent.wfSpecDigest = schema.wfSpecDigest;
         wfEvent.wfSpecName = schema.wfSpecName;
         wfEvent.type = WFEventType.EXTERNAL_EVENT;
         wfEvent.timestamp = LHUtil.now();
@@ -110,7 +110,7 @@ public class ExternalEventDefAPI {
         config.send(record);
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.guid = externalEventGuid;
+        response.digest = externalEventGuid;
         ctx.json(response);
     }
 }

@@ -7,8 +7,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Stack;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrelSchema;
@@ -18,26 +20,30 @@ import little.horse.common.events.WFEventSchema;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.EdgeSchema;
-import little.horse.common.objects.metadata.NodeSchema;
-import little.horse.common.objects.metadata.ThreadSpecSchema;
-import little.horse.common.objects.metadata.VariableAssignmentSchema;
-import little.horse.common.objects.metadata.VariableMutationSchema;
-import little.horse.common.objects.metadata.WFRunVariableDefSchema;
-import little.horse.common.objects.metadata.WFSpecSchema;
+import little.horse.common.objects.metadata.Edge;
+import little.horse.common.objects.metadata.Node;
+import little.horse.common.objects.metadata.ThreadSpec;
+import little.horse.common.objects.metadata.VariableAssignment;
+import little.horse.common.objects.metadata.VariableMutation;
+import little.horse.common.objects.metadata.WFRunVariableDef;
+import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
-public class WFRunSchema extends BaseSchema {
+@JsonIdentityInfo(
+    generator = ObjectIdGenerators.PropertyGenerator.class,
+    property = "guid"
+)
+public class WFRun extends BaseSchema {
     // These fields are in the actual JSON for the WFRunSchema object
     public String guid;
-    public String wfSpecGuid;
+    public String wfSpecDigest;
     public String wfSpecName;
 
     @JsonManagedReference
-    public ArrayList<ThreadRunSchema> threadRuns;
+    public ArrayList<ThreadRun> threadRuns;
 
-    public WFRunStatus status;
+    public LHExecutionStatus status;
     public Date startTime;
     public Date endTime;
 
@@ -49,28 +55,30 @@ public class WFRunSchema extends BaseSchema {
     public HashMap<String, ArrayList<ExternalEventCorrelSchema>> correlatedEvents;
     public Stack<String> pendingInterrupts;
 
-    public HashMap<String, ArrayList<ThreadRunMetaSchema>> awaitableThreads;
+    public HashMap<String, ArrayList<ThreadRunMeta>> awaitableThreads;
 
     @JsonIgnore
-    private WFSpecSchema wfSpec;
+    private WFSpec wfSpec;
 
     @JsonIgnore
-    public void setWFSpec(WFSpecSchema spec) {
+    public void setWFSpec(WFSpec spec) {
         wfSpec = spec;
+        wfSpecDigest = wfSpec.getDigest();
+        wfSpecName = wfSpec.name;
     }
 
     @JsonIgnore
-    public WFSpecSchema getWFSpec() throws LHConnectionError {
+    public WFSpec getWFSpec() throws LHConnectionError {
         if (wfSpec == null) {
-            String id = (wfSpecGuid == null) ? wfSpecName : wfSpecGuid;
-            wfSpec = LHDatabaseClient.lookupWFSpec(id, config);
+            String id = (wfSpecDigest == null) ? wfSpecName : wfSpecDigest;
+            setWFSpec(LHDatabaseClient.lookupMeta(id, config, WFSpec.class));
         }
         return wfSpec;
     }
 
     @JsonIgnore
-    public ThreadRunSchema createThreadClientAdds(
-        String threadName, Map<String, Object> variables, ThreadRunSchema parent
+    public ThreadRun createThreadClientAdds(
+        String threadName, Map<String, Object> variables, ThreadRun parent
     ) throws LHConnectionError {
         getWFSpec();  // just make sure the thing isn't null;
 
@@ -78,20 +86,20 @@ public class WFRunSchema extends BaseSchema {
         // via the API, this is supposedly hypotentially in theory guaranteed to
         // return a ThreadSpecSchema (otherwise there would've been an error thrown
         // at WFSpec creation time).
-        ThreadSpecSchema tspec = wfSpec.threadSpecs.get(threadName);
+        ThreadSpec tspec = wfSpec.threadSpecs.get(threadName);
         // TODO: do the fillOut() and linkUp() here.
 
-        ThreadRunSchema trun = new ThreadRunSchema();
+        ThreadRun trun = new ThreadRun();
         setConfig(config); // this will populate the ThreadRun as well
 
         trun.id = threadRuns.size();
-        trun.status = parent == null ? WFRunStatus.RUNNING : parent.status;
-        trun.taskRuns = new ArrayList<TaskRunSchema>();
+        trun.status = parent == null ? LHExecutionStatus.RUNNING : parent.status;
+        trun.taskRuns = new ArrayList<TaskRun>();
 
         // Load the variables for the ThreadRun
         trun.variables = new HashMap<String, Object>();
         for (String varName: tspec.variableDefs.keySet()) {
-            WFRunVariableDefSchema varDef = tspec.variableDefs.get(varName);
+            WFRunVariableDef varDef = tspec.variableDefs.get(varName);
 
             Object result = variables.get(varName);
             if (result != null) {
@@ -100,7 +108,7 @@ public class WFRunSchema extends BaseSchema {
                 trun.variables.put(varName, varDef.defaultValue);
             }
         }
-        trun.upNext = new ArrayList<EdgeSchema>();
+        trun.upNext = new ArrayList<Edge>();
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
         // trun.threadSpecGuid = trun.threadSpec.guid;
@@ -143,7 +151,7 @@ public class WFRunSchema extends BaseSchema {
         event.setConfig(config);
         event.type = type;
         event.wfRunGuid = guid;
-        event.wfSpecGuid = wfSpecGuid;
+        event.wfSpecDigest = wfSpecDigest;
         event.wfSpecName = wfSpecName;
         event.timestamp = LHUtil.now();
         event.content = content.toString();
@@ -205,13 +213,13 @@ public class WFRunSchema extends BaseSchema {
         }
 
         if (event.type == WFEventType.TASK_EVENT) {
-            ThreadRunSchema thread = threadRuns.get(event.threadID);
+            ThreadRun thread = threadRuns.get(event.threadID);
             thread.incorporateEvent(event);
         }
 
         if (event.type == WFEventType.WF_RUN_STOP_REQUEST) {
-            if (event.threadID == 0 && status == WFRunStatus.RUNNING) {
-                status = WFRunStatus.HALTING;
+            if (event.threadID == 0 && status == LHExecutionStatus.RUNNING) {
+                status = LHExecutionStatus.HALTING;
             }
             int threadID = event.threadID >= 0 ? event.threadID : 0;
             if (threadID < threadRuns.size()) {
@@ -223,8 +231,8 @@ public class WFRunSchema extends BaseSchema {
         }
 
         if (event.type == WFEventType.WF_RUN_RESUME_REQUEST) {
-            if (event.threadID == 0 && status != WFRunStatus.COMPLETED) {
-                status = WFRunStatus.RUNNING;
+            if (event.threadID == 0 && status != LHExecutionStatus.COMPLETED) {
+                status = LHExecutionStatus.RUNNING;
             }
             if (event.threadID < threadRuns.size()) {
                 threadRuns.get(event.threadID).removeHaltReason(
@@ -236,7 +244,7 @@ public class WFRunSchema extends BaseSchema {
 
     @JsonIgnore
     public void updateStatuses(WFEventSchema event) {
-        for (ThreadRunSchema thread: threadRuns) {
+        for (ThreadRun thread: threadRuns) {
             thread.updateStatus();
         }
 
@@ -248,71 +256,59 @@ public class WFRunSchema extends BaseSchema {
         boolean allTerminated = true;
         boolean allCompleted = true;
 
-        if (status == WFRunStatus.HALTING) {
+        if (status == LHExecutionStatus.HALTING) {
             boolean allHalted = true;
-            for (ThreadRunSchema thread: this.threadRuns) {
-                if (thread.status == WFRunStatus.HALTING) {
+            for (ThreadRun thread: this.threadRuns) {
+                if (thread.status == LHExecutionStatus.HALTING) {
                     allHalted = false;
-                } else if (thread.status == WFRunStatus.RUNNING) {
+                } else if (thread.status == LHExecutionStatus.RUNNING) {
                     LHUtil.log("WTF how is the thread RUNNING while wfRun is HALTING?");
                 }
             }
             if (allHalted) {
-                this.status = WFRunStatus.HALTED;
+                this.status = LHExecutionStatus.HALTED;
             }
-        } else if (this.status == WFRunStatus.RUNNING) {
-            for (ThreadRunSchema thread: this.threadRuns) {
+        } else if (this.status == LHExecutionStatus.RUNNING) {
+            for (ThreadRun thread: this.threadRuns) {
                 if (!thread.isTerminated()) allTerminated = false;
                 if (!thread.isCompleted()) allCompleted = false;
             }
             if (allCompleted) {
-                this.status = WFRunStatus.COMPLETED;
+                this.status = LHExecutionStatus.COMPLETED;
             } else if (allTerminated) {
-                this.status = WFRunStatus.HALTED;
+                this.status = LHExecutionStatus.HALTED;
             }
         }
     }
 
-    public static HashSet<String> getNeededVars(NodeSchema n) {
-        HashSet<String> neededVars = new HashSet<String>();
-        // first figure out which variables we need as input
-        for (VariableAssignmentSchema var: n.variables.values()) {
-            if (var.wfRunVariableName != null) {
-                neededVars.add(var.wfRunVariableName);
-            }
-        }
+    // public static HashSet<String> getNeededVars(NodeSchema n) {
+    //     HashSet<String> neededVars = new HashSet<String>();
+    //     // first figure out which variables we need as input
+    //     for (VariableAssignmentSchema var: n.variables.values()) {
+    //         if (var.wfRunVariableName != null) {
+    //             neededVars.add(var.wfRunVariableName);
+    //         }
+    //     }
 
-        // Now see which variables we need as output
-        for (Map.Entry<String, VariableMutationSchema> p:
-            n.variableMutations.entrySet()
-        ) {
-            // Add the variable that gets mutated
-            neededVars.add(p.getKey());
+    //     // Now see which variables we need as output
+    //     for (Map.Entry<String, VariableMutationSchema> p:
+    //         n.variableMutations.entrySet()
+    //     ) {
+    //         // Add the variable that gets mutated
+    //         neededVars.add(p.getKey());
 
-            VariableAssignmentSchema rhsVarAssign = p.getValue().sourceVariable;
-            if (rhsVarAssign != null) {
-                if (rhsVarAssign.wfRunVariableName != null) {
-                    neededVars.add(rhsVarAssign.wfRunVariableName);
-                }
-            }
-        }
-        return neededVars;
-    }
+    //         VariableAssignmentSchema rhsVarAssign = p.getValue().sourceVariable;
+    //         if (rhsVarAssign != null) {
+    //             if (rhsVarAssign.wfRunVariableName != null) {
+    //                 neededVars.add(rhsVarAssign.wfRunVariableName);
+    //             }
+    //         }
+    //     }
+    //     return neededVars;
+    // }
 
     @JsonIgnore
-    public ThreadRunSchema entrypointThreadRun() {
+    public ThreadRun entrypointThreadRun() {
         return threadRuns.get(0);
-    }
-
-    @Override
-    @JsonIgnore
-    public Config setConfig(Config config) {
-        super.setConfig(config);
-        if (threadRuns == null) threadRuns = new ArrayList<>();
-        for (ThreadRunSchema thread: threadRuns) {
-            thread.wfRun = this;
-            thread.setConfig(config);
-        }
-        return this.config;
     }
 }

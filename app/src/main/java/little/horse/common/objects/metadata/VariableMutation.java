@@ -2,7 +2,7 @@ package little.horse.common.objects.metadata;
 
 import little.horse.common.objects.BaseSchema;
 
-public class VariableMutationSchema extends BaseSchema {
+public class VariableMutation extends BaseSchema {
     public VariableMutationOperation operation;
     
     /**
@@ -24,5 +24,5 @@ public class VariableMutationSchema extends BaseSchema {
     public boolean copyDirectlyFromNodeOutput = false;
     public String jsonPath;
     public Object literalValue;
-    public VariableAssignmentSchema sourceVariable;
+    public VariableAssignment sourceVariable;
 }

@@ -10,18 +10,26 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.hash.Hashing;
 import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.lang3.StringUtils;
+
+import little.horse.common.util.json.JsonMapKeyDeserializer;
+
 
 public class LHUtil {
     public static String generateGuid() {
         return UUID.randomUUID().toString();
     }
 
-    public static final ObjectMapper mapper = new ObjectMapper();
+    public static final ObjectMapper mapper = new MapperInitializer().getMapper();
 
     public static String toValidK8sName(String oldStr) {
         String str = new String(oldStr);
@@ -89,14 +97,20 @@ public class LHUtil {
      * @param obj the thing to unsplat
      * @return the unsplatted object
      */
-    @SuppressWarnings("unchecked")
     public static HashMap<String, Object> unsplat(Object obj) {
         HashMap<String, Object> out;
         try {
             LHUtil.log("obj:", obj.toString());
-            out = (HashMap<String, Object>) jsonifyIfPossible(obj.toString());
+
+            @SuppressWarnings("unchecked")
+            HashMap<String, Object> tmp = (HashMap<String, Object>) jsonifyIfPossible(
+                obj.toString()
+            );
+
+            out = tmp;
         } catch (Exception exn) {
             out = new HashMap<>();
+            out.put("", obj);
         }
         return out;
     }
@@ -136,5 +150,27 @@ public class LHUtil {
 
     public static Object jsonPath(String json, String path) {
         return JsonPath.parse(json).read(path);
+    }
+}
+
+
+class MapperInitializer {
+    // Citations: https://stackoverflow.com/questions/42763298/jackson-keep-references-to-keys-in-map-values-when-deserializing
+    private ObjectMapper mapper;
+
+    public ObjectMapper getMapper() {
+        return mapper;
+    }
+
+    public MapperInitializer() {
+        SimpleModule module = new SimpleModule();
+        module.setDeserializerModifier(new BeanDeserializerModifier() {
+            @Override
+            public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, 
+                    BeanDescription beanDescription, JsonDeserializer<?> originalDeserializer) {
+                return new JsonMapKeyDeserializer(originalDeserializer, beanDescription);
+            }
+        });
+        mapper.registerModule(module);
     }
 }
