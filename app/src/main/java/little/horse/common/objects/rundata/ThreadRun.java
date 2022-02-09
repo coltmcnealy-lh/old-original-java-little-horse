@@ -14,13 +14,13 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import little.horse.common.Config;
-import little.horse.common.events.ExternalEventCorrelSchema;
-import little.horse.common.events.ExternalEventPayloadSchema;
-import little.horse.common.events.TaskRunEndedEventSchema;
-import little.horse.common.events.TaskRunEventSchema;
-import little.horse.common.events.TaskRunStartedEventSchema;
-import little.horse.common.events.TaskScheduledEventSchema;
-import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.ExternalEventCorrel;
+import little.horse.common.events.ExternalEventPayload;
+import little.horse.common.events.TaskRunEndedEvent;
+import little.horse.common.events.TaskRunEvent;
+import little.horse.common.events.TaskRunStartedEvent;
+import little.horse.common.events.TaskScheduledEvent;
+import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.VarSubOrzDash;
@@ -244,12 +244,12 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public void incorporateEvent(WFEventSchema wfEvent)
+    public void incorporateEvent(WFEvent wfEvent)
     throws LHConnectionError {
-        TaskRunEventSchema event;
+        TaskRunEvent event;
         try {
             event = BaseSchema.fromString(
-                wfEvent.content, TaskRunEventSchema.class, config
+                wfEvent.content, TaskRunEvent.class, config
             );
         } catch (LHSerdeError exn) {
             throw new RuntimeException("Not possible");
@@ -264,9 +264,9 @@ public class ThreadRun extends BaseSchema {
     // Potentially this and handleTaskEnded could go in the TaskRunSchema.java,
     // but I'm not sure I wanna deal with jumping back and forth like that.
     @JsonIgnore
-    private void handleTaskStarted(TaskRunEventSchema trEvent) {
+    private void handleTaskStarted(TaskRunEvent trEvent) {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
-        TaskRunStartedEventSchema event = trEvent.startedEvent;
+        TaskRunStartedEvent event = trEvent.startedEvent;
 
         tr.status = LHDeployStatus.RUNNING;
         tr.startTime = trEvent.timestamp;
@@ -275,8 +275,8 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public WFEventSchema newWFEvent(WFEventType type, BaseSchema content) {
-        WFEventSchema out = wfRun.newWFEvent(type, content);
+    public WFEvent newWFEvent(WFEventType type, BaseSchema content) {
+        WFEvent out = wfRun.newWFEvent(type, content);
         out.threadID = id;
         return out;
     }
@@ -324,10 +324,10 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    private void handleTaskEnded(TaskRunEventSchema trEvent)
+    private void handleTaskEnded(TaskRunEvent trEvent)
     throws LHConnectionError {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
-        TaskRunEndedEventSchema event = trEvent.endedEvent;
+        TaskRunEndedEvent event = trEvent.endedEvent;
         LHDeployStatus taskStatus = event.success ? LHDeployStatus.COMPLETED : LHDeployStatus.ERROR;
 
         completeTask(
@@ -570,7 +570,7 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public boolean advance(WFEventSchema event)
+    public boolean advance(WFEvent event)
     throws LHConnectionError {
         if (status != LHExecutionStatus.RUNNING || upNext.size() == 0) {
             return false;
@@ -629,7 +629,7 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     private void scheduleTask(TaskRun tr, Node node) {
-        TaskScheduledEventSchema te = new TaskScheduledEventSchema();
+        TaskScheduledEvent te = new TaskScheduledEvent();
         te.setConfig(config);
         te.taskType = node.taskDef.taskType;
         te.taskQueueName = node.taskDef.taskQueueName;
@@ -644,7 +644,7 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     private boolean activateNode(
-        Node node, WFEventSchema event)
+        Node node, WFEvent event)
     throws LHConnectionError {
         if (node.nodeType == NodeType.TASK) {
             upNext = new ArrayList<Edge>();
@@ -657,15 +657,15 @@ public class ThreadRun extends BaseSchema {
             return true;
 
         } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
-            ArrayList<ExternalEventCorrelSchema> relevantEvents =
+            ArrayList<ExternalEventCorrel> relevantEvents =
             wfRun.correlatedEvents.get(node.externalEventDefName);
             if (relevantEvents == null) {
-                relevantEvents = new ArrayList<ExternalEventCorrelSchema>();
+                relevantEvents = new ArrayList<ExternalEventCorrel>();
                 wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
             }
-            ExternalEventCorrelSchema correlSchema = null;
+            ExternalEventCorrel correlSchema = null;
             
-            for (ExternalEventCorrelSchema candidate : relevantEvents) {
+            for (ExternalEventCorrel candidate : relevantEvents) {
                 // In the future, we may want to add the ability to signal
                 // a specific thread rather than the whole wfRun. We would do that here.
                 if (candidate.event != null && candidate.assignedNodeGuid == null) {
@@ -744,7 +744,7 @@ public class ThreadRun extends BaseSchema {
     }
 
     private boolean handleWaitForThreadNode(
-        Node node, WFEventSchema event
+        Node node, WFEvent event
     ) throws LHConnectionError {
         // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
         // If it's from the node we're waiting for and it's NOT done, then
@@ -910,7 +910,7 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public void handleInterrupt(ExternalEventPayloadSchema payload) throws
+    public void handleInterrupt(ExternalEventPayload payload) throws
     LHConnectionError {
 
         HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
@@ -950,7 +950,7 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public void propagateInterrupt(ExternalEventPayloadSchema payload) throws
+    public void propagateInterrupt(ExternalEventPayload payload) throws
     LHConnectionError {
         HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
         if (idefs != null && idefs.containsKey(payload.externalEventDefName)) {

@@ -8,8 +8,8 @@ import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIError;
 import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
-import little.horse.common.events.ExternalEventPayloadSchema;
-import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.ExternalEventPayload;
+import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.ExternalEventDef;
@@ -88,13 +88,13 @@ public class ExternalEventDefAPI {
         ExternalEventDef evdSchema = evd;
         String externalEventGuid = LHUtil.generateGuid();
 
-        ExternalEventPayloadSchema payload = new ExternalEventPayloadSchema();
+        ExternalEventPayload payload = new ExternalEventPayload();
         payload.externalEventDefGuid = evdSchema.guid;
         payload.externalEventDefName = evdSchema.name;
         payload.externalEventGuid = externalEventGuid;
         payload.content = eventContent;
 
-        WFEventSchema wfEvent = new WFEventSchema();
+        WFEvent wfEvent = new WFEvent();
         wfEvent.wfRunGuid = schema.guid;
         wfEvent.wfSpecDigest = schema.wfSpecDigest;
         wfEvent.wfSpecName = schema.wfSpecName;

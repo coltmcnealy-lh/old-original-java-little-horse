@@ -8,9 +8,9 @@ import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIError;
 import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
-import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
-import little.horse.common.events.WFRunRequestSchema;
+import little.horse.common.events.WFRunRequest;
 import little.horse.common.objects.rundata.LHDeployStatus;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
@@ -39,7 +39,7 @@ public class WFRunAPI {
     }
 
     public void post(Context ctx) {
-        WFRunRequestSchema request = ctx.bodyAsClass(WFRunRequestSchema.class);
+        WFRunRequest request = ctx.bodyAsClass(WFRunRequest.class);
         
         // TODO: Create the WFSpec if spec but not guid is provided.
         
@@ -55,7 +55,7 @@ public class WFRunAPI {
         //     }
         // }
 
-        WFEventSchema event = new WFEventSchema();
+        WFEvent event = new WFEvent();
 
         // try {
         //     wfSpec = LHDatabaseClient.lookupWFSpec(wfSpecId, config);
@@ -92,7 +92,7 @@ public class WFRunAPI {
 
     public void stopWFRun(Context ctx) {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
-        WFEventSchema event = new WFEventSchema();
+        WFEvent event = new WFEvent();
         event.wfRunGuid = wfRunGuid;
         event.threadID = 0;
         event.type = WFEventType.WF_RUN_STOP_REQUEST;
@@ -121,7 +121,7 @@ public class WFRunAPI {
 
     public void resumeWFRun(Context ctx) {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
-        WFEventSchema event = new WFEventSchema();
+        WFEvent event = new WFEvent();
         event.setConfig(config);
         event.wfRunGuid = wfRunGuid;
         event.type = WFEventType.WF_RUN_RESUME_REQUEST;
@@ -152,7 +152,7 @@ public class WFRunAPI {
     public void stopThread(Context ctx) {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         int tid = Integer.valueOf(ctx.pathParam("tid"));
-        WFEventSchema event = new WFEventSchema();
+        WFEvent event = new WFEvent();
         event.setConfig(config);
         event.wfRunGuid = wfRunGuid;
         event.type = WFEventType.WF_RUN_STOP_REQUEST;
@@ -183,7 +183,7 @@ public class WFRunAPI {
     public void resumeThread(Context ctx) {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         int tid = Integer.valueOf(ctx.pathParam("tid"));
-        WFEventSchema event = new WFEventSchema();
+        WFEvent event = new WFEvent();
         event.setConfig(config);
         event.wfRunGuid = wfRunGuid;
         event.type = WFEventType.WF_RUN_RESUME_REQUEST;

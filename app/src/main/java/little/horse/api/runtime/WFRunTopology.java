@@ -9,7 +9,7 @@ import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
 import little.horse.common.Config;
-import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.WFEvent;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
@@ -29,8 +29,8 @@ public class WFRunTopology {
         String topoSource = "WFRun Source";
         String updateProcessorName = "WFRun Update Surfacer";
 
-        LHSerdes<WFEventSchema> eventSerde = new LHSerdes<>(
-            WFEventSchema.class, config
+        LHSerdes<WFEvent> eventSerde = new LHSerdes<>(
+            WFEvent.class, config
         );
         LHSerdes<WFRun> runSerde = new LHSerdes<>(
             WFRun.class, config

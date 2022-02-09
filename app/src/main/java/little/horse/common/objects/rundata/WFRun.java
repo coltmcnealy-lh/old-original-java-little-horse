@@ -13,10 +13,10 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 import little.horse.common.Config;
-import little.horse.common.events.ExternalEventCorrelSchema;
-import little.horse.common.events.ExternalEventPayloadSchema;
-import little.horse.common.events.WFEventIDSchema;
-import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.ExternalEventCorrel;
+import little.horse.common.events.ExternalEventPayload;
+import little.horse.common.events.WFEventID;
+import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
@@ -50,9 +50,9 @@ public class WFRun extends BaseSchema {
     public LHFailureReason errorCode;
     public String errorMessage;
 
-    public ArrayList<WFEventIDSchema> history;  // Event Sourcing! Yay!
+    public ArrayList<WFEventID> history;  // Event Sourcing! Yay!
 
-    public HashMap<String, ArrayList<ExternalEventCorrelSchema>> correlatedEvents;
+    public HashMap<String, ArrayList<ExternalEventCorrel>> correlatedEvents;
     public Stack<String> pendingInterrupts;
 
     public HashMap<String, ArrayList<ThreadRunMeta>> awaitableThreads;
@@ -146,8 +146,8 @@ public class WFRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public WFEventSchema newWFEvent(WFEventType type, BaseSchema content) {
-        WFEventSchema event = new WFEventSchema();
+    public WFEvent newWFEvent(WFEventType type, BaseSchema content) {
+        WFEvent event = new WFEvent();
         event.setConfig(config);
         event.type = type;
         event.wfRunGuid = guid;
@@ -160,10 +160,10 @@ public class WFRun extends BaseSchema {
     }
 
     @JsonIgnore
-    private void handleExternalEvent(WFEventSchema event) throws
+    private void handleExternalEvent(WFEvent event) throws
     LHConnectionError {
-        ExternalEventPayloadSchema payload = BaseSchema.fromString(
-            event.content, ExternalEventPayloadSchema.class, config, false
+        ExternalEventPayload payload = BaseSchema.fromString(
+            event.content, ExternalEventPayload.class, config, false
         );
         
         if (wfSpec.interruptEvents.contains(payload.externalEventDefName)) {
@@ -180,7 +180,7 @@ public class WFRun extends BaseSchema {
         } else {
             // This isn't an interrupt, so store the event in case some other
             // thread has an EXTERNAL_EVENT node that waits for this type of event.
-            ExternalEventCorrelSchema correl = new ExternalEventCorrelSchema();
+            ExternalEventCorrel correl = new ExternalEventCorrel();
             correl.event = payload;
             correl.arrivalTime = event.timestamp;
             correl.assignedThreadID = event.threadID;
@@ -199,7 +199,7 @@ public class WFRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public void incorporateEvent(WFEventSchema event)
+    public void incorporateEvent(WFEvent event)
     throws LHConnectionError {
         if (event.type == WFEventType.WF_RUN_STARTED) {
             throw new RuntimeException(
@@ -243,7 +243,7 @@ public class WFRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public void updateStatuses(WFEventSchema event) {
+    public void updateStatuses(WFEvent event) {
         for (ThreadRun thread: threadRuns) {
             thread.updateStatus();
         }

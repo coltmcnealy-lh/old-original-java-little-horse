@@ -6,9 +6,9 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.common.Config;
-import little.horse.common.events.WFEventSchema;
+import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
-import little.horse.common.events.WFRunRequestSchema;
+import little.horse.common.events.WFRunRequest;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFSpec;
@@ -19,7 +19,7 @@ import little.horse.common.util.LHUtil;
 
 
 public class WFRuntime
-    implements Processor<String, WFEventSchema, String, WFRun>
+    implements Processor<String, WFEvent, String, WFRun>
 {
     private KeyValueStore<String, WFRun> wfRunStore;
     private KeyValueStore<String, WFSpec> wfSpecStore;
@@ -36,7 +36,7 @@ public class WFRuntime
     }
 
     @Override
-    public void process(final Record<String, WFEventSchema> record) {
+    public void process(final Record<String, WFEvent> record) {
         try {
             processHelper(record);
         } catch(Exception exn) {
@@ -44,10 +44,10 @@ public class WFRuntime
         }
     }
 
-    private void processHelper(final Record<String, WFEventSchema> record)
+    private void processHelper(final Record<String, WFEvent> record)
     throws LHConnectionError {
         String wfRunGuid = record.key();
-        WFEventSchema event = record.value();
+        WFEvent event = record.value();
 
         WFRun wfRun = wfRunStore.get(wfRunGuid);
         WFSpec wfSpec = getWFSpec(event.wfSpecDigest);

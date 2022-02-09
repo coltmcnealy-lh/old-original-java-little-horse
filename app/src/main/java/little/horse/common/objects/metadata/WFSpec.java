@@ -18,9 +18,9 @@ import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIPostResult;
 import little.horse.api.util.LHDeployException;
 import little.horse.common.Config;
-import little.horse.common.events.ExternalEventCorrelSchema;
-import little.horse.common.events.WFEventSchema;
-import little.horse.common.events.WFRunRequestSchema;
+import little.horse.common.events.ExternalEventCorrel;
+import little.horse.common.events.WFEvent;
+import little.horse.common.events.WFRunRequest;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -195,14 +195,14 @@ public class WFSpec extends CoreMetadata {
 
     @JsonIgnore
     public WFRun newRun(
-        final Record<String, WFEventSchema> record
+        final Record<String, WFEvent> record
     ) throws LHConnectionError {
         WFRun wfRun = new WFRun();
-        WFEventSchema event = record.value();
-        WFRunRequestSchema runRequest;
+        WFEvent event = record.value();
+        WFRunRequest runRequest;
         try {
             runRequest = BaseSchema.fromString(
-                event.content, WFRunRequestSchema.class, config
+                event.content, WFRunRequest.class, config
             );
         } catch (LHSerdeError exn) {
             exn.printStackTrace();
@@ -217,7 +217,7 @@ public class WFSpec extends CoreMetadata {
         wfRun.status = LHExecutionStatus.RUNNING;
         wfRun.threadRuns = new ArrayList<ThreadRun>();
         wfRun.correlatedEvents =
-            new HashMap<String, ArrayList<ExternalEventCorrelSchema>>();
+            new HashMap<String, ArrayList<ExternalEventCorrel>>();
 
         wfRun.startTime = event.timestamp;
         wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMeta>>();
