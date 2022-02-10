@@ -80,13 +80,6 @@ class FrontendAPIApp {
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
 
         APIStreamsContext context = new APIStreamsContext(streams);
-        context.setWFSpecNameStoreName(Constants.WF_SPEC_NAME_STORE);
-        context.setWFSpecGuidStoreName(Constants.WF_SPEC_GUID_STORE);
-        context.setTaskDefGuidStoreName(Constants.TASK_DEF_GUID_STORE);
-        context.setTaskDefNameStoreName(Constants.TASK_DEF_NAME_STORE);
-        context.setExternalEventDefNameStoreName(Constants.EXTERNAL_EVENT_DEF_NAME_STORE);
-        context.setExternalEventDefGuidStoreName(Constants.EXTERNAL_EVENT_DEF_GUID_STORE);
-        context.setWFRunStoreName(Constants.WF_RUN_STORE);
 
         LittleHorseAPI lapi = new LittleHorseAPI(config, context);
 
@@ -136,9 +129,9 @@ public class App {
             node.variables.put("foobar", assn);
 
             node.variables.put("notfoobar", assn);
-            System.out.println(node.getDigest());
+            System.out.println(node.getId());
 
-            System.out.println(node.getDigest());
+            System.out.println(node.getId());
 
             // String json = "{\"foo\": 1234, \"name\": \"task1\", \"guid\": \"06ab9216-a34c-4845-b594-4b1a90e8d3ee\", \"dockerImage\": \"little-horse-daemon\", \"bashCommand\": [\"python3\", \"/examples/task1.py\", \"<<personName>>\"], \"stdin\": null}";
             // Object obj = JsonPath.parse(json).read("$.foo");

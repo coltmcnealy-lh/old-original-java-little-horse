@@ -18,15 +18,17 @@ import little.horse.common.util.LHUtil;
 
 public class WFRunAPI {
     private Config config;
-    private APIStreamsContext wfRunStreams;
+    private APIStreamsContext streamsContext;
 
-    public WFRunAPI(Config config, APIStreamsContext wfRunStreams) {
+    public WFRunAPI(Config config, APIStreamsContext streamsContext) {
         this.config = config;
-        this.wfRunStreams = wfRunStreams;
+        this.streamsContext = streamsContext;
     }
 
     public void get(Context ctx) {
-        ReadOnlyKeyValueStore<String, WFRun> store = wfRunStreams.getWFRunStore();
+        ReadOnlyKeyValueStore<String, WFRun> store = streamsContext.getIdStore(
+            WFRun.class
+        );
         String wfRunGuid = ctx.pathParam("wfRunGuid");
 
         WFRun wfRun = store.get(wfRunGuid);
@@ -68,7 +70,7 @@ public class WFRunAPI {
         // }
 
         String guid = LHUtil.generateGuid();
-        event.wfRunGuid = guid;
+        event.wfRunId = guid;
         // event.wfSpecGuid = wfSpec.guid;
         // event.wfSpecName = wfSpec.name;
         event.content = request.toString();
@@ -76,14 +78,14 @@ public class WFRunAPI {
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             config.getWFRunTopic(), // wfSpec.kafkaTopic,
-            event.wfRunGuid,
+            event.wfRunId,
             event.toString()
         );
 
         config.send(record); // TODO: Some checking that it went through.
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = guid;
+        response.id = guid;
         response.status = LHDeployStatus.PENDING;
 
         ctx.status(201);
@@ -93,7 +95,7 @@ public class WFRunAPI {
     public void stopWFRun(Context ctx) {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         WFEvent event = new WFEvent();
-        event.wfRunGuid = wfRunGuid;
+        event.wfRunId = wfRunGuid;
         event.threadID = 0;
         event.type = WFEventType.WF_RUN_STOP_REQUEST;
 
@@ -113,7 +115,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = wfRunGuid;
+        response.id = wfRunGuid;
         response.status = null;
 
         ctx.json(response);
@@ -123,7 +125,7 @@ public class WFRunAPI {
         String wfRunGuid = ctx.pathParam("wfRunGuid");
         WFEvent event = new WFEvent();
         event.setConfig(config);
-        event.wfRunGuid = wfRunGuid;
+        event.wfRunId = wfRunGuid;
         event.type = WFEventType.WF_RUN_RESUME_REQUEST;
 
         try {
@@ -143,7 +145,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = wfRunGuid;
+        response.id = wfRunGuid;
         response.status = null;
 
         ctx.json(response);
@@ -154,7 +156,7 @@ public class WFRunAPI {
         int tid = Integer.valueOf(ctx.pathParam("tid"));
         WFEvent event = new WFEvent();
         event.setConfig(config);
-        event.wfRunGuid = wfRunGuid;
+        event.wfRunId = wfRunGuid;
         event.type = WFEventType.WF_RUN_STOP_REQUEST;
 
         try {
@@ -174,7 +176,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = wfRunGuid;
+        response.id = wfRunGuid;
         response.status = null;
 
         ctx.json(response);
@@ -185,7 +187,7 @@ public class WFRunAPI {
         int tid = Integer.valueOf(ctx.pathParam("tid"));
         WFEvent event = new WFEvent();
         event.setConfig(config);
-        event.wfRunGuid = wfRunGuid;
+        event.wfRunId = wfRunGuid;
         event.type = WFEventType.WF_RUN_RESUME_REQUEST;
 
         try {
@@ -205,7 +207,7 @@ public class WFRunAPI {
         }
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = wfRunGuid;
+        response.id = wfRunGuid;
         response.status = null;
 
         ctx.json(response);

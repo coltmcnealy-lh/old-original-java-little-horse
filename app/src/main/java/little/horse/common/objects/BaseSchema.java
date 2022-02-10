@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHUtil;
 
@@ -29,11 +30,16 @@ public class BaseSchema {
         this.config = config;
     }
 
-    @DigestIgnore
+    @JsonIgnore
     private String digest;
 
+    public String getId() {
+        return LHUtil.fullDigestify(getId());
+    }
+
     @SuppressWarnings("unchecked")
-    public String getDigest() {
+    @JsonIgnore
+    private String getDigest() {
         if (digest != null) return digest;
 
         HashMap<String, String> digests = new HashMap<>();
@@ -59,12 +65,12 @@ public class BaseSchema {
                 if (obj == null) {
                     digests.put(key, "");
                 } else if (obj instanceof BaseSchema) {
-                    digests.put(key, ((BaseSchema)obj).getDigest());
+                    digests.put(key, ((BaseSchema)obj).getId());
                 } else if (obj instanceof List) {
                     List<String> thingStrings = new ArrayList<String>();
                     for (Object thing: (List<Object>) obj) {
                         if (thing instanceof BaseSchema) {
-                            thingStrings.add(((BaseSchema)thing).getDigest());
+                            thingStrings.add(((BaseSchema)thing).getId());
                         } else {
                             thingStrings.add(thing.toString());
                         }
@@ -78,7 +84,7 @@ public class BaseSchema {
                     ) {
                         String val;
                         if (entry.getValue() instanceof BaseSchema) {
-                            val = ((BaseSchema) entry.getValue()).getDigest();
+                            val = ((BaseSchema) entry.getValue()).getId();
                         } else {
                             val = entry.getValue().toString();
                         }
@@ -97,7 +103,7 @@ public class BaseSchema {
                 exn.printStackTrace();
             }
         }
-        digest = LHUtil.fullDigestify(digests.toString());
+        digest = digests.toString();
         return digest;
     }
 
@@ -188,6 +194,6 @@ public class BaseSchema {
             return false;
         }
 
-        return ((BaseSchema)o).getDigest().equals(this.getDigest());
+        return ((BaseSchema)o).getId().equals(this.getId());
     }
 }

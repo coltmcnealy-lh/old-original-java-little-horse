@@ -22,10 +22,10 @@ import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFRunRequest;
 import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
-import little.horse.common.objects.LHSerdeError;
 import little.horse.common.objects.rundata.LHDeployStatus;
 import little.horse.common.objects.rundata.ThreadRunMeta;
 import little.horse.common.objects.rundata.ThreadRun;
@@ -209,7 +209,7 @@ public class WFSpec extends CoreMetadata {
             throw new RuntimeException("TODO: Handle when the runRequest is invalid");
         }
 
-        wfRun.guid = record.key();
+        wfRun.id = record.key();
         wfRun.wfSpecDigest = event.wfSpecDigest;
         wfRun.wfSpecName = event.wfSpecName;
         wfRun.setWFSpec(this);
@@ -307,7 +307,7 @@ public class WFSpec extends CoreMetadata {
 
         validateVariables();
         
-        myDigest = getDigest();
+        myDigest = getId();
         if (kafkaTopic == null) {
             kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
                 + myDigest.substring(0, 8);
@@ -346,13 +346,13 @@ public class WFSpec extends CoreMetadata {
 
         // First, see if the thing already exists.
         WFSpec old = LHDatabaseClient.lookupMeta(
-            getDigest(), config, WFSpec.class
+            getId(), config, WFSpec.class
         );
         if (old != null) {
             out.spec = old;
             out.record = null;
             out.name = old.name;
-            out.guid = old.getDigest();
+            out.guid = old.getId();
             out.status = old.status;
             return out;
         }
@@ -404,14 +404,14 @@ public class WFSpec extends CoreMetadata {
         ctx.waitForProcessing(meta, WFSpec.class);
 
         old = LHDatabaseClient.lookupMeta(
-            getDigest(), config, WFSpec.class
+            getId(), config, WFSpec.class
         );
 
         if (old != null) {
             out.spec = old;
             out.record = null;
             out.name = old.name;
-            out.guid = old.getDigest();
+            out.guid = old.getId();
             out.status = old.status;
             return out;
         }

@@ -13,7 +13,7 @@ import little.horse.common.objects.rundata.WFRun;
 public class WFEvent extends BaseSchema {
     public String wfSpecDigest;
     public String wfSpecName;
-    public String wfRunGuid;
+    public String wfRunId;
     public Date timestamp;
     public int threadID;
 
@@ -35,7 +35,7 @@ public class WFEvent extends BaseSchema {
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             wfRun.getWFSpec().kafkaTopic,
-            wfRun.guid,
+            wfRun.id,
             this.toString()
         );
         config.send(record);

@@ -4,10 +4,10 @@ import java.io.IOException;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.exceptions.LHLookupExceptionReason;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.LHSerdeError;
 import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.rundata.WFRun;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -46,14 +46,13 @@ public class LHDatabaseClient {
             err += exn.getMessage() + ".\nWas trying to call URL " + url;
 
             LHUtil.logError(err);
-            throw new LHConnectionError(exn, LHLookupExceptionReason.IO_FAILURE, err);
+            throw new LHConnectionError(exn, err);
         }
 
         // Check response code.
         if (response.code() == 404) {
             throw new LHConnectionError(
                 null,
-                LHLookupExceptionReason.OBJECT_NOT_FOUND,
                 "Could not find object at URL " + url
             );
         } else if (response.code() != 200) {
@@ -62,27 +61,26 @@ public class LHDatabaseClient {
             }
             throw new LHConnectionError(
                 null,
-                LHLookupExceptionReason.OTHER_ERROR,
                 "API Returned an error: " + String.valueOf(response.code()) + " "
                 + responseBody
             );
         }
 
         try {
-            return BaseSchema.fromString(
-                responseBody, cls, config, false
-            );
+            return BaseSchema.fromString(responseBody, cls, config);
         } catch (LHSerdeError exn) {
             exn.printStackTrace();
             // That means the response we got didn't match the proper schema. Since it
             // "should" be "impossible", it's likely that the API is orzdashed.
             throw new LHConnectionError(
                 null,
-                LHLookupExceptionReason.INVALID_RESPONSE,
                 "Got an unparseable response: " + responseBody
             );
         }
     }
 
-
+    public static WFRun lookupWFRun(String id, Config config)
+    throws LHConnectionError {
+        throw new RuntimeException("implement me!");
+    }
 }

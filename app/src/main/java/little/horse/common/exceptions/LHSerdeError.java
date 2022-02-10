@@ -1,8 +1,8 @@
-package little.horse.common.objects;
+package little.horse.common.exceptions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-public class LHSerdeError extends Exception {
+public class LHSerdeError extends LHException {
     public Exception parent;
     public String message;
 
@@ -10,7 +10,7 @@ public class LHSerdeError extends Exception {
     public String getMessage() {
         return message;
     }
-    
+
     public LHSerdeError(Exception parent, String message) {
         this.parent = parent;
         this.message = message;

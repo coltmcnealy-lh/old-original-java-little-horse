@@ -5,6 +5,6 @@ import little.horse.common.objects.rundata.LHDeployStatus;
 
 public class LHAPIResponsePost extends BaseSchema {
     public String name;
-    public String digest;
+    public String id;
     public LHDeployStatus status;
 }

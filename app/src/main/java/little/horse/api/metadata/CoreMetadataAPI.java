@@ -6,8 +6,8 @@ import little.horse.api.util.LHAPIError;
 import little.horse.api.util.LHAPIPostResult;
 import little.horse.api.util.LHDeployException;
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.LHSerdeError;
 import little.horse.common.objects.metadata.CoreMetadata;
 
 public class CoreMetadataAPI<T extends CoreMetadata> {

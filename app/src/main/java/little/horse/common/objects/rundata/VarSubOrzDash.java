@@ -1,4 +1,4 @@
-package little.horse.common.exceptions;
+package little.horse.common.objects.rundata;
 
 public class VarSubOrzDash extends Exception {
     public String message;

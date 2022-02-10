@@ -48,7 +48,7 @@ public class WFSpecAPI {
         spec.record();
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = spec.getDigest();
+        response.id = spec.getId();
         response.status = spec.status;
         response.name = spec.name;
         ctx.json(response);
@@ -93,7 +93,7 @@ public class WFSpecAPI {
         ctx.status(202);
 
         LHAPIResponsePost response = new LHAPIResponsePost();
-        response.digest = schema.getDigest();
+        response.id = schema.getId();
         response.name = schema.name;
         response.status = schema.status;
 

@@ -217,7 +217,7 @@ public class Node extends BaseSchema {
             throw exn;
         }
 
-        taskDefDigest = taskDef.getDigest();
+        taskDefDigest = taskDef.getId();
         taskDefName = taskDef.name;
     }
 
@@ -242,7 +242,7 @@ public class Node extends BaseSchema {
             throw exn;
         }
 
-        taskDefDigest = taskDef.getDigest();
+        taskDefDigest = taskDef.getId();
         taskDefName = taskDef.name;
     }
 

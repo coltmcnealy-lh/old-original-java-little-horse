@@ -1,22 +1,17 @@
 package little.horse.common.exceptions;
 
-public class LHConnectionError extends Exception {
+public class LHConnectionError extends LHException {
     private Exception parent;
-    private LHLookupExceptionReason reason;
     private String message;
 
-    public LHConnectionError(Exception exn, LHLookupExceptionReason rsn, String msg) {
+    public LHConnectionError(Exception exn, String msg) {
         this.message = msg;
-        this.reason = rsn;
         this.parent = exn;
     }
 
+    @Override
     public String getMessage() {
         return this.message;
-    }
-    
-    public LHLookupExceptionReason getReason() {
-        return this.reason;
     }
 
     public Exception parent() {

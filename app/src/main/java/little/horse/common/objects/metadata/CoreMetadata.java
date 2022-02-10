@@ -16,7 +16,7 @@ public abstract class CoreMetadata extends BaseSchema {
     public String name;
     public LHDeployStatus desiredStatus;
     public LHDeployStatus status;
-    
+
     @JsonIgnore
     public static String typeName;
 
@@ -62,7 +62,7 @@ public abstract class CoreMetadata extends BaseSchema {
     @JsonIgnore
     public Future<RecordMetadata> record() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            getEventKafkaTopic(this.config), getDigest(), this.toString());
+            getEventKafkaTopic(this.config), getId(), this.toString());
         return this.config.send(record);
     }
 

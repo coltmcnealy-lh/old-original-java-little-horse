@@ -36,7 +36,7 @@ import little.horse.common.util.LHUtil;
 )
 public class WFRun extends BaseSchema {
     // These fields are in the actual JSON for the WFRunSchema object
-    public String guid;
+    public String id;
     public String wfSpecDigest;
     public String wfSpecName;
 
@@ -63,7 +63,7 @@ public class WFRun extends BaseSchema {
     @JsonIgnore
     public void setWFSpec(WFSpec spec) {
         wfSpec = spec;
-        wfSpecDigest = wfSpec.getDigest();
+        wfSpecDigest = wfSpec.getId();
         wfSpecName = wfSpec.name;
     }
 
@@ -150,7 +150,7 @@ public class WFRun extends BaseSchema {
         WFEvent event = new WFEvent();
         event.setConfig(config);
         event.type = type;
-        event.wfRunGuid = guid;
+        event.wfRunId = id;
         event.wfSpecDigest = wfSpecDigest;
         event.wfSpecName = wfSpecName;
         event.timestamp = LHUtil.now();

@@ -8,9 +8,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import little.horse.common.Config;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
-import little.horse.common.events.WFRunRequest;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
@@ -23,16 +21,14 @@ public class WFRuntime
 {
     private KeyValueStore<String, WFRun> wfRunStore;
     private KeyValueStore<String, WFSpec> wfSpecStore;
-    private Config config;
 
     public WFRuntime(Config config) {
-        this.config = config;
+        // this.config = config;
     }
 
     @Override
     public void init(final ProcessorContext<String, WFRun> context) {
         wfRunStore = context.getStateStore(Constants.WF_RUN_STORE);
-        wfSpecStore = context.getStateStore(Constants.WF_SPEC_GUID_STORE);
     }
 
     @Override
@@ -70,14 +66,12 @@ public class WFRuntime
         if (wfRun == null) {
             if (event.type == WFEventType.WF_RUN_STARTED) {
                 wfRun = wfSpec.newRun(record);
-                wfRun.setConfig(config);
                 wfRun.setWFSpec(wfSpec);
             } else {
                 LHUtil.logError("Couldnt find wfRun for event", event);
                 return;
             }
         } else {
-            wfRun.setConfig(config);
             wfRun.setWFSpec(wfSpec);
             wfRun.incorporateEvent(event);
         }
@@ -99,7 +93,7 @@ public class WFRuntime
             wfRun.updateStatuses(event);
         }
 
-        wfRunStore.put(wfRun.guid, wfRun);
+        wfRunStore.put(wfRun.id, wfRun);
     }
 
     private WFSpec getWFSpec(String guid) throws LHConnectionError {

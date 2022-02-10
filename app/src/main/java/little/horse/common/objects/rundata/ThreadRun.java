@@ -23,9 +23,8 @@ import little.horse.common.events.TaskScheduledEvent;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.exceptions.VarSubOrzDash;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.LHSerdeError;
 import little.horse.common.objects.metadata.EdgeCondition;
 import little.horse.common.objects.metadata.Edge;
 import little.horse.common.objects.metadata.ExceptionHandlerSpec;
@@ -188,13 +187,13 @@ public class ThreadRun extends BaseSchema {
             dataToParse = result;
         } else if (var.wfRunMetadata != null) {
             if (var.wfRunMetadata == WFRunMetadataEnum.WF_RUN_GUID) {
-                return wfRun.guid;
+                return wfRun.id;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_GUID) {
                 return wfRun.wfSpecDigest;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
                 return wfRun.wfSpecName;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_GUID) {
-                return String.valueOf(this.id) + "-"+ wfRun.guid;
+                return String.valueOf(this.id) + "-"+ wfRun.id;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_ID) {
                 return Integer.valueOf(this.id);
             }
@@ -234,7 +233,7 @@ public class ThreadRun extends BaseSchema {
         tr.number = taskRuns.size();
         tr.nodeName = node.name;
         // tr.nodeGuid = node.guid; // this was there prolly for some reason...
-        tr.wfSpecDigest = wfRun.getWFSpec().getDigest();
+        tr.wfSpecDigest = wfRun.getWFSpec().getId();
         tr.wfSpecName = wfRun.getWFSpec().name;
 
         tr.parentThread = this;
@@ -633,10 +632,10 @@ public class ThreadRun extends BaseSchema {
         te.setConfig(config);
         te.taskType = node.taskDef.taskType;
         te.taskQueueName = node.taskDef.taskQueueName;
-        te.wfRunGuid = wfRun.guid;
+        te.wfRunGuid = wfRun.id;
         te.wfSpecDigest = wfRun.wfSpecDigest;
         te.wfSpecName = wfRun.wfSpecName;
-        te.taskExecutionGuid = wfRun.guid + "_" + String.valueOf(id) + "_" +
+        te.taskExecutionGuid = wfRun.id + "_" + String.valueOf(id) + "_" +
             String.valueOf(taskRuns.size());
 
         te.record();
