@@ -11,7 +11,7 @@ import little.horse.common.Config;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequest;
-import little.horse.common.objects.rundata.LHDeployStatus;
+import little.horse.common.objects.metadata.LHDeployStatus;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;

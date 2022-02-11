@@ -19,6 +19,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
@@ -35,7 +36,6 @@ public class Config {
     private String taskDeftopic;
     private String externalEventDefTopic;
     private String kafkaTopicPrefix;
-    private String advertisedUrl;
     private String stateDirectory;
     private String defaultTaskDockerImage;
     private String apiURL;
@@ -47,6 +47,9 @@ public class Config {
     private String wfSpecGuid;
     private String wfNodeName;
     private String threadSpecName;
+    private String advertisedHost;
+    private int advertisedPort;
+    private String advertisedProtocol;
 
     public Config() {
         // TODO: Make this more readable
@@ -85,8 +88,14 @@ public class Config {
         this.taskDeftopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "TaskDef";
         this.externalEventDefTopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "ExternalEventDef";
 
-        String theURL = System.getenv(Constants.ADVERTISED_URL_KEY);
-        this.advertisedUrl = (theURL == null) ? "http://localhost:5000" : theURL;
+        String theHost = System.getenv(Constants.ADVERTISED_HOST_KEY);
+        this.advertisedHost = (theHost == null) ? "localhost" : theHost;
+
+        String theProto = System.getenv(Constants.ADVERTISED_PROTOCOL_KEY);
+        this.advertisedProtocol= (theProto == null) ? "http" : theProto;
+
+        String thePort = System.getenv(Constants.ADVERTISED_PORT_KEY);
+        this.advertisedPort = thePort == null ? 80 : Integer.valueOf(thePort);
 
         String sdir = System.getenv(Constants.STATE_DIR_KEY);
         this.stateDirectory = (sdir == null) ? "/tmp/kafkaState" : sdir;
@@ -129,6 +138,10 @@ public class Config {
         this.wfSpecGuid = System.getenv(Constants.WF_SPEC_GUID_KEY);
         this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
         this.threadSpecName = System.getenv(Constants.THREAD_SPEC_NAME_KEY);
+    }
+
+    public HostInfo getHostInfo() {
+        return new HostInfo(advertisedHost, advertisedPort);
     }
 
     public void createKafkaTopic(NewTopic topic) {
@@ -249,12 +262,21 @@ public class Config {
         return this.getStreamsConfig("");
     }
 
+    public String getAdvertisedUrl() {
+        return String.format(
+            "%s://%s:%d",
+            advertisedProtocol,
+            advertisedHost,
+            advertisedPort
+        );
+    }
+
     public Properties getStreamsConfig(String appIdSuffix) {
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, this.appId + appIdSuffix);
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
-        props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.advertisedUrl);
+        props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());

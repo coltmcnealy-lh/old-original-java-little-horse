@@ -12,7 +12,9 @@ public class Constants {
     public static String SYSTEM_PREFIX = "SYSTEM__";
 
     public static String API_URL_KEY = "LHORSE_API_URL";
-    public static String ADVERTISED_URL_KEY = "LHORSE_ADVERTISED_URL";
+    public static String ADVERTISED_PROTOCOL_KEY = "LHORSE_ADVERTISED_PROTOCOL";
+    public static String ADVERTISED_HOST_KEY = "LHORSE_ADVERTISED_HOST";
+    public static String ADVERTISED_PORT_KEY = "LHORSE_ADVERTISED_PORT";
     public static String STATE_DIR_KEY = "LHORSE_KAFKA_STREAMS_STATE_DIR";
 
     public static String WF_SPEC_GUID_KEY = "LHORSE_WF_SPEC_GUID";
@@ -36,4 +38,6 @@ public class Constants {
     public static Pattern VARIABLE_PATTERN = Pattern.compile(
         "<<(.*?)>>"
     );
+
+    public static String FORCE_LOCAL = "forceLocal";
 }

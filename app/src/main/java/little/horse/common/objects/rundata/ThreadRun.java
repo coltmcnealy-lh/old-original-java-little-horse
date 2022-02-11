@@ -29,6 +29,7 @@ import little.horse.common.objects.metadata.EdgeCondition;
 import little.horse.common.objects.metadata.Edge;
 import little.horse.common.objects.metadata.ExceptionHandlerSpec;
 import little.horse.common.objects.metadata.InterruptDef;
+import little.horse.common.objects.metadata.LHDeployStatus;
 import little.horse.common.objects.metadata.Node;
 import little.horse.common.objects.metadata.NodeType;
 import little.horse.common.objects.metadata.ThreadSpec;

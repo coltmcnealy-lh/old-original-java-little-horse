@@ -26,7 +26,7 @@ public class TaskRun extends BaseSchema {
     public Object stdin;
     public int attemptNumber = 1;
 
-    public LHDeployStatus status;
+    public LHExecutionStatus status;
     public Object stdout;
     public Object stderr;
     public int returnCode;
@@ -41,13 +41,17 @@ public class TaskRun extends BaseSchema {
 
     @JsonIgnore
     public boolean isTerminated() {
-        return (status == LHDeployStatus.COMPLETED || status == LHDeployStatus.ERROR);
+        return (
+            status == LHExecutionStatus.COMPLETED
+            || status == LHExecutionStatus.FAILED
+        );
     }
 
     @JsonIgnore
     public boolean isCompleted() {
         return (
-            status == LHDeployStatus.COMPLETED || status == LHDeployStatus.FAILED_AND_HANDLED
+            status == LHExecutionStatus.COMPLETED
+            || status == LHExecutionStatus.FAILED
         );
     }
 

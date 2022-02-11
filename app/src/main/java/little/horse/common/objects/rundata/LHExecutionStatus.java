@@ -4,5 +4,6 @@ public enum LHExecutionStatus {
     RUNNING,
     HALTING,
     HALTED,
+    FAILED,
     COMPLETED;
 }

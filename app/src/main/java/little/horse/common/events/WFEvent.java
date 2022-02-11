@@ -34,7 +34,7 @@ public class WFEvent extends BaseSchema {
         }
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            wfRun.getWFSpec().kafkaTopic,
+            wfRun.getWFSpec().getKafkaTopic(),
             wfRun.id,
             this.toString()
         );

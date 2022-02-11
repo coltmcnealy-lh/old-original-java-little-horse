@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.concurrent.Future;
 
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.streams.processor.api.Record;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
@@ -14,9 +12,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.api.util.APIStreamsContext;
-import little.horse.api.util.LHAPIPostResult;
-import little.horse.api.util.LHDeployException;
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.WFEvent;
@@ -26,12 +21,10 @@ import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
-import little.horse.common.objects.rundata.LHDeployStatus;
 import little.horse.common.objects.rundata.ThreadRunMeta;
 import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
-import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
 
@@ -41,21 +34,28 @@ import little.horse.common.util.LHUtil;
     property = "name"
 )
 public class WFSpec extends CoreMetadata {
+    @JsonIgnore
     public static String typeName = "wfSpec";
 
+    // Journalling
     public String name;
-    public String myDigest;
     public LHDeployStatus status;
-    public String kafkaTopic;
-    public String entrypointThreadName;
     public LHDeployStatus desiredStatus;
-    public String k8sName;
-    public String namespace;
-    public HashSet<String> interruptEvents;
-
+    
+    // Actual definition here.
     @JsonManagedReference
     public HashMap<String, ThreadSpec> threadSpecs;
+    public HashSet<String> interruptEvents;
+    public String entrypointThreadName;
+    
+    // Stuff for deployment info
+    @JsonIgnore // see getter()
+    private String k8sName;
+    public String namespace;
+    @JsonIgnore // see getter()
+    private String kafkaTopic;
 
+    // Internal bookkeeping for validation
     @JsonIgnore
     @DigestIgnore
     private HashMap<String, HashMap<String, WFRunVariableDef>> allVarDefs;
@@ -240,6 +240,11 @@ public class WFSpec extends CoreMetadata {
     }
 
     @JsonIgnore
+    public void deploy() {
+        throw new RuntimeException("Implement me!");
+    }
+
+    @JsonIgnore
     public void undeploy() {
         throw new RuntimeException("Implement me!");
     }
@@ -253,7 +258,7 @@ public class WFSpec extends CoreMetadata {
     public void processChange(CoreMetadata old) {
         if (!(old instanceof WFSpec)) {
             throw new RuntimeException(
-                "Called processChange on a non-WFSpecSchema."
+                "Called processChange on a non-WFSpec"
             );
         }
 
@@ -261,8 +266,6 @@ public class WFSpec extends CoreMetadata {
         if (oldSpec.status != desiredStatus) {
             if (desiredStatus == LHDeployStatus.RUNNING) {
                 deploy();
-            } else if (desiredStatus == LHDeployStatus.REMOVED) {
-                remove();
             } else if (desiredStatus == LHDeployStatus.STOPPED) {
                 undeploy();
             }
@@ -280,14 +283,14 @@ public class WFSpec extends CoreMetadata {
         // In the future, we'll want to support that use case.
         interruptEvents = new HashSet<String>();
         for (ThreadSpec thread: this.threadSpecs.values()) {
-            thread.fillOut(config, this);
+            thread.validate(config, this);
 
-            if (allVarDefs.containsKey(name)) {
+            if (allVarDefs.containsKey(thread.name)) {
                 throw new LHValidationError(
-                    "Thread name " + name + " used twice in the workflow! OrzDash!"
+                    "Thread name " + thread.name + " used twice in the workflow! OrzDash!"
                 );
             }
-            allVarDefs.put(name, thread.variableDefs);
+            allVarDefs.put(thread.name, thread.variableDefs);
 
             for (Map.Entry<String, InterruptDef> p:
                 thread.interruptDefs.entrySet()
@@ -303,16 +306,8 @@ public class WFSpec extends CoreMetadata {
                 }
             }
         }
-        // No leaf-level CoreMetadata's here, so nothing else to do.
 
         validateVariables();
-        
-        myDigest = getId();
-        if (kafkaTopic == null) {
-            kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
-                + myDigest.substring(0, 8);
-        }
-        k8sName = LHUtil.toValidK8sName(name + "-" + LHUtil.digestify(myDigest));
     }
 
     @JsonIgnore
@@ -326,95 +321,19 @@ public class WFSpec extends CoreMetadata {
         return out;
     }
 
-    @JsonIgnore
-    @SuppressWarnings("unchecked")  // TODO: Figure out how to not have to do this.
-    public LHAPIPostResult<WFSpec> createIfNotExists(APIStreamsContext ctx)
-    throws LHDeployException {
-        try {
-            return createHelper(ctx);
-        } catch (LHValidationError exn) {
-            throw new LHDeployException(exn, exn.getMessage(), 400);
-        } catch (LHConnectionError exn) {
-            throw new LHDeployException(exn, exn.getMessage(), 500);
+    public String getKafkaTopic() {
+        if (kafkaTopic == null) {
+            kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
+                + getId().substring(0, 8);
         }
+        return kafkaTopic;
     }
 
-    @JsonIgnore
-    private LHAPIPostResult<WFSpec> createHelper(APIStreamsContext ctx)
-    throws LHValidationError, LHConnectionError, LHDeployException {
-        LHAPIPostResult<WFSpec> out = new LHAPIPostResult<WFSpec>();
-
-        // First, see if the thing already exists.
-        WFSpec old = LHDatabaseClient.lookupMeta(
-            getId(), config, WFSpec.class
-        );
-        if (old != null) {
-            out.spec = old;
-            out.record = null;
-            out.name = old.name;
-            out.guid = old.getId();
-            out.status = old.status;
-            return out;
+    public String getK8sName() {
+        if (k8sName == null) {
+            k8sName = LHUtil.toValidK8sName(name + "-" + getId().substring(0, 8));
         }
-
-        // Ok, so the WFSpec doesn't already exist; now we have to go make it
-        // and block until we know whether it was created or it orzdashed.
-
-        // There's a bunch of TaskDef's here, let's create those if they don't exist.
-        for (Node node: getAllNodes()) {
-            // We know that node.fillOut() will have already been called. This means
-            // that the node's taskDefGuid, taskDefName, and taskDef are all set.
-            // But we don't yet know if the node's taskDef was created yet.
-            // In the FUTURE, we MIGHT add some optimization to that. But for now,
-            // we have to throw the taskDef at the API and see what sticks.
-
-            // TODO: parallelize this.
-            LHAPIPostResult<TaskDef> result = node.taskDef.createIfNotExists(
-                ctx
-            );
-
-            // TODO: Clean this error handling up.
-            if (result.message != null) {
-                throw new LHValidationError(
-                    "Was unable to create taskDef " + node.taskDefName + ": " + 
-                    result.message
-                );
-            }
-            if (result.spec == null || !result.spec.isEqualTo(node.taskDef)) {
-                throw new LHValidationError(
-                    "The taskDef " + node.taskDefName + " was not able to be created."
-                );
-            }
-        }
-
-        // TODO: Create externalEventDef's as well.
-
-        // At this point, we've created all of the TaskDefs/ExternalEventDefs that our
-        // WFSpec needs. Now we need to create the actual WFSpec.
-        Future<RecordMetadata> fut = record();
-        RecordMetadata meta;
-        try {
-            meta = fut.get();
-        } catch (Exception exn) {
-            exn.printStackTrace();
-            LHUtil.logError("need to figure out something smart to do");
-            throw new RuntimeException("orzdash");
-        }
-
-        ctx.waitForProcessing(meta, WFSpec.class);
-
-        old = LHDatabaseClient.lookupMeta(
-            getId(), config, WFSpec.class
-        );
-
-        if (old != null) {
-            out.spec = old;
-            out.record = null;
-            out.name = old.name;
-            out.guid = old.getId();
-            out.status = old.status;
-            return out;
-        }
-        throw new RuntimeException("Argh, wtf?");
+        return k8sName;
     }
+
 }

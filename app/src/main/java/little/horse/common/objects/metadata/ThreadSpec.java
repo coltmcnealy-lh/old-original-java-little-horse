@@ -43,7 +43,7 @@ public class ThreadSpec extends BaseSchema {
     @JsonManagedReference
     public HashMap<String, Node> nodes;
 
-    public void fillOut(Config config, WFSpec parent)
+    public void validate(Config config, WFSpec parent)
     throws LHValidationError, LHConnectionError {
         setConfig(config);
 

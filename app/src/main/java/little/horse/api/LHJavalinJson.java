@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import io.javalin.plugin.json.JsonMapper;
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
 
@@ -44,13 +45,18 @@ public class LHJavalinJson implements JsonMapper {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     @NotNull()
     public <T> T fromJsonString(@NotNull() String json, @NotNull() Class<T> targetClass) {
         if (BaseSchema.class.isAssignableFrom(targetClass)) {
 
-            @SuppressWarnings("unchecked")
             Class<? extends BaseSchema> jedi = (Class<? extends BaseSchema>)targetClass;
-            return BaseSchema.fromString(json, jedi, config, false);
+            try {
+                return (T) BaseSchema.fromString(json, jedi, config);
+            } catch (Exception exn) {
+                exn.printStackTrace();
+                return null;
+            }
 
         } else {
             try {
@@ -62,15 +68,15 @@ public class LHJavalinJson implements JsonMapper {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     @NotNull()
     public <T> T fromJsonStream(@NotNull() InputStream json, @NotNull() Class<T> targetClass) {
         try {
             if (BaseSchema.class.isAssignableFrom(targetClass)) {
 
-                @SuppressWarnings("unchecked")
                 Class<? extends BaseSchema> jedi = (Class<? extends BaseSchema>)targetClass;
-                return BaseSchema.fromBytes(json.readAllBytes(), jedi, config, false);
+                return (T) BaseSchema.fromBytes(json.readAllBytes(), jedi, config);
 
             } else {
                 try {
@@ -81,6 +87,9 @@ public class LHJavalinJson implements JsonMapper {
                 }
             }
         } catch (IOException exn) {
+            exn.printStackTrace();
+            return null;
+        } catch (LHSerdeError exn) {
             exn.printStackTrace();
             return null;
         }

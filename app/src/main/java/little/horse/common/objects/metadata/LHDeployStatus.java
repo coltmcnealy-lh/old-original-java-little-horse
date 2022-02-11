@@ -1,4 +1,4 @@
-package little.horse.common.objects.rundata;
+package little.horse.common.objects.metadata;
 
 public enum LHDeployStatus {
     STARTING,

@@ -3,9 +3,7 @@ package little.horse.api;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import io.javalin.http.Context;
-import little.horse.api.util.APIStreamsContext;
 import little.horse.api.util.LHAPIError;
-import little.horse.api.util.LHAPIResponsePost;
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.WFEvent;
@@ -19,20 +17,6 @@ import little.horse.common.util.LHUtil;
 
 public class ExternalEventDefAPI {
     private Config config;
-
-    public ExternalEventDefAPI(Config config, APIStreamsContext streams) {
-        this.config = config;
-    }
-
-    public void post(Context ctx) {
-        ExternalEventDef spec = ctx.bodyAsClass(ExternalEventDef.class);
-        spec.record();
-
-        LHAPIResponsePost response = new LHAPIResponsePost();
-        response.id = spec.getId();
-        response.name = spec.name;
-        ctx.json(response);
-    }
 
     public void get(Context ctx) {
         throw new RuntimeException("Replace with CoreMetadataAPI");
@@ -63,7 +47,6 @@ public class ExternalEventDefAPI {
 
         WFRun schema = wfRun;
         ExternalEventDef evdSchema = evd;
-        String externalEventId = LHUtil.generateGuid();
 
         ExternalEventPayload payload = new ExternalEventPayload();
         payload.externalEventDefId = evdSchema.getId();
@@ -79,14 +62,14 @@ public class ExternalEventDefAPI {
         wfEvent.content = payload.toString();
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            wfSpec.kafkaTopic,
+            wfSpec.getKafkaTopic(),
             wfEvent.wfRunId,
             wfEvent.toString()
         );
         config.send(record);
 
-        LHAPIResponsePost response = new LHAPIResponsePost();
-        response.id = externalEventId;
-        ctx.json(response);
+        // LHAPIResponsePost response = new LHAPIResponsePost();
+        // response.id = externalEventId;
+        // ctx.json(response);
     }
 }

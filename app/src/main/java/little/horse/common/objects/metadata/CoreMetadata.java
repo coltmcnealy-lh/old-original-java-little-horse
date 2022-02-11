@@ -1,6 +1,5 @@
 package little.horse.common.objects.metadata;
 
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -12,7 +11,6 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.rundata.LHDeployStatus;
 import little.horse.common.util.LHUtil;
 
 public abstract class CoreMetadata extends BaseSchema {
@@ -47,6 +45,10 @@ public abstract class CoreMetadata extends BaseSchema {
         return "/" + typeName;
     }
 
+    public static String getAliasPath() {
+        return getAPIPath() + "Alias";
+    }
+
     public abstract void processChange(CoreMetadata old);
     
     /**
@@ -58,10 +60,17 @@ public abstract class CoreMetadata extends BaseSchema {
     }
 
     @JsonIgnore
-    public Future<RecordMetadata> record() {
+    public Future<RecordMetadata> save() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             getIdKafkaTopic(this.config), getId(), this.toString());
         return this.config.send(record);
+    }
+
+    @JsonIgnore
+    public static Future<RecordMetadata> sendNullRecord(String id, Config config) {
+        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
+            getIdKafkaTopic(config), id, null);
+        return config.send(record);
     }
 
     public void undeploy() {
