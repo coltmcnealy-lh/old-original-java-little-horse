@@ -15,27 +15,27 @@ public class APIStreamsContext {
         this.streams = streams;
     }
 
-    public <T extends CoreMetadata> ReadOnlyKeyValueStore<String, T> getIdStore(
-        Class<T> cls
-    ) {
-        return streams.store(
-            StoreQueryParameters.fromNameAndType(
-                T.getStoreName(),
-                QueryableStoreTypes.keyValueStore()
-            )
-        );
-    }
+    // private <T extends CoreMetadata> ReadOnlyKeyValueStore<String, T> getIdStore(
+    //     Class<T> cls
+    // ) {
+    //     return streams.store(
+    //         StoreQueryParameters.fromNameAndType(
+    //             T.getIdStoreName(),
+    //             QueryableStoreTypes.keyValueStore()
+    //         )
+    //     );
+    // }
 
-    public <T extends CoreMetadata> ReadOnlyKeyValueStore<String, T> getNameStore(
-        Class<T> cls
-    ) {
-        return streams.store(
-            StoreQueryParameters.fromNameAndType(
-                T.getNameStoreName(),
-                QueryableStoreTypes.keyValueStore()
-            )
-        );
-    }
+    // private <T extends CoreMetadata> ReadOnlyKeyValueStore<String, T> getNameStore(
+    //     Class<T> cls
+    // ) {
+    //     return streams.store(
+    //         StoreQueryParameters.fromNameAndType(
+    //             T.getNameStoreName(),
+    //             QueryableStoreTypes.keyValueStore()
+    //         )
+    //     );
+    // }
 
     public <T extends CoreMetadata> void waitForProcessing(
         RecordMetadata record, Class<T> cls
@@ -46,5 +46,12 @@ public class APIStreamsContext {
         try {
             Thread.sleep(100);
         } catch (Exception exn) {}
+    }
+
+    public <T extends CoreMetadata> T queryRemoteOrLocal(
+        String identifier, Class<T> cls
+    ) {
+        
+        return null;
     }
 }

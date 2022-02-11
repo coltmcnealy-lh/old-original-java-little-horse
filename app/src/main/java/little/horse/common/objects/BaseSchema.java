@@ -184,6 +184,10 @@ public class BaseSchema {
         }
     }
 
+    public byte[] toBytes() {
+        return toString().getBytes();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null) {
@@ -195,5 +199,10 @@ public class BaseSchema {
         }
 
         return ((BaseSchema)o).getId().equals(this.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getId().hashCode();
     }
 }

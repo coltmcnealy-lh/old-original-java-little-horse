@@ -1,5 +1,7 @@
 package little.horse.common.objects.metadata;
 
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.Future;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -7,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.rundata.LHDeployStatus;
@@ -21,28 +24,23 @@ public abstract class CoreMetadata extends BaseSchema {
     public static String typeName;
 
     @JsonIgnore
-    public static String getEventKafkaTopic(Config config) {
+    public static String getIdKafkaTopic(Config config) {
         return config.getKafkaTopicPrefix() + "__" + typeName;
     }
 
     @JsonIgnore
-    public static String getNameKeyedKafkaTopic(Config config) {
-        return getEventKafkaTopic(config) + "__nameKeyed";
+    public static String getAliasKafkaTopic(Config config) {
+        return getIdKafkaTopic(config) + "__aliases";
     }
 
     @JsonIgnore
-    public static String getStoreName() {
+    public static String getIdStoreName() {
         return typeName;
     }
 
     @JsonIgnore
-    public static String getNameStoreName() {
-        return typeName + "__nameKeyed";
-    }
-
-    @JsonIgnore
-    public static String getOffsetStoreName() {
-        return typeName + "__offset";
+    public static String getAliasStoreName() {
+        return getIdStoreName() + "__aliases";
     }
 
     public static String getAPIPath() {
@@ -62,11 +60,15 @@ public abstract class CoreMetadata extends BaseSchema {
     @JsonIgnore
     public Future<RecordMetadata> record() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            getEventKafkaTopic(this.config), getId(), this.toString());
+            getIdKafkaTopic(this.config), getId(), this.toString());
         return this.config.send(record);
     }
 
     public void undeploy() {
         LHUtil.log("TODO: write this function.");
+    }
+
+    public Set<AliasIdentifier> getAliases() {
+        throw new RuntimeException("implement me!");
     }
 }

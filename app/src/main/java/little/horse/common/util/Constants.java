@@ -23,12 +23,13 @@ public class Constants {
     public static String DEFAULT_COLLECTOR_IMAGE_KEY = "LHORSE_DEFAULT_COLLECTOR_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_K8S_REPLICAS";
 
-    public static String WF_SPEC_API_PATH = "wfSpec";
-    public static String TASK_DEF_API_PATH = "taskDef";
-    public static String EXTERNAL_EVENT_DEF_PATH = "externalEventDef";
-    public static String WF_RUN_API_PATH = "wfRun";
+    // public static String WF_SPEC_API_PATH = "wfSpec";
+    // public static String TASK_DEF_API_PATH = "taskDef";
+    // public static String EXTERNAL_EVENT_DEF_PATH = "externalEventDef";
+    // public static String WF_RUN_API_PATH = "wfRun";
 
-    public static String WF_RUN_STORE = "wfRunStorePlus";
+    // TODO: make this a reserved word.
+    public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";
 
     public static int EXPOSED_PORT = 5000;
 
