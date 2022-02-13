@@ -17,24 +17,13 @@ public class LHRpcCLient {
         this.config = config;
     }
 
-    public<T extends CoreMetadata> LHRpcResponse<T> get(
+    public<T extends CoreMetadata> LHRpcResponse<T> getResponse(
         String url, Class<T> cls
     ) throws LHConnectionError {
-        OkHttpClient client = config.getHttpClient();
-        Request request = new Request.Builder().url(url).build();
+        byte[] response = getResponse(url);
 
         try {
-            Response resp = client.newCall(request).execute();
-            return LHRpcResponse.fromResponse(resp, config, cls);
-
-        } catch (IOException exn) {
-            // java.net.ConnectException is included in IOException.
-            // java.net.SocketTimeoutException also included in IOException.
-            throw new LHConnectionError(
-                exn,
-                "Had " + exn.getClass().getName() + " error connecting to " + url +
-                " : " + exn.getMessage()
-            );
+            return LHRpcResponse.fromResponse(response, config, cls);
 
         } catch (LHSerdeError exn) {
             throw new RuntimeException(
@@ -42,6 +31,34 @@ public class LHRpcCLient {
                 "RocksDB, which shouldn't be possible. Colt should be fired ;) "
             );
 
+        }
+    }
+
+    private byte[] getResponse(String url) throws LHConnectionError {
+        OkHttpClient client = config.getHttpClient();
+        Request request = new Request.Builder().url(url).build();
+
+        try {
+            Response resp = client.newCall(request).execute();
+            byte[] body = resp.body().bytes();
+            if (resp.code() < 300 && resp.code() >= 200) {
+                return body;
+            } else {
+                throw new LHConnectionError(
+                    null,
+                    String.format("Got a %s response from API: %s", resp.code(), body)
+                );
+            }
+        } catch(IOException exn) {
+            // java.net.ConnectException is included in IOException.
+            // java.net.SocketTimeoutException also included in IOException.
+            throw new LHConnectionError(
+                exn,
+                String.format(
+                    "Had %s error connectiong to %s: %s",
+                    exn.getClass().getName(), url, exn.getMessage()
+                )
+            );
         }
     }
 }

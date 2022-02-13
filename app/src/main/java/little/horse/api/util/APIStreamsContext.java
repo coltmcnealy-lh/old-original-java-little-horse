@@ -1,8 +1,13 @@
+/**
+ * This, along with CoreMetadataAPI.java, is **almost** an implementation of a
+ * full-blown database with indexes (the alias thing). It's not quite as robust as SQL
+ * but it hopefully gets the job done.
+ */
+
 package little.horse.api.util;
 
 import java.util.Set;
 
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -12,6 +17,9 @@ import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
+import little.horse.api.OffsetInfoCollection;
+import little.horse.api.metadata.AliasEntryCollection;
+import little.horse.api.metadata.AliasIdentifier;
 import little.horse.api.metadata.CoreMetadataEntry;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
@@ -45,8 +53,11 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
     }
 
-    public T getTFromId(String id, boolean forceLocal) throws LHConnectionError {
-        Bytes objBytes = queryStoreBytes(id, T.getIdStoreName(), forceLocal);
+    public T getTFromId(String id, boolean forceLocal)
+    throws LHConnectionError {
+        Bytes objBytes = queryStoreBytes(
+            id, T.getIdStoreName(), forceLocal, T.getAPIPath(id)
+        );
 
         try {
             CoreMetadataEntry entry = BaseSchema.fromBytes(
@@ -65,23 +76,108 @@ public class APIStreamsContext<T extends CoreMetadata> {
         }
     }
 
-    public T getTFromAlias(String aliasKey, String aliasValue, boolean forceLocal)
+    public Long getOffsetIDStore(String id, boolean forceLocal, String apiPath)
     throws LHConnectionError {
-        return null;
+        // Need the ID in order to figure out the partition thing.
+        Bytes objBytes = queryStoreBytes(
+            Constants.LATEST_OFFSET_ROCKSDB_KEY, T.getIdStoreName(), forceLocal,
+            apiPath, id
+        );
+        if (objBytes == null) return null;
+
+        return Long.valueOf(String.valueOf(objBytes.get()));
+    }
+
+    public AliasEntryCollection getTFromAlias(
+        String aliasKey, String aliasValue, boolean forceLocal
+    ) throws LHConnectionError {
+        String apiPath = T.getAliasPath(aliasKey, aliasValue);
+        AliasIdentifier entryID = new AliasIdentifier(aliasKey, aliasValue);
+
+        Bytes aliasEntryCollectionBytes = queryStoreBytes(
+            T.getAliasStoreName(), entryID.getStoreKey(), forceLocal, apiPath
+        );
+
+        try {
+            if (aliasEntryCollectionBytes == null) return null;
+
+            return BaseSchema.fromBytes(
+                aliasEntryCollectionBytes.get(), AliasEntryCollection.class, config
+            );
+        } catch(LHSerdeError exn) {
+            throw new RuntimeException("Somehow we got invalid crap in rocksdb");
+        }
     }
 
     public void waitForProcessing(
-        String key, RecordMetadata record, boolean forceLocal
-    ) {
+        String key, long offset, int partition, boolean forceLocal, String apiPath
+    ) throws LHConnectionError {
+        KeyQueryMetadata metadata = streams.queryMetadataForKey(
+            T.getIdStoreName(),
+            key,
+            Serdes.String().serializer()
+        );
 
+        if (forceLocal || metadata.activeHost().equals(thisHost)) {
+            while (true) {
+                OffsetInfoCollection infos;
+                try {
+                    infos = BaseSchema.fromBytes(
+                        getStore(T.getIdStoreName()).get(
+                            Constants.LATEST_OFFSET_ROCKSDB_KEY
+                        ).get(),
+                        OffsetInfoCollection.class,
+                        config
+                    );
+                } catch(LHSerdeError exn) {
+                    exn.printStackTrace();
+                    throw new RuntimeException("this should be impossible");
+                }
+                if (infos != null) {
+                    String mapKey = T.getIdKafkaTopic(config) + partition;
+                    if (infos.partitionMap.get(mapKey).offset >= offset) {
+                        break;
+                    }
+                }
+
+                try {
+                    Thread.sleep(100);
+                } catch(Exception exn) {}
+            }
+        } else {
+            // No need to query standby's, because if the leader is down, well, then
+            // there's gonna be no progress made until the leader comes back up, so we
+            // just say ":shrug: the leader's down, dunno."
+            
+            // In the future, if Colty weren't so lazy, maybe we could query the
+            // standby to see if the info had already propagated. But that's not in
+            // the time budget for now.
+            HostInfo host = metadata.activeHost();
+            String newApiPath = forceLocal ? apiPath : apiPath + "?forceLocal=true";
+            String url = String.format(
+                "http://%s:%s%s", host.host(), host.port(), newApiPath
+            );
+            LHUtil.log(
+                "Calling wait externally:", url
+            );
+            new LHRpcCLient(config).getResponse(url, cls);
+        }
     }
 
     private Bytes queryStoreBytes(
-        String storeName, String storeKey, boolean forceLocal
+        String storeName, String storeKey, boolean forceLocal, String apiPath
+    ) throws LHConnectionError {
+        // Use the store key as the partition key.
+        return queryStoreBytes(storeName, storeKey, forceLocal, apiPath, storeKey);
+    }
+
+    private Bytes queryStoreBytes(
+        String storeName, String storeKey, boolean forceLocal,
+        String apiPath, String partitionKey
     ) throws LHConnectionError {
         KeyQueryMetadata metadata = streams.queryMetadataForKey(
             storeName,
-            storeKey,
+            partitionKey,
             Serdes.String().serializer()
         );
 
@@ -91,20 +187,22 @@ public class APIStreamsContext<T extends CoreMetadata> {
         } else {
 
             try {
-                return queryRemote(storeKey, storeName, metadata.activeHost());
+                return queryRemote(
+                    storeKey, storeName, metadata.activeHost(), apiPath
+                );
 
             } catch (LHConnectionError exn) {
                 LHUtil.logError(
                     "Trying to read from stale replica: ", exn.getMessage()
                 );
-                return queryStandbys(storeKey, storeName, metadata);
+                return queryStandbys(storeKey, storeName, metadata, apiPath);
 
             }
         }
     }
 
     private Bytes queryRemote(
-        String storeKey, String storeName, HostInfo hostInfo
+        String storeKey, String storeName, HostInfo hostInfo, String apiPath
     ) throws LHConnectionError {
         String remoteHost = hostInfo.host();
         int remotePort = hostInfo.port();
@@ -112,13 +210,13 @@ public class APIStreamsContext<T extends CoreMetadata> {
             "http://%s:%d%s/%s/%s",
             remoteHost,
             remotePort,
-            T.getAPIPath(),
+            apiPath,
             Constants.FORCE_LOCAL,
             storeKey
         );
 
         LHRpcCLient client = new LHRpcCLient(config);
-        LHRpcResponse<T> response = client.get(url, cls);
+        LHRpcResponse<T> response = client.getResponse(url, cls);
 
         switch (response.status) {
             case OK:
@@ -141,13 +239,13 @@ public class APIStreamsContext<T extends CoreMetadata> {
     }
 
     private Bytes queryStandbys(
-        String storeKey, String storeName, KeyQueryMetadata metadata
+        String storeKey, String storeName, KeyQueryMetadata metadata, String apiPath
     ) throws LHConnectionError {
         Set<HostInfo> standbys = metadata.standbyHosts();
         for (HostInfo host: standbys) {
             if (host.equals(metadata.activeHost())) continue; // already tried.
             try {
-                return queryRemote(storeKey, storeName, host);
+                return queryRemote(storeKey, storeName, host, apiPath);
             } catch(LHConnectionError exn) {
                 // Just swallow it and throw later.
             }

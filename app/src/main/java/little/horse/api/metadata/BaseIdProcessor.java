@@ -1,6 +1,7 @@
 package little.horse.api.metadata;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import org.apache.kafka.streams.processor.api.RecordMetadata;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.api.OffsetInfo;
+import little.horse.api.OffsetInfoCollection;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
@@ -67,13 +69,30 @@ implements Processor<String, T, String, AliasEvent> {
             updateMeta(old, newMeta, record, offset);
         }
 
-        // Now save the offset.
-        OffsetInfo oi = new OffsetInfo();
-        oi.offset = offset;
-        oi.recordTime = new Date(record.timestamp());
-        oi.processTime = LHUtil.now();
+        if (recordMeta != null) {
+            OffsetInfoCollection infos = BaseSchema.fromBytes(
+                kvStore.get(Constants.LATEST_OFFSET_ROCKSDB_KEY).get(),
+                OffsetInfoCollection.class,
+                config
+            );
 
-        kvStore.put(Constants.LATEST_OFFSET_ROCKSDB_KEY, new Bytes(oi.toBytes()));
+            if (infos == null) {
+                infos = new OffsetInfoCollection();
+                infos.partitionMap = new HashMap<String, OffsetInfo>();
+            }
+
+            // Now save the offset.
+            OffsetInfo oi = new OffsetInfo();
+            oi.offset = offset;
+            oi.recordTime = new Date(record.timestamp());
+            oi.processTime = LHUtil.now();
+
+            infos.latest = oi;
+            String key = recordMeta.topic() + recordMeta.partition();
+            infos.partitionMap.put(key, oi);
+
+            kvStore.put(Constants.LATEST_OFFSET_ROCKSDB_KEY, new Bytes(infos.toBytes()));
+        }
     }
 
     private void updateMeta(T old, T newMeta, final Record<String, T> record, long offset) {

@@ -133,7 +133,7 @@ public class Node extends BaseSchema {
 
     @JsonIgnore
     public String getK8sName() {
-        return LHUtil.toValidK8sName(threadSpec.wfSpec.k8sName + "-" + name);
+        return LHUtil.toValidK8sName(threadSpec.wfSpec.getK8sName() + "-" + name);
     }
 
     @JsonIgnore
@@ -207,12 +207,6 @@ public class Node extends BaseSchema {
             String prefix = "Node " + name + ", thread " + threadSpec.name;
             if (exn instanceof LHValidationError) {
                 throw new LHValidationError(prefix + exn.getMessage());
-            } else if (exn instanceof LHConnectionError) {
-                throw new LHConnectionError(
-                    ((LHConnectionError) exn).parent(),
-                    ((LHConnectionError) exn).getReason(),
-                    ((LHConnectionError) exn).getMessage()
-                );
             }
             throw exn;
         }
@@ -232,12 +226,6 @@ public class Node extends BaseSchema {
             String prefix = "Node " + name + ", thread " + threadSpec.name;
             if (exn instanceof LHValidationError) {
                 throw new LHValidationError(prefix + exn.getMessage());
-            } else if (exn instanceof LHConnectionError) {
-                throw new LHConnectionError(
-                    ((LHConnectionError) exn).parent(),
-                    ((LHConnectionError) exn).getReason(),
-                    ((LHConnectionError) exn).getMessage()
-                );
             }
             throw exn;
         }

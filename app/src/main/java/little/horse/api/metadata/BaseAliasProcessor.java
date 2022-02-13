@@ -10,6 +10,7 @@ import little.horse.common.Config;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.util.Constants;
 
 public class BaseAliasProcessor<T extends CoreMetadata>
 implements Processor<String, AliasEvent, Void, Void> {
@@ -56,12 +57,20 @@ implements Processor<String, AliasEvent, Void, Void> {
         ) : null;
 
         if (ae.operation == AliasOperation.DELETE) {
-            if (entries == null || !entries.entries.containsKey(ai.aliasValue)) {
+            if (entries == null) {
                 throw new RuntimeException(
                     "Shouldn't have call to delete for nonexistent entry."
                 );
             }
-            entries.entries.remove(ai.aliasValue);
+            Integer idx = entries.getIndexForGuid(ae.id);
+
+            if (idx == null) {
+                throw new RuntimeException(
+                    "How is it possible that the idx is null....?"
+                );
+            }
+
+            entries.entries.remove(idx.intValue());
 
             if (entries.entries.size() == 0) {
                 kvStore.delete(storeKey);
@@ -74,26 +83,37 @@ implements Processor<String, AliasEvent, Void, Void> {
                 entries = new AliasEntryCollection();
             }
 
-            AliasEntry entry = entries.entries.get(ai.aliasValue);
-
-            if (entry == null) {
-                entry = new AliasEntry();
-                entry.firstOffset = ae.sourceOffset;
-                entry.mostRecentOffset = ae.sourceOffset;
-                entry.id = ae.id;
+            Integer idx = entries.getIndexForGuid(ae.id);
+            if (idx != null) {
+                throw new RuntimeException(
+                    "wtf we're creating an entry for something already there"
+                );
             }
-            entries.entries.put(ai.aliasValue, entry);
+
+            AliasEntry entry = new AliasEntry();
+            entry.firstOffset = ae.sourceOffset;
+            entry.mostRecentOffset = ae.sourceOffset;
+            entry.id = ae.id;
+            entries.entries.add(entry);
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));
 
         } else if (ae.operation == AliasOperation.HEARTBEAT) {
-            if (entries == null || !entries.entries.containsKey(ai.aliasValue)) {
+            if (entries == null) {
                 throw new RuntimeException(
                     "Shouldn't have call to heartbeat for nonexistent entry."
                 );
             }
 
-            AliasEntry entry = entries.entries.get(ai.aliasValue);
+            Integer idx = entries.getIndexForGuid(ae.id);
+
+            if (idx == null) {
+                throw new RuntimeException(
+                    "How is it possible that the idx is null....?"
+                );
+            }
+
+            AliasEntry entry = entries.entries.get(idx);
             entry.mostRecentOffset = ae.sourceOffset;
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));
@@ -101,5 +121,11 @@ implements Processor<String, AliasEvent, Void, Void> {
         } else {
             throw new RuntimeException("What?");
         }
+
+        // I know, this comes from the source to the ID store, but that is intentional.
+        kvStore.put(
+            Constants.LATEST_OFFSET_ROCKSDB_KEY,
+            new Bytes(String.valueOf(ae.sourceOffset).toString().getBytes())
+        );
     }
 }

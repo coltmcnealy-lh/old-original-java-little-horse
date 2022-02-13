@@ -30,16 +30,22 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         this.streamsContext = context;
 
         // GET /wfSpec/{id}
-        app.get(T.getAPIPath() + "/{id}", this::get);
+        app.get(T.getAPIPath("/{id}"), this::get);
 
-        // GET /wfSpecAlias
-        app.get(T.getAliasPath(), this::getAlias);
+        // GET /wfSpecAlias/{aliasKey}/{aliasValue}
+        app.get(T.getAliasPath("{aliasKey}", "{aliasValue}"), this::getAlias);
 
         // POST /wfSpec
         app.post(T.getAPIPath(), this::post);
 
         // DELETE /wfSpec
         app.delete(T.getAPIPath(), this::delete);
+
+        // GET /wfSpecOffset/{id}/{offset}/{partition}
+        app.get(
+            T.getWaitForAPIPath("{id}", "{offset}", "{partition}"),
+            this::waitForProcessing
+        );
     }
 
     public void get(Context ctx) {
@@ -58,7 +64,6 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                 response.message = "Could not find " + cls.getTypeName() +
                     " with id " + id;
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                ctx.status(400);
 
             } else {
                 response.status = ResponseStatus.OK;
@@ -82,7 +87,12 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             T t = BaseSchema.fromBytes(ctx.bodyAsBytes(), this.cls, config);
             t.validate(config);
             RecordMetadata record = t.save().get();
-            streamsContext.waitForProcessing(t.getId(), record, false);
+            streamsContext.waitForProcessing(
+                t.getId(), record.offset(), record.partition(), false,
+                T.getWaitForAPIPath(
+                    t.getId(), record.offset(), record.partition()
+                )
+            );
 
             response.result = LHDatabaseClient.lookupMeta(t.getId(), config, cls);
             response.status = ResponseStatus.OK;
@@ -122,10 +132,14 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                 result.status = ResponseStatus.OBJECT_NOT_FOUND;
                 result.message = "Could not find " + cls.getTypeName() +
                     " with id " + id;
-                ctx.status(404);
             } else {
                 RecordMetadata record = T.sendNullRecord(id, config).get();
-                streamsContext.waitForProcessing(result.id, record, false);
+                streamsContext.waitForProcessing(
+                    result.id, record.offset(), record.partition(), false,
+                    T.getWaitForAPIPath(
+                        id, record.offset(), record.partition()
+                    )
+                );
                 result.status = ResponseStatus.OK;
                 result.message = "Successfully deleted object";
                 // TODO: add way to see if the delete actually worked.
@@ -139,8 +153,88 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         ctx.json(result);
     }
 
+    // TODO: in the future, we're gonna want to validate whether the provided alias
+    // name (i.e. search key) is valid for this T.
     public void getAlias(Context ctx) {
-        throw new RuntimeException("implement me you lazy *********");
+        String aliasKey = ctx.pathParam("aliasKey");
+        String aliasValue = ctx.pathParam("aliasValue");
+
+        boolean forceLocal = ctx.queryParamAsClass(
+            "forceLocal", Boolean.class
+        ).getOrDefault(false);        
+
+        LHRpcResponse<T> response = new LHRpcResponse<>();
+
+        try {
+            AliasEntryCollection collection = streamsContext.getTFromAlias(
+                aliasKey, aliasValue, forceLocal
+            );
+
+            if (collection == null) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+                response.message = "No objects found matching search criteria.";
+            } else {
+                if (collection.entries.size() == 0) {
+                    throw new RuntimeException(
+                        "This shouldn't be possible, see BaseAliasProcessor.java"
+                    );
+                }
+
+                AliasEntry entry = collection.entries.get(
+                    collection.entries.size() - 1
+                );
+
+                response.result = streamsContext.getTFromId(entry.id, forceLocal);
+                if (response.result != null) {
+                    response.status = ResponseStatus.OK;
+                } else {
+                    response.status = ResponseStatus.OBJECT_NOT_FOUND;
+                    response.message = "obj deleted and idx will follow soon.";
+                }
+            }
+
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            response.message =
+                "Had an internal retriable connection error: " + exn.getMessage();
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            ctx.status(500);
+
+        }
+
+        ctx.json(response);
+    }
+
+    public void waitForProcessing(Context ctx) {
+        // TODO: Need to add timeout capabilities to this.
+
+        String id = ctx.pathParam("id");
+        long offset = Long.valueOf(ctx.pathParam("offset"));
+        int partition = Integer.valueOf(ctx.pathParam("partition"));
+        boolean forceLocal = ctx.queryParamAsClass(
+            "forceLocal", Boolean.class
+        ).getOrDefault(false);
+
+        LHRpcResponse<T> response = new LHRpcResponse<>();
+
+        try {
+            streamsContext.waitForProcessing(
+                id, offset, partition, forceLocal, T.getWaitForAPIPath(
+                    id, offset, partition
+                )
+            );
+            response.status = ResponseStatus.OK;
+
+        } catch(LHConnectionError exn) {
+            exn.printStackTrace();
+            response.message =
+                "Had an internal retriable connection error: " + exn.getMessage();
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            ctx.status(500);
+
+        }
+
+        ctx.json(response);
     }
 
     /**

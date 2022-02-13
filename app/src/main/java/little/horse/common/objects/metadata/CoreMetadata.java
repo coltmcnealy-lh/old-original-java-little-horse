@@ -1,5 +1,8 @@
 package little.horse.common.objects.metadata;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -11,12 +14,16 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.DigestIgnore;
 import little.horse.common.util.LHUtil;
 
 public abstract class CoreMetadata extends BaseSchema {
     public String name;
     public LHDeployStatus desiredStatus;
     public LHDeployStatus status;
+
+    @DigestIgnore
+    public Long lastUpdatedOffset;
 
     @JsonIgnore
     public static String typeName;
@@ -45,8 +52,47 @@ public abstract class CoreMetadata extends BaseSchema {
         return "/" + typeName;
     }
 
+    public static String getAPIPath(String id) {
+        return getAPIPath() + "/" + id;
+    }
+
     public static String getAliasPath() {
         return getAPIPath() + "Alias";
+    }
+
+    public static String getAliasPath(String aliasName, String aliasValue) {
+        return getAliasPath() + "/" + aliasName + "/" + aliasValue;
+    }
+
+    public static String getAliasPath(Map<String, String> aliases) {
+        String path = getAliasPath();
+        if (aliases.size() == 0) return path;
+
+        path += "?";
+
+        for (Map.Entry<String, String> param: aliases.entrySet()) {
+            try {
+                path += URLEncoder.encode(param.getKey(), "x-www-form-urlencoded");
+            } catch(UnsupportedEncodingException exn) {
+                exn.printStackTrace();
+            }
+            path += "&";
+        }
+
+        return path.substring(0, path.length() - 1);
+    }
+
+    public static String getWaitForAPIPath(
+        String id, String offset, String partition
+    ) {
+        return getAPIPath() + "Offset/" + id + "/" + offset + "/" + partition;
+    }
+
+    public static String getWaitForAPIPath(
+        String id, long offset, int partition
+    ) {
+        return getAPIPath() + "Offset/" + id + "/" + String.valueOf(offset)
+            + "/" + String.valueOf(partition);
     }
 
     public abstract void processChange(CoreMetadata old);

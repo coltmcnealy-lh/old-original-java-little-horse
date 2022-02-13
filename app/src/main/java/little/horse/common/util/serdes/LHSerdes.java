@@ -9,10 +9,10 @@ import little.horse.common.objects.BaseSchema;
 
 
 public class LHSerdes<T extends BaseSchema> implements Serde<T> {
-    private Class<? extends BaseSchema> cls;
+    private Class<T> cls;
     private Config config;
     
-    public LHSerdes(Class<? extends BaseSchema> asdf, Config config) {
+    public LHSerdes(Class<T> asdf, Config config) {
         this.cls = asdf;
         this.config = config;
     }
