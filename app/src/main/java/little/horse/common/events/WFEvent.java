@@ -8,7 +8,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
+import little.horse.common.util.LHDatabaseClient;
 
 public class WFEvent extends BaseSchema {
     public String wfSpecDigest;
@@ -26,15 +28,47 @@ public class WFEvent extends BaseSchema {
     @JsonIgnore
     public WFRun wfRun;
 
+    @JsonIgnore
+    private WFSpec wfSpec;
+
+    @JsonIgnore
+    private String kafkaTopic;
+
+    @JsonIgnore
+    public String getKafkaTopic() throws LHConnectionError {
+        if (kafkaTopic != null) {
+            return kafkaTopic;
+        }
+
+        if (wfRun != null) {
+            return wfRun.getWFSpec().getKafkaTopic();
+        }
+
+        if (wfSpec == null) {
+            wfSpec = LHDatabaseClient.lookupMeta(
+                wfSpecDigest, config, WFSpec.class
+            );
+
+            if (wfSpec == null) {
+                throw new RuntimeException(
+                    "Event has invalid wfSpec id!!"
+                );
+            }
+            kafkaTopic = wfSpec.getKafkaTopic();
+            
+        }
+        return kafkaTopic;
+    }
+
     public void record() throws LHConnectionError {
-        if (wfRun == null || config == null) {
+        if (config == null) {
             throw new RuntimeException(
-                "Must set wfRun and Config for WFEventSchema before recording it!"
+                "Must set Config for WFEventSchema before recording it!"
             );
         }
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            wfRun.getWFSpec().getKafkaTopic(),
+            this.getKafkaTopic(),
             wfRun.id,
             this.toString()
         );

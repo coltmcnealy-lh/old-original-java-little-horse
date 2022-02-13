@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.javalin.Javalin;
 import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
@@ -22,6 +23,10 @@ public abstract class CoreMetadata extends BaseSchema {
     public String name;
     public LHDeployStatus desiredStatus;
     public LHDeployStatus status;
+
+    @JsonIgnore
+    public static boolean onlyUseDefaultAPIforGET = false;
+    public void overridePostAPIEndpoints(Javalin app) {}
 
     @DigestIgnore
     public Long lastUpdatedOffset;

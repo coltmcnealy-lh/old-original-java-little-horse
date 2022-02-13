@@ -148,7 +148,7 @@ public class BaseSchema {
 
     @JsonIgnore
     @SuppressWarnings("unchecked")
-    final protected void setConfig(Config config) {
+    final public void setConfig(Config config) {
         // Needed to avoid infinite recursion. So 
         if (this.config != null) return;
         this.config = config;

@@ -3,7 +3,6 @@ package little.horse.common.util;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
-import little.horse.common.objects.rundata.WFRun;
 
 
 /**
@@ -25,10 +24,5 @@ public class LHDatabaseClient {
         LHRpcResponse<T> response = client.getResponse(url, cls);
 
         return response.result;
-    }
-
-    public static WFRun lookupWFRun(String id, Config config)
-    throws LHConnectionError {
-        throw new RuntimeException("implement me!");
     }
 }

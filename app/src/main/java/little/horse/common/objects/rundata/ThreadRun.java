@@ -13,7 +13,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
@@ -29,7 +28,6 @@ import little.horse.common.objects.metadata.EdgeCondition;
 import little.horse.common.objects.metadata.Edge;
 import little.horse.common.objects.metadata.ExceptionHandlerSpec;
 import little.horse.common.objects.metadata.InterruptDef;
-import little.horse.common.objects.metadata.LHDeployStatus;
 import little.horse.common.objects.metadata.Node;
 import little.horse.common.objects.metadata.NodeType;
 import little.horse.common.objects.metadata.ThreadSpec;
@@ -229,7 +227,7 @@ public class ThreadRun extends BaseSchema {
     public TaskRun createNewTaskRun(Node node) 
     throws LHConnectionError {
         TaskRun tr = new TaskRun();
-        tr.status = LHDeployStatus.PENDING;
+        tr.status = LHExecutionStatus.RUNNING;
         tr.threadID = id;
         tr.number = taskRuns.size();
         tr.nodeName = node.name;
@@ -268,7 +266,7 @@ public class ThreadRun extends BaseSchema {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunStartedEvent event = trEvent.startedEvent;
 
-        tr.status = LHDeployStatus.RUNNING;
+        tr.status = LHExecutionStatus.RUNNING;
         tr.startTime = trEvent.timestamp;
         tr.bashCommand = event.bashCommand;
         tr.stdin = event.stdin;
@@ -284,7 +282,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     private void completeTask(
         TaskRun task,
-        LHDeployStatus taskStatus,
+        LHExecutionStatus taskStatus,
         String stdout,
         String stderr,
         Date endTime,
@@ -301,11 +299,11 @@ public class ThreadRun extends BaseSchema {
         // Need the up next to be set whether or not the task fails/there is
         // a retry/it succeeds.
         upNext = new ArrayList<Edge>();
-        for (Edge edge: task.getNode().outgoingEdges) {
+        for (Edge edge: task.getNode().getOutgoingEdges()) {
             upNext.add(edge);
         }
 
-        if (taskStatus == LHDeployStatus.COMPLETED) {
+        if (taskStatus == LHExecutionStatus.COMPLETED) {
             try {
                 mutateVariables(task);
             } catch(VarSubOrzDash exn) {
@@ -328,7 +326,8 @@ public class ThreadRun extends BaseSchema {
     throws LHConnectionError {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunEndedEvent event = trEvent.endedEvent;
-        LHDeployStatus taskStatus = event.success ? LHDeployStatus.COMPLETED : LHDeployStatus.ERROR;
+        LHExecutionStatus taskStatus = event.success
+            ? LHExecutionStatus.COMPLETED : LHExecutionStatus.FAILED;
 
         completeTask(
             tr, taskStatus, event.stdout, event.stderr, trEvent.timestamp,
@@ -378,7 +377,7 @@ public class ThreadRun extends BaseSchema {
     private void handleException(
         String handlerSpecName, TaskRun tr, LHFailureReason reason, String msg
     ) throws LHConnectionError {
-        tr.status = LHDeployStatus.ERROR;
+        tr.status = LHExecutionStatus.FAILED;
         tr.failureMessage = msg;
         tr.failureReason = reason;
 
@@ -403,7 +402,7 @@ public class ThreadRun extends BaseSchema {
     private void failTask(
         TaskRun tr, LHFailureReason reason, String message
     ) throws LHConnectionError {
-        tr.status = LHDeployStatus.ERROR;
+        tr.status = LHExecutionStatus.FAILED;
         tr.failureMessage = message;
         tr.failureReason = reason;
 
@@ -463,7 +462,7 @@ public class ThreadRun extends BaseSchema {
             } else {
                 if (taskRuns.size() > 0) {
                     TaskRun lastTr = taskRuns.get(taskRuns.size() - 1);
-                    if (lastTr.status == LHDeployStatus.ERROR) {
+                    if (lastTr.status == LHExecutionStatus.FAILED) {
                         status = LHExecutionStatus.HALTED;
                     }
                 }
@@ -547,7 +546,7 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     public boolean lockVariables(Node n, int threadID) {
-        HashSet<String> neededVars = WFRun.getNeededVars(n);
+        HashSet<String> neededVars = n.getNeededVars();
 
         // Now check to make sure that no one is using the variables we need.
         for (String var: neededVars) {
@@ -564,7 +563,7 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     public void unlockVariables(Node n) {
-        for (String var: WFRun.getNeededVars(n)) {
+        for (String var: n.getNeededVars()) {
             unlock(var);
         }
     }
@@ -724,7 +723,7 @@ public class ThreadRun extends BaseSchema {
             wfRun.awaitableThreads.get(tr.nodeName).add(meta);
             taskRuns.add(tr);
             completeTask(
-                tr, LHDeployStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
+                tr, LHExecutionStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
             );
             return true;
 
@@ -735,7 +734,7 @@ public class ThreadRun extends BaseSchema {
             taskRuns.add(tr);
             exceptionName = node.exceptionToThrow;
             completeTask(
-                tr, LHDeployStatus.ERROR, "", "Throwing exception " + exceptionName,
+                tr, LHExecutionStatus.FAILED, "", "Throwing exception " + exceptionName,
                 event.timestamp, -1
             );
             return true;
@@ -789,7 +788,7 @@ public class ThreadRun extends BaseSchema {
         if (allCompleted) {
             taskRuns.add(tr);
             completeTask(
-                tr, LHDeployStatus.COMPLETED, awaitables.toString(),
+                tr, LHExecutionStatus.COMPLETED, awaitables.toString(),
                 null, event.timestamp, 0
             );
         } else {
@@ -819,7 +818,8 @@ public class ThreadRun extends BaseSchema {
                 " we are handling it.";
 
                 completeTask(
-                    tr, LHDeployStatus.ERROR, awaitables.toString(), msg, event.timestamp, 1
+                    tr, LHExecutionStatus.FAILED,
+                    awaitables.toString(), msg, event.timestamp, 1
                 );
                 handleException(
                     hspec.handlerThreadSpecName, tr, LHFailureReason.TASK_FAILURE, msg
@@ -961,20 +961,6 @@ public class ThreadRun extends BaseSchema {
                 kid.propagateInterrupt(payload);
             }
         }
-    }
-
-    @JsonIgnore
-    @Override
-    public Config setConfig(Config config) {
-        super.setConfig(config);
-
-        if (taskRuns == null) taskRuns = new ArrayList<>();
-        for (TaskRun taskRun: taskRuns) {
-            taskRun.setConfig(config);
-            taskRun.parentThread = this;
-        }
-    
-        return this.config;
     }
 }
 

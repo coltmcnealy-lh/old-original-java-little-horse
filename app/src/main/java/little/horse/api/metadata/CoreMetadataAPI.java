@@ -35,17 +35,21 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         // GET /wfSpecAlias/{aliasKey}/{aliasValue}
         app.get(T.getAliasPath("{aliasKey}", "{aliasValue}"), this::getAlias);
 
-        // POST /wfSpec
-        app.post(T.getAPIPath(), this::post);
-
-        // DELETE /wfSpec
-        app.delete(T.getAPIPath(), this::delete);
-
         // GET /wfSpecOffset/{id}/{offset}/{partition}
         app.get(
             T.getWaitForAPIPath("{id}", "{offset}", "{partition}"),
             this::waitForProcessing
         );
+
+        // A little bit of voodoo to allow for some special overriding stuff, eg for
+        // WFRun.
+        if (!T.onlyUseDefaultAPIforGET) {
+            // POST /wfSpec
+            app.post(T.getAPIPath(), this::post);
+
+            // DELETE /wfSpec
+            app.delete(T.getAPIPath(), this::delete);
+        }
     }
 
     public void get(Context ctx) {

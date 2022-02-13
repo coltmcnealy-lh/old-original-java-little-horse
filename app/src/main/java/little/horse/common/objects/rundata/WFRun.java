@@ -3,7 +3,6 @@ package little.horse.common.objects.rundata;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Stack;
 
@@ -12,31 +11,42 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+import little.horse.api.ResponseStatus;
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.WFEventID;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
+import little.horse.common.events.WFRunRequest;
 import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.Edge;
-import little.horse.common.objects.metadata.Node;
+import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.ThreadSpec;
-import little.horse.common.objects.metadata.VariableAssignment;
-import little.horse.common.objects.metadata.VariableMutation;
 import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
+import little.horse.common.util.LHRpcResponse;
 import little.horse.common.util.LHUtil;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
     property = "guid"
 )
-public class WFRun extends BaseSchema {
+public class WFRun extends CoreMetadata {
     // These fields are in the actual JSON for the WFRunSchema object
     public String id;
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
     public String wfSpecDigest;
     public String wfSpecName;
 
@@ -162,9 +172,16 @@ public class WFRun extends BaseSchema {
     @JsonIgnore
     private void handleExternalEvent(WFEvent event) throws
     LHConnectionError {
-        ExternalEventPayload payload = BaseSchema.fromString(
-            event.content, ExternalEventPayload.class, config, false
-        );
+        ExternalEventPayload payload;
+        try {
+            payload = BaseSchema.fromString(
+                event.content, ExternalEventPayload.class, config
+            );
+        } catch(LHSerdeError exn) {
+            exn.printStackTrace();
+            LHUtil.logError("Ignoring exception since there's nothing we can do.");
+            return;
+        }
         
         if (wfSpec.interruptEvents.contains(payload.externalEventDefName)) {
             // This is an interrupt. Find the appropriate thread and interrupt it.
@@ -311,4 +328,130 @@ public class WFRun extends BaseSchema {
     public ThreadRun entrypointThreadRun() {
         return threadRuns.get(0);
     }
+
+    // Override the next two methods for the sake of compatibility with CoreMetadata,
+    // even though this isn't truly CoreMetadata.
+    @Override
+    public void validate(Config config) {}
+
+    @Override
+    public void processChange(CoreMetadata old) {}
+
+    @JsonIgnore
+    public static boolean onlyUseDefaultAPIforGET = false;
+
+    private WFRunApiStuff apiStuff;;
+
+    @Override
+    public void overridePostAPIEndpoints(Javalin app) {
+        apiStuff = new WFRunApiStuff(config);
+
+        app.post("/wfRun", apiStuff::postRun);
+        app.post(
+            "/externalEvent/{externalEventDefId}/{wfRunId}", apiStuff::postEvent
+        );
+        
+    }
+
+}
+
+class WFRunApiStuff {
+    private Config config;
+
+    public WFRunApiStuff(Config config) {
+        this.config = config;
+    }
+
+    public void postRun(Context ctx) {
+        LHRpcResponse<WFRun> response = new LHRpcResponse<>();
+
+        WFRunRequest request = ctx.bodyAsClass(WFRunRequest.class);
+        WFEvent event = new WFEvent();
+        event.setConfig(config);
+        String guid = LHUtil.generateGuid();
+        event.wfRunId = guid;
+        event.content = request.toString();
+        event.type = WFEventType.WF_RUN_STARTED;
+
+        response.objectId = guid;
+
+        try {
+            event.record();
+            response.status = ResponseStatus.OK;
+        } catch(LHConnectionError exn) {
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            response.message = exn.getMessage();
+            ctx.json(response);
+            return;
+        }
+
+        ctx.json(response);
+        return;
+    }
+
+    public void postStopThread(Context ctx) {
+
+    }
+
+    public void resumeThread(Context ctx) {
+
+    }
+
+    public void postEvent(Context ctx) {
+        String wfRunId = ctx.pathParam("wfRunId");
+        String externalEventDefID = ctx.pathParam("externalEventDefID");
+        Object eventContent = ctx.bodyAsClass(Object.class);
+        WFRun wfRun;
+        ExternalEventDef evd;
+
+        LHRpcResponse<WFRun> response = new LHRpcResponse<>();
+
+        try {
+            wfRun = LHDatabaseClient.lookupMeta(wfRunId, config, WFRun.class);
+            if (wfRun == null) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+                response.message = "Couldn't find wfRun with id " + wfRunId;
+                ctx.json(response);
+                return;
+            }
+
+            evd = LHDatabaseClient.lookupMeta(
+                externalEventDefID, config, ExternalEventDef.class
+            );
+
+            if (evd == null) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+                response.message = "Couldn't find Ext Ev Def with id "
+                    + externalEventDefID;
+                ctx.json(response);
+                return;
+            }
+
+            ExternalEventPayload payload = new ExternalEventPayload();
+            payload.externalEventDefId = evd.getId();
+            payload.externalEventDefName = evd.name;
+            payload.content = eventContent;
+
+            WFEvent wfEvent = new WFEvent();
+            wfEvent.wfRunId = wfRun.getId();
+            wfEvent.wfSpecDigest = wfRun.wfSpecDigest;
+            wfEvent.wfSpecName = wfRun.wfSpecName;
+            wfEvent.type = WFEventType.EXTERNAL_EVENT;
+            wfEvent.timestamp = LHUtil.now();
+            wfEvent.content = payload.toString();
+            wfEvent.wfRun = wfRun;
+
+            wfEvent.record();
+
+            ctx.json(response);
+
+        } catch(LHConnectionError exn) {
+            exn.printStackTrace();
+            ctx.status(500);
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            response.message = exn.getMessage();
+            ctx.json(response);
+        }
+    }
+
 }
