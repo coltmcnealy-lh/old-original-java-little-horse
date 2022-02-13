@@ -1,16 +1,23 @@
 package little.horse.common.objects.metadata;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.streams.processor.api.Record;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import little.horse.common.Config;
 import little.horse.common.events.ExternalEventCorrel;
@@ -25,7 +32,16 @@ import little.horse.common.objects.rundata.ThreadRunMeta;
 import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
+import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
+import little.horse.common.util.K8sStuff.Container;
+import little.horse.common.util.K8sStuff.Deployment;
+import little.horse.common.util.K8sStuff.DeploymentMetadata;
+import little.horse.common.util.K8sStuff.DeploymentSpec;
+import little.horse.common.util.K8sStuff.EnvEntry;
+import little.horse.common.util.K8sStuff.PodSpec;
+import little.horse.common.util.K8sStuff.Selector;
+import little.horse.common.util.K8sStuff.Template;
 
 
 // Just scoping for the purposes of the json parser
@@ -240,22 +256,89 @@ public class WFSpec extends CoreMetadata {
     }
 
     @JsonIgnore
-    public void deploy() {
-        throw new RuntimeException("Implement me!");
+    public void deploy() throws LHConnectionError {
+        config.createKafkaTopic(new NewTopic(this.getKafkaTopic(), getPartitions(),
+            getReplicationFactor())
+        );
+        
+        String deployString;
+
+        try {
+            deployString = new ObjectMapper(
+                new YAMLFactory()).writeValueAsString(getK8sDeployment());
+        } catch (JsonProcessingException exn) {
+            exn.printStackTrace();
+            throw new RuntimeException(
+                "Looks like Colt's code created invalid json >_> "
+            );
+        }
+
+        try {
+            Process process = Runtime.getRuntime().exec("kubectl apply -f -");
+
+            process.getOutputStream().write(deployString.getBytes());
+            process.getOutputStream().close();
+            process.waitFor();
+
+            BufferedReader input = new BufferedReader(
+                new InputStreamReader(process.getInputStream())
+            );
+            String line = null;
+            while ((line = input.readLine()) != null) {
+                LHUtil.log(line);
+            }
+
+            BufferedReader error = new BufferedReader(
+                new InputStreamReader(process.getErrorStream())
+            );
+            line = null;
+            while ((line = error.readLine()) != null) {
+                LHUtil.log(line);
+            }
+        } catch(IOException|InterruptedException exn) {
+            throw new LHConnectionError(
+                exn, "Failed to deploy the wf: " + exn.getMessage()
+            );
+        }
+
     }
 
     @JsonIgnore
-    public void undeploy() {
-        throw new RuntimeException("Implement me!");
-    }
-
-    @JsonIgnore
-    public void remove() {
-        throw new RuntimeException("Implement me!");
+    @Override
+    public void remove() throws LHConnectionError {
+        try {
+            Process process = Runtime.getRuntime().exec(
+                "kubectl delete deploy -llittlehorse.io/wfSpecId=" + getId()
+            );
+            process.getOutputStream().close();
+            process.waitFor();
+            BufferedReader input = new BufferedReader(
+                new InputStreamReader(process.getInputStream())
+            );
+            String line = null;
+            while ((line = input.readLine()) != null) {
+                LHUtil.log(line);
+            }
+    
+            BufferedReader error = new BufferedReader(
+                new InputStreamReader(process.getErrorStream())
+            );
+            line = null;
+            while ((line = error.readLine()) != null) {
+                LHUtil.log(line);
+            }
+    
+            this.status = LHDeployStatus.STOPPED;
+        } catch(IOException|InterruptedException exn) {
+            throw new LHConnectionError(
+                exn, "Failed to deploy the wf: " + exn.getMessage()
+            );
+        }
+        
     }
 
     @Override
-    public void processChange(CoreMetadata old) {
+    public void processChange(CoreMetadata old) throws LHConnectionError {
         if (!(old instanceof WFSpec)) {
             throw new RuntimeException(
                 "Called processChange on a non-WFSpec"
@@ -267,7 +350,7 @@ public class WFSpec extends CoreMetadata {
             if (desiredStatus == LHDeployStatus.RUNNING) {
                 deploy();
             } else if (desiredStatus == LHDeployStatus.STOPPED) {
-                undeploy();
+                remove();
             }
         }
     }
@@ -336,4 +419,66 @@ public class WFSpec extends CoreMetadata {
         return k8sName;
     }
 
+    @JsonIgnore
+    private Deployment getK8sDeployment() {
+        Deployment dp = new Deployment();
+        dp.metadata = new DeploymentMetadata();
+        dp.spec = new DeploymentSpec();
+        dp.kind = "Deployment";
+        dp.apiVersion = "apps/v1";
+
+        dp.metadata.name = this.getK8sName();
+        dp.metadata.labels = new HashMap<String, String>();
+        dp.metadata.namespace = namespace;
+        dp.metadata.labels.put("app", this.getK8sName());
+        dp.metadata.labels.put("littlehorse.io/wfSpecId", getId());
+        dp.metadata.labels.put("littlehorse.io/wfSpecName", name);
+        dp.metadata.labels.put("littlehorse.io/active", "true");
+
+        Container container = new Container();
+        container.name = this.getK8sName();
+        container.image = config.getWfWorkerImage();
+        container.imagePullPolicy = "IfNotPresent";
+        container.env = config.getBaseK8sEnv();
+        container.env.add(new EnvEntry(
+            Constants.KAFKA_APPLICATION_ID_KEY,
+            getId()
+        ));
+
+        container.env.add(new EnvEntry(Constants.WF_SPEC_ID_KEY, getId()));
+        container.env.add(new EnvEntry(Constants.NODE_NAME_KEY, name));
+
+        Template template = new Template();
+        template.metadata = new DeploymentMetadata();
+        template.metadata.name = this.getK8sName();
+        template.metadata.labels = new HashMap<String, String>();
+        template.metadata.namespace = namespace;
+        template.metadata.labels.put("app", this.getK8sName());
+        template.metadata.labels.put("littlehorse.io/wfSpecId", getId());
+        template.metadata.labels.put("littlehorse.io/wfSpecName", name);
+        template.metadata.labels.put("littlehorse.io/active", "true");
+
+        template.spec = new PodSpec();
+        template.spec.containers = new ArrayList<Container>();
+        template.spec.containers.add(container);
+
+        dp.spec.template = template;
+        dp.spec.replicas = this.getReplicationFactor();
+        dp.spec.selector = new Selector();
+        dp.spec.selector.matchLabels = new HashMap<String, String>();
+        dp.spec.selector.matchLabels.put("app", this.getK8sName());
+        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecId", getId());
+        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecName", name);
+        dp.spec.selector.matchLabels.put("littlehorse.io/active", "true");
+
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        try {
+            String result = mapper.writeValueAsString(dp);
+            LHUtil.log("Node tok8s: ", result);
+        } catch (JsonProcessingException exn) {
+            LHUtil.logError(exn.getMessage());
+        }
+
+        return dp;
+    }
 }

@@ -37,13 +37,12 @@ public class Config {
     private String externalEventDefTopic;
     private String kafkaTopicPrefix;
     private String stateDirectory;
-    private String defaultTaskDockerImage;
     private String apiURL;
     private OkHttpClient httpClient;
     private int defaultReplicas;
     private Admin kafkaAdmin;
     private int defaultPartitions;
-    private String collectorImage;
+    private String wfWorkerImage;
     private String wfSpecGuid;
     private String wfNodeName;
     private String threadSpecName;
@@ -100,9 +99,6 @@ public class Config {
         String sdir = System.getenv(Constants.STATE_DIR_KEY);
         this.stateDirectory = (sdir == null) ? "/tmp/kafkaState" : sdir;
 
-        String drmg = System.getenv(Constants.DEFAULT_TASK_IMAGE_KEY);
-        this.defaultTaskDockerImage = (drmg == null) ? "little-horse-daemon:latest": drmg;
-
         String tempApiURL = System.getenv(Constants.API_URL_KEY);
         this.apiURL = (tempApiURL == null) ? "http://localhost:5000" : tempApiURL;
 
@@ -130,12 +126,12 @@ public class Config {
             defaultPartitions = 1;
         }
 
-        String tempCollectorImage = System.getenv(Constants.DEFAULT_COLLECTOR_IMAGE_KEY);
-        this.collectorImage = (
+        String tempCollectorImage = System.getenv(Constants.DEFAULT_WF_WORKER_IMAGE_KEY);
+        this.wfWorkerImage = (
             tempCollectorImage == null
         ) ? "little-horse-collector:latest" : tempCollectorImage;
 
-        this.wfSpecGuid = System.getenv(Constants.WF_SPEC_GUID_KEY);
+        this.wfSpecGuid = System.getenv(Constants.WF_SPEC_ID_KEY);
         this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
         this.threadSpecName = System.getenv(Constants.THREAD_SPEC_NAME_KEY);
     }
@@ -156,8 +152,8 @@ public class Config {
         }
     }
 
-    public String getCollectorImage() {
-        return this.collectorImage;
+    public String getWfWorkerImage() {
+        return this.wfWorkerImage;
     }
 
     public ArrayList<String> getCollectorCommand() {
@@ -304,10 +300,6 @@ public class Config {
     public void cleanup() {
         this.producer.close();
         this.kafkaAdmin.close();
-    }
-
-    public String getDefaultTaskDockerImage() {
-        return this.defaultTaskDockerImage;
     }
 
     public int getDefaultPartitions() {

@@ -96,13 +96,13 @@ public abstract class CoreMetadata extends BaseSchema {
             + "/" + String.valueOf(partition);
     }
 
-    public abstract void processChange(CoreMetadata old);
+    public abstract void processChange(CoreMetadata old) throws LHConnectionError;
     
     /**
      * Idempotent cleanup of resources when the CoreMetadata is deleted from the API.
      * For example, undeploys the WFRuntime deployer on WFSpec.
      */
-    public void remove() {
+    public void remove() throws LHConnectionError {
         // Nothing to do in default.
     }
 

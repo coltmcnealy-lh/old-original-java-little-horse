@@ -15,9 +15,11 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import little.horse.api.OffsetInfo;
 import little.horse.api.OffsetInfoCollection;
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.LHDeployStatus;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 
@@ -107,7 +109,12 @@ implements Processor<String, T, String, AliasEvent> {
         // because a) creating TaskQueue/deploying WFSpec goes through slow Kafka and
         // Kubernetes API's, and b) the expected throughput of Metadata changes is
         // low, so we don't have to be super fast.
-        newMeta.processChange(old);
+        try {
+            newMeta.processChange(old);
+        } catch(LHConnectionError exn) {
+            exn.printStackTrace();
+            newMeta.status = LHDeployStatus.ERROR;
+        }
 
         // Store the actual data in the ID store:
         CoreMetadataEntry entry = new CoreMetadataEntry(newMeta, offset);
@@ -161,7 +168,12 @@ implements Processor<String, T, String, AliasEvent> {
     private void removeOld(final Record<String, T> record, CoreMetadata old, long offset) {
         // Delete side effects (i.e. k8s deployments) if there are any.
         // This call is idempotent.
-        old.remove();
+        try {
+            old.remove();
+        } catch(LHConnectionError exn) {
+            exn.printStackTrace();
+            old.status = LHDeployStatus.ERROR;
+        }
 
         // Remove all of the aliases.
         Set<AliasIdentifier> aliases = old.getAliases();

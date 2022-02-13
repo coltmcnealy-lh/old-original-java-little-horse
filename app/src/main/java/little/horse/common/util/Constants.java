@@ -17,12 +17,11 @@ public class Constants {
     public static String ADVERTISED_PORT_KEY = "LHORSE_ADVERTISED_PORT";
     public static String STATE_DIR_KEY = "LHORSE_KAFKA_STREAMS_STATE_DIR";
 
-    public static String WF_SPEC_GUID_KEY = "LHORSE_WF_SPEC_GUID";
+    public static String WF_SPEC_ID_KEY = "LHORSE_WF_SPEC_GUID";
     public static String NODE_NAME_KEY = "LHORSE_NODE_NAME";
     public static String THREAD_SPEC_NAME_KEY = "LHORSE_THREAD_SPEC_NAME";
 
-    public static String DEFAULT_TASK_IMAGE_KEY = "LHORSE_DEFAULT_TASK_IMAGE";
-    public static String DEFAULT_COLLECTOR_IMAGE_KEY = "LHORSE_DEFAULT_COLLECTOR_IMAGE";
+    public static String DEFAULT_WF_WORKER_IMAGE_KEY = "LHORSE_DEFAULT_WF_WORKER_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_K8S_REPLICAS";
 
     // public static String WF_SPEC_API_PATH = "wfSpec";
