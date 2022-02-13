@@ -30,9 +30,37 @@ public class Node extends BaseSchema {
     public String name;
 
     public NodeType nodeType;
-    
+
     private ArrayList<Edge> outgoingEdges;
     private ArrayList<Edge> incomingEdges;
+
+    @JsonManagedReference
+    public HashMap<String, VariableAssignment> variables;
+
+    @DigestIgnore
+    @JsonBackReference
+    public ThreadSpec threadSpec;
+
+    public String externalEventDefName;
+    public String externalEventDefId;
+
+    public String threadWaitSourceNodeName;
+    public String threadSpawnThreadSpecName;
+
+    @JsonManagedReference
+    public HashMap<String, VariableMutation> variableMutations;
+
+    public TaskDef taskDef;
+    public String taskDefName;
+    public String taskDefId;
+
+    // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
+    public String exceptionToThrow;
+
+    public ExceptionHandlerSpec baseExceptionhandler;
+
+    @JsonManagedReference
+    public HashMap<String, ExceptionHandlerSpec> customExceptionHandlers;
 
     public ArrayList<Edge> getOutgoingEdges() {
         if (outgoingEdges == null) {
@@ -58,38 +86,11 @@ public class Node extends BaseSchema {
         return incomingEdges;
     }
 
-    @JsonManagedReference
-    public HashMap<String, VariableAssignment> variables;
-
-    @DigestIgnore
-    @JsonBackReference
-    public ThreadSpec threadSpec;
-
-    public String externalEventDefName;
-    public String externalEventDefDigest;
-
-    public String threadWaitSourceNodeName;
-    public String threadSpawnThreadSpecName;
-
-    @JsonManagedReference
-    public HashMap<String, VariableMutation> variableMutations;
-
-    public TaskDef taskDef;
-    public String taskDefName;
-    public String taskDefDigest;
-
-    // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
-    public String exceptionToThrow;
-
-    public ExceptionHandlerSpec baseExceptionhandler;
-
-    @JsonManagedReference
-    public HashMap<String, ExceptionHandlerSpec> customExceptionHandlers;
-
     // Everything below doesn't show up in json.
     @JsonIgnore
     private ExternalEventDef externalEventDef;
 
+    @JsonIgnore
     public HashSet<String> getNeededVars() {
         HashSet<String> neededVars = new HashSet<String>();
         // first figure out which variables we need as input
@@ -116,14 +117,15 @@ public class Node extends BaseSchema {
         return neededVars;
     }
 
+    @JsonIgnore
     public ExternalEventDef getExeternalEventDef() throws LHConnectionError {
         if (externalEventDef != null) {
             return externalEventDef;
         }
 
-        if (externalEventDefDigest != null || externalEventDefName != null) {
-            String eedGuid = (externalEventDefDigest == null) ?
-                externalEventDefName : externalEventDefDigest;
+        if (externalEventDefId != null || externalEventDefName != null) {
+            String eedGuid = (externalEventDefId == null) ?
+                externalEventDefName : externalEventDefId;
             externalEventDef = LHDatabaseClient.lookupMeta(
                 eedGuid, config, ExternalEventDef.class
             );
@@ -146,14 +148,11 @@ public class Node extends BaseSchema {
     }
 
     @Override
-    public void validate(Config config) throws LHValidationError {
-        throw new RuntimeException("Shouldn't be called!");
-    }
-
-    public void fillOut(Config config, ThreadSpec parent)
-    throws LHValidationError, LHConnectionError {
+    public void validate(Config config) throws LHValidationError, LHConnectionError {
         setConfig(config);
-        threadSpec = parent;
+        if (threadSpec == null) {
+            throw new RuntimeException("Jackson didn't do its thing");
+        }
 
         if (variableMutations == null) {
             variableMutations = new HashMap<String, VariableMutation>();
@@ -171,71 +170,81 @@ public class Node extends BaseSchema {
         if (baseExceptionhandler != null) {
             String handlerSpecName = baseExceptionhandler.handlerThreadSpecName;
             if (handlerSpecName != null) {
-                ThreadSpec handlerSpec = threadSpec.wfSpec.threadSpecs.get(
-                    handlerSpecName
-                );
-                if (handlerSpec == null) {
+                if (!threadSpec.wfSpec.threadSpecs.containsKey(handlerSpecName)) {
                     throw new LHValidationError(
                         "Exception handler on node " + name + " refers to " +
                         "thread spec that doesn't exist: " + handlerSpecName
                     );
                 }
-                // TODO: Maybe we should enforce "the exception handler thread
-                // can't have input variables"
+                // Maybe in the future we should enforce "the exception handler thread
+                // can't have input variables"?
             }
         }
 
         // We may have some leaf-level CoreMetadata objects here...
         if (nodeType == NodeType.TASK) {
-            fillOutTaskNode(config);
+            validateTaskNode(config);
         } else if (nodeType == NodeType.EXTERNAL_EVENT) {
-            fillOutExternalEventNode(config);
+            validateExternalEventNode(config);
         } else if (nodeType == NodeType.SPAWN_THREAD) {
-            fillOutSpawnThreadNode(config);
+            validateSpawnThreadNode(config);
         } else if (nodeType == NodeType.WAIT_FOR_THREAD) {
-            fillOutWaitForThreadNode(config);
+            validateWaitForThreadNode(config);
         }
     }
 
-    private void fillOutTaskNode(Config config)
+    private void validateTaskNode(Config config)
     throws LHValidationError, LHConnectionError {
-        try {
-            taskDef = LHDatabaseClient.lookupOrCreateTaskDef(
-                taskDef, taskDefName, taskDefDigest, config
-            );
-        } catch (Exception exn) {
-            String prefix = "Node " + name + ", thread " + threadSpec.name;
-            if (exn instanceof LHValidationError) {
-                throw new LHValidationError(prefix + exn.getMessage());
-            }
-            throw exn;
+        String taskDefKey = (taskDefId == null) ? taskDefName : taskDefId;
+        if (taskDefKey == null) {
+            throw new LHValidationError(String.format(
+                "Node %s on thread %s provides neither taskdef name nor digest!",
+                name, threadSpec.name
+            ));
         }
 
-        taskDefDigest = taskDef.getId();
+        taskDef = LHDatabaseClient.lookupMeta(
+            taskDefKey, config, TaskDef.class
+        );
+
+        if (taskDef == null) {
+            throw new LHValidationError(String.format(
+                "Node %s on thread %s provided task def identifier %s but no such " +
+                "task def was found!", name, threadSpec.name, taskDefKey
+            ));
+        }
+
+        taskDefId = taskDef.getId();
         taskDefName = taskDef.name;
     }
 
-    private void fillOutExternalEventNode(Config config)
+    private void validateExternalEventNode(Config config)
     throws LHValidationError, LHConnectionError {
-        try {
-            externalEventDef = LHDatabaseClient.lookupOrCreateExternalEventDef(
-                externalEventDef, externalEventDefName,
-                externalEventDefDigest, config
-            );
-        } catch (Exception exn) {
-            String prefix = "Node " + name + ", thread " + threadSpec.name;
-            if (exn instanceof LHValidationError) {
-                throw new LHValidationError(prefix + exn.getMessage());
-            }
-            throw exn;
-        }
+        String eedKey = (externalEventDefId == null) ?
+            externalEventDefName : externalEventDefId;
 
-        taskDefDigest = taskDef.getId();
-        taskDefName = taskDef.name;
+        if (eedKey == null) {
+            throw new LHValidationError(String.format(
+                "Node %s on thread %s provides neither externalEventDef name nor digest!",
+                name, threadSpec.name
+            ));
+        }
+        externalEventDef = LHDatabaseClient.lookupMeta(
+            eedKey, config, ExternalEventDef.class
+        );
+
+        if (externalEventDef == null) {
+            throw new LHValidationError(String.format(
+                "Node %s on thread %s provided external event def identifier %s " +
+                "but no such EE definition was found!", name, threadSpec.name, eedKey
+            ));
+        }
+        externalEventDefName = externalEventDef.name;
+        externalEventDefId = externalEventDef.getId();
     }
 
-    private void fillOutSpawnThreadNode(Config config)
-    throws LHValidationError, LHConnectionError {
+    private void validateSpawnThreadNode(Config config)
+    throws LHValidationError {
         String tname = threadSpawnThreadSpecName;
         if (tname == null) {
             throw new LHValidationError(
@@ -253,8 +262,8 @@ public class Node extends BaseSchema {
         }
     }
 
-    private void fillOutWaitForThreadNode(Config config)
-    throws LHValidationError, LHConnectionError {
+    private void validateWaitForThreadNode(Config config)
+    throws LHValidationError {
         Node sourceNode = threadSpec.nodes.get(threadWaitSourceNodeName);
 
         if (sourceNode == null) {

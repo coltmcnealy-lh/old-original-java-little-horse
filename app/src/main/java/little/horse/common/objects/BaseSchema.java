@@ -34,7 +34,7 @@ public class BaseSchema {
     private String digest;
 
     public String getId() {
-        return LHUtil.fullDigestify(getId());
+        return LHUtil.fullDigestify(getDigest());
     }
 
     @SuppressWarnings("unchecked")

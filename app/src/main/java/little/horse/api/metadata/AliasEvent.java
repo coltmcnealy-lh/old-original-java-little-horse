@@ -6,7 +6,7 @@ public class AliasEvent extends BaseSchema {
     /**
      * The id of the associated CoreMetadata that's supposed to be aliased by this.
      */
-    public String id;
+    public String objectId;
 
     /**
      * Used to identify the actual alias.
@@ -51,7 +51,7 @@ public class AliasEvent extends BaseSchema {
         Long sourceOffset, AliasOperation operation, int totalAliases
     ) {
         this.identifier = identifier;
-        this.id = id;
+        this.objectId = id;
         this.sourceOffset = sourceOffset;
         this.operation = operation;
         this.totalAliases = totalAliases;

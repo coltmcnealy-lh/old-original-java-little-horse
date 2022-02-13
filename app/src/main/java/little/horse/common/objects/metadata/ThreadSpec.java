@@ -57,34 +57,34 @@ public class ThreadSpec extends BaseSchema {
 
         if (edges == null) edges = new ArrayList<Edge>();
         for (Edge edge : edges) {
-            cleanupEdge(edge);
+            validateEdge(edge);
         }
 
         for (Map.Entry<String, Node> p: nodes.entrySet()) {
             Node node = p.getValue();
             String nodeName = p.getKey();
             node.name = nodeName;
-            node.fillOut(config, this);
+            node.validate(config);
         }
 
         entrypointNodeName = calculateEntrypointNode();
         // There are no leaf CoreMetadata here, so we go on.
     }
 
-    private void cleanupEdge(Edge edge) {
-        Node source = nodes.get(edge.sourceNodeName);
-        Node sink = nodes.get(edge.sinkNodeName);
+    private void validateEdge(Edge edge) throws LHValidationError {
 
-        boolean alreadyHasEdge = false;
-        for (Edge candidate : source.outgoingEdges) {
-            if (candidate.sinkNodeName.equals(sink.name)) {
-                alreadyHasEdge = true;
-                break;
-            }
+        if (edge.getSourceNode() == null) {
+            throw new LHValidationError(String.format(
+                "Edge on thread %s refers to missing node: %s !",
+                name, edge.sourceNodeName
+            ));
         }
-        if (!alreadyHasEdge) {
-            source.outgoingEdges.add(edge);
-            sink.incomingEdges.add(edge);
+
+        if (edge.getSinkNode() == null) {
+            throw new LHValidationError(String.format(
+                "Edge on thread %s refers to missing node: %s !",
+                name, edge.sinkNodeName
+            ));
         }
     }
 
@@ -96,7 +96,7 @@ public class ThreadSpec extends BaseSchema {
         Node entrypoint = null;
         for (Map.Entry<String, Node> pair: nodes.entrySet()) {
             Node node = pair.getValue();
-            if (node.incomingEdges.size() == 0) {
+            if (node.getIncomingEdges().size() == 0) {
                 if (entrypoint != null) {
                     throw new LHValidationError(
                         "Invalid WFSpec: More than one node without incoming edges."

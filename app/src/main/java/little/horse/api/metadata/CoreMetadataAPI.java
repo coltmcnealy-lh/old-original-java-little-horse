@@ -135,7 +135,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             } else {
                 RecordMetadata record = T.sendNullRecord(id, config).get();
                 streamsContext.waitForProcessing(
-                    result.id, record.offset(), record.partition(), false,
+                    result.objectId, record.offset(), record.partition(), false,
                     T.getWaitForAPIPath(
                         id, record.offset(), record.partition()
                     )
@@ -184,7 +184,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                     collection.entries.size() - 1
                 );
 
-                response.result = streamsContext.getTFromId(entry.id, forceLocal);
+                response.result = streamsContext.getTFromId(entry.objectId, forceLocal);
                 if (response.result != null) {
                     response.status = ResponseStatus.OK;
                 } else {

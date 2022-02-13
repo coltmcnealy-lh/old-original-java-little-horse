@@ -66,13 +66,5 @@ public class WFRunTopology {
             );
 
         topology.addStateStore(wfRunStoreBuilder, updateProcessorName);
-
-        StoreBuilder<KeyValueStore<String, WFSpec>> wfSpecStoreBuilder =
-            Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore(Constants.WF_SPEC_GUID_STORE),
-                Serdes.String(),
-                specSerde
-            );
-        topology.addStateStore(wfSpecStoreBuilder, updateProcessorName);
     }
 }

@@ -13,9 +13,10 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 
 import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.Config;
+import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
-import little.horse.common.util.LHUtil;
 
 public abstract class CoreMetadata extends BaseSchema {
     public String name;
@@ -119,9 +120,8 @@ public abstract class CoreMetadata extends BaseSchema {
         return config.send(record);
     }
 
-    public void undeploy() {
-        LHUtil.log("TODO: write this function.");
-    }
+    public abstract void validate(Config config)
+    throws LHValidationError, LHConnectionError;
 
     public Set<AliasIdentifier> getAliases() {
         throw new RuntimeException("implement me!");

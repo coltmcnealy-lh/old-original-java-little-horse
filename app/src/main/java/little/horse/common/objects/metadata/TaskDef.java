@@ -4,7 +4,9 @@ import java.util.HashMap;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHDatabaseClient;
 
 
@@ -45,5 +47,21 @@ public class TaskDef extends CoreMetadata {
         }
 
         // Nothing really to do here since we TaskDef doesn't have side effects.
+    }
+
+    public void validate(Config config) throws LHValidationError, LHConnectionError {
+        this.config = config;
+
+        // ALl we gotta do is make sure the taskQueue exists.
+        taskQueue = LHDatabaseClient.lookupMeta(
+            taskQueueName, config, TaskQueue.class
+        );
+        if (taskQueue == null) {
+            throw new LHValidationError(String.format(
+                "Task Def %s refers to nonexistent task queue %s!",
+                name, taskQueueName
+            ));
+        }
+
     }
 }

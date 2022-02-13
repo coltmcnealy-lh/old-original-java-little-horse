@@ -62,7 +62,7 @@ implements Processor<String, AliasEvent, Void, Void> {
                     "Shouldn't have call to delete for nonexistent entry."
                 );
             }
-            Integer idx = entries.getIndexForGuid(ae.id);
+            Integer idx = entries.getIndexForGuid(ae.objectId);
 
             if (idx == null) {
                 throw new RuntimeException(
@@ -83,7 +83,7 @@ implements Processor<String, AliasEvent, Void, Void> {
                 entries = new AliasEntryCollection();
             }
 
-            Integer idx = entries.getIndexForGuid(ae.id);
+            Integer idx = entries.getIndexForGuid(ae.objectId);
             if (idx != null) {
                 throw new RuntimeException(
                     "wtf we're creating an entry for something already there"
@@ -93,7 +93,7 @@ implements Processor<String, AliasEvent, Void, Void> {
             AliasEntry entry = new AliasEntry();
             entry.firstOffset = ae.sourceOffset;
             entry.mostRecentOffset = ae.sourceOffset;
-            entry.id = ae.id;
+            entry.objectId = ae.objectId;
             entries.entries.add(entry);
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));
@@ -105,7 +105,7 @@ implements Processor<String, AliasEvent, Void, Void> {
                 );
             }
 
-            Integer idx = entries.getIndexForGuid(ae.id);
+            Integer idx = entries.getIndexForGuid(ae.objectId);
 
             if (idx == null) {
                 throw new RuntimeException(

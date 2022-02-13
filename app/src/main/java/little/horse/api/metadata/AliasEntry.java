@@ -4,7 +4,7 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
 
 public class AliasEntry extends BaseSchema implements Comparable<AliasEntry> {
-    public String id;
+    public String objectId;
 
     @DigestIgnore
     public long firstOffset;
