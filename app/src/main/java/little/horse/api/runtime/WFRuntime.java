@@ -17,19 +17,23 @@ import little.horse.common.util.LHUtil;
 
 
 public class WFRuntime
-    implements Processor<String, WFEvent, String, WFRun>
+    implements Processor<String, WFEvent, String, CoordinatorOutput>
 {
     private KeyValueStore<String, WFRun> wfRunStore;
-    private KeyValueStore<String, WFSpec> wfSpecStore;
     private Config config;
+    private WFSpec wfSpec;
+    private ProcessorContext<String, CoordinatorOutput> context;
 
-    public WFRuntime(Config config) {
+    public WFRuntime(Config config, WFSpec wfSpec) {
         // this.config = config;
+        this.config = config;
+        this.wfSpec = wfSpec;
     }
 
     @Override
-    public void init(final ProcessorContext<String, WFRun> context) {
-        wfRunStore = context.getStateStore(Constants.WF_RUN_STORE);
+    public void init(final ProcessorContext<String, CoordinatorOutput> context) {
+        wfRunStore = context.getStateStore(Constants.WF_RUN_STORE_NAME);
+        this.context = context;
     }
 
     @Override
@@ -96,9 +100,4 @@ public class WFRuntime
 
         wfRunStore.put(wfRun.id, wfRun);
     }
-
-    private WFSpec getWFSpec(String guid) throws LHConnectionError {
-        return guid == null ? null : wfSpecStore.get(guid);
-    }
-
 }

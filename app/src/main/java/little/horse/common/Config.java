@@ -219,7 +219,7 @@ public class Config {
         out.add("java");
         out.add("-jar");
         out.add("/littleHorse.jar");
-        out.add("daemon");
+        out.add("workflow-worker");
         return out;
     }
 
@@ -310,7 +310,7 @@ public class Config {
      * Gets the WFSpecGuid from Environment
      * @return the wfSpecGuid for this 
      */
-    public String getWfSpecGuid() {
+    public String getWfSpecId() {
         return this.wfSpecGuid;
     }
 

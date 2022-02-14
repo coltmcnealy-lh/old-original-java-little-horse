@@ -24,11 +24,6 @@ public class Constants {
     public static String DEFAULT_WF_WORKER_IMAGE_KEY = "LHORSE_DEFAULT_WF_WORKER_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_K8S_REPLICAS";
 
-    // public static String WF_SPEC_API_PATH = "wfSpec";
-    // public static String TASK_DEF_API_PATH = "taskDef";
-    // public static String EXTERNAL_EVENT_DEF_PATH = "externalEventDef";
-    // public static String WF_RUN_API_PATH = "wfRun";
-
     // TODO: make this a reserved word.
     public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";
 
@@ -37,6 +32,7 @@ public class Constants {
     public static Pattern VARIABLE_PATTERN = Pattern.compile(
         "<<(.*?)>>"
     );
+    public static String WF_RUN_STORE_NAME = "wfRunStore";
 
     public static String FORCE_LOCAL = "forceLocal";
 }

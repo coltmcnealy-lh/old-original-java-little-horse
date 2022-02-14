@@ -41,7 +41,7 @@ public class WFEvent extends BaseSchema {
         }
 
         if (wfRun != null) {
-            return wfRun.getWFSpec().getKafkaTopic();
+            return wfRun.getWFSpec().getEventTopic();
         }
 
         if (wfSpec == null) {
@@ -54,7 +54,7 @@ public class WFEvent extends BaseSchema {
                     "Event has invalid wfSpec id!!"
                 );
             }
-            kafkaTopic = wfSpec.getKafkaTopic();
+            kafkaTopic = wfSpec.getEventTopic();
             
         }
         return kafkaTopic;

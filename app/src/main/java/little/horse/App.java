@@ -3,7 +3,7 @@
  */
 package little.horse;
 
-import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.admin.NewTopic;
@@ -11,9 +11,16 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.LittleHorseAPI;
+import little.horse.api.metadata.MetadataTopologyBuilder;
 import little.horse.api.runtime.WFRunTopology;
 import little.horse.common.Config;
-import little.horse.common.objects.DigestIgnore;
+import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.ExternalEventDef;
+import little.horse.common.objects.metadata.TaskDef;
+import little.horse.common.objects.metadata.TaskQueue;
+import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.WFRun;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
@@ -50,15 +57,12 @@ class FrontendAPIApp {
         FrontendAPIApp.createKafkaTopics(config);
         Topology topology = new Topology();
 
-        // TaskDefTopology.addStuff(topology, config);
-        // WFSpecTopology.addStuff(topology, config);
-        // ExternalEventDefTopology.addStuff(topology, config);
-
-        WFRunTopology.addStuff(
-            topology,
-            config,
-            Pattern.compile(config.getWFRunTopic())
-        );
+        for (Class<? extends CoreMetadata> cls: Arrays.asList(
+            WFSpec.class, TaskDef.class, TaskQueue.class,
+            ExternalEventDef.class, WFRun.class
+        )) {
+            MetadataTopologyBuilder.addStuff(topology, config, cls);
+        }
 
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
         LittleHorseAPI lapi = new LittleHorseAPI(config, streams);
@@ -72,23 +76,22 @@ class FrontendAPIApp {
     }
 }
 
+class WorkflowWorker {
+    public static void run() throws LHConnectionError {
+        Config config = new Config();
 
-class Thing {
-    // @IncludeInDigest
-    public String mystring;
-    @DigestIgnore
-    public Object foobar;
+        Topology topology = new Topology();
+        WFRunTopology.addStuff(
+            topology,
+            config,
+            Pattern.compile(config.getWFRunTopic())
+        );
 
-    @DigestIgnore
-    public int myint = 123;
+        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
+        Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
+        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
-    public void printDigest() throws IllegalAccessException {
-        for (Field field: this.getClass().getDeclaredFields()) {
-            field.setAccessible(true);
-            if (field.isAnnotationPresent(DigestIgnore.class)) {
-                System.out.println(field.get(this).toString());
-            }
-        }
+        streams.start();
     }
 }
 
@@ -97,6 +100,8 @@ public class App {
         if (args.length > 0 && args[0].equals("api")) {
             System.out.println("running the app");
             FrontendAPIApp.run();
+        } else if (args.length > 0 && args[0].equals("workflow-worker")) {
+
         } else {
             System.out.println("Nothing to do");
         }

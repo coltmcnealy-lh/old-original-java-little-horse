@@ -257,7 +257,7 @@ public class WFSpec extends CoreMetadata {
 
     @JsonIgnore
     public void deploy() throws LHConnectionError {
-        config.createKafkaTopic(new NewTopic(this.getKafkaTopic(), getPartitions(),
+        config.createKafkaTopic(new NewTopic(this.getEventTopic(), getPartitions(),
             getReplicationFactor())
         );
         
@@ -404,7 +404,7 @@ public class WFSpec extends CoreMetadata {
         return out;
     }
 
-    public String getKafkaTopic() {
+    public String getEventTopic() {
         if (kafkaTopic == null) {
             kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
                 + getId().substring(0, 8);
@@ -417,6 +417,27 @@ public class WFSpec extends CoreMetadata {
             k8sName = LHUtil.toValidK8sName(name + "-" + getId().substring(0, 8));
         }
         return k8sName;
+    }
+
+    @JsonIgnore
+    private HashSet<TaskQueue> tqs;
+
+    @JsonIgnore
+    public HashSet<TaskQueue> getAllTaskQueues() throws LHConnectionError {
+        if (tqs != null) return tqs;
+
+        HashSet<TaskQueue> out = new HashSet<>();
+
+        for (ThreadSpec t: threadSpecs.values()) {
+            for (Node n: t.nodes.values()) {
+                if (n.nodeType == NodeType.TASK) {
+                    tqs.add(n.taskDef.getTaskQueue());
+                }
+            }
+        }
+
+        tqs = out;
+        return tqs;
     }
 
     @JsonIgnore
@@ -442,7 +463,7 @@ public class WFSpec extends CoreMetadata {
         container.env = config.getBaseK8sEnv();
         container.env.add(new EnvEntry(
             Constants.KAFKA_APPLICATION_ID_KEY,
-            getId()
+            "workflow-worker-" + name + "-" + getId()
         ));
 
         container.env.add(new EnvEntry(Constants.WF_SPEC_ID_KEY, getId()));
