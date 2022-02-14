@@ -26,7 +26,7 @@ public abstract class CoreMetadata extends BaseSchema {
 
     @JsonIgnore
     public static boolean onlyUseDefaultAPIforGET = false;
-    public void overridePostAPIEndpoints(Javalin app) {}
+    public static void overridePostAPIEndpoints(Javalin app, Config config) {}
 
     @DigestIgnore
     public Long lastUpdatedOffset;

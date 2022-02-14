@@ -49,6 +49,8 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
 
             // DELETE /wfSpec
             app.delete(T.getAPIPath(), this::delete);
+        } else {
+            T.overridePostAPIEndpoints(app, config);
         }
     }
 

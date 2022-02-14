@@ -21,6 +21,7 @@ public class WFRuntime
 {
     private KeyValueStore<String, WFRun> wfRunStore;
     private KeyValueStore<String, WFSpec> wfSpecStore;
+    private Config config;
 
     public WFRuntime(Config config) {
         // this.config = config;

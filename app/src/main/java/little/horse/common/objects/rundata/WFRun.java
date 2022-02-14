@@ -340,10 +340,9 @@ public class WFRun extends CoreMetadata {
     @JsonIgnore
     public static boolean onlyUseDefaultAPIforGET = false;
 
-    private WFRunApiStuff apiStuff;;
+    public static WFRunApiStuff apiStuff;
 
-    @Override
-    public void overridePostAPIEndpoints(Javalin app) {
+    public static void overridePostAPIEndpoints(Javalin app, Config config) {
         apiStuff = new WFRunApiStuff(config);
 
         app.post("/wfRun", apiStuff::postRun);

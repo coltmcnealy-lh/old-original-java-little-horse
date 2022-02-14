@@ -15,14 +15,13 @@ import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.WFRun;
  
 
 public class LittleHorseAPI {
     private Javalin app; 
     private Config config;
     private Set<CoreMetadataAPI<? extends CoreMetadata>> apis;
-
-    private WFRunAPI wfRunAPI;
 
     private KafkaStreams streams;
 
@@ -50,22 +49,11 @@ public class LittleHorseAPI {
         });
         
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
-            WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class
+            WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
+            WFRun.class
         )) {
             addApi(cls);
         }
-
-        this.app.get("/wfRun/{wfRunId}", this.wfRunAPI::get);
-        this.app.post("/wfRun/", this.wfRunAPI::post);
-        this.app.post("/wfRun/stop/{wfRunId}", this.wfRunAPI::stopWFRun);
-        this.app.post("/wfRun/resume/{wfRunId}", this.wfRunAPI::resumeWFRun);
-        this.app.post("/wfRun/stop/{wfRunId}/{tid}", this.wfRunAPI::stopThread);
-        this.app.post("/wfRun/resume/{wfRunId}/{tid}", this.wfRunAPI::resumeThread);
-
-        // this.app.get("/externalEventDef/{nameOrId}", this.externalEventDefAPI::get);
-        // this.app.post("/externalEventDef", this.externalEventDefAPI::post);
-
-        // this.app.post("/externalEvent/{externalEventDefID}/{wfRunId}", this.externalEventDefAPI::postEvent);
     }
 
     public void cleanup() {
