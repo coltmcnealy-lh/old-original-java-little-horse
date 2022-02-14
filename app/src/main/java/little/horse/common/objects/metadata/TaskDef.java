@@ -11,6 +11,7 @@ import little.horse.common.util.LHDatabaseClient;
 
 
 public class TaskDef extends CoreMetadata {
+    @JsonIgnore
     public static String typeName = "taskDef";
 
     public TaskDef() {}
@@ -26,6 +27,7 @@ public class TaskDef extends CoreMetadata {
     @JsonIgnore
     private TaskQueue taskQueue;
 
+    @JsonIgnore
     public TaskQueue getTaskQueue() throws LHConnectionError {
         if (taskQueue == null) {
             taskQueue = LHDatabaseClient.lookupMeta(
@@ -35,6 +37,7 @@ public class TaskDef extends CoreMetadata {
         return taskQueue;
     }
 
+    @JsonIgnore
     public void setTaskQueue(TaskQueue tq) {
         this.taskQueue = tq;
     }

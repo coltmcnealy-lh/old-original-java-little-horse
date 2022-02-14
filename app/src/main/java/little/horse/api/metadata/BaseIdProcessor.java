@@ -2,6 +2,7 @@ package little.horse.api.metadata;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -37,7 +38,7 @@ implements Processor<String, T, String, AliasEvent> {
 
     @Override
     public void init(final ProcessorContext<String, AliasEvent> context) {
-        this.kvStore = context.getStateStore(T.getIdStoreName());
+        this.kvStore = context.getStateStore(T.getIdStoreName(cls));
         this.context = context;
     }
 
@@ -53,11 +54,8 @@ implements Processor<String, T, String, AliasEvent> {
 
     private void processHelper(final Record<String, T> record) throws LHSerdeError {
         T newMeta = record.value();
-        T old = BaseSchema.fromBytes(
-            kvStore.get(record.key()).get(),
-            cls,
-            config
-        );
+        Bytes b = kvStore.get(record.key());
+        T old = b != null ? BaseSchema.fromBytes(b.get(), cls, config) : null;
 
         Optional<RecordMetadata> rm = context.recordMetadata();
         RecordMetadata recordMeta = rm.isPresent() ? rm.get() : null;
@@ -72,11 +70,10 @@ implements Processor<String, T, String, AliasEvent> {
         }
 
         if (recordMeta != null) {
-            OffsetInfoCollection infos = BaseSchema.fromBytes(
-                kvStore.get(Constants.LATEST_OFFSET_ROCKSDB_KEY).get(),
-                OffsetInfoCollection.class,
-                config
-            );
+            Bytes nb = kvStore.get(Constants.LATEST_OFFSET_ROCKSDB_KEY);
+            OffsetInfoCollection infos = nb != null ? BaseSchema.fromBytes(
+                nb.get(), OffsetInfoCollection.class, config
+            ) : null;
 
             if (infos == null) {
                 infos = new OffsetInfoCollection();
@@ -122,7 +119,8 @@ implements Processor<String, T, String, AliasEvent> {
 
         // We need to remove aliases from the old and add from the new.
         Set<AliasIdentifier> newAliases = newMeta.getAliases();
-        Set<AliasIdentifier> oldAliases = old.getAliases();
+        Set<AliasIdentifier> oldAliases = old == null ? new HashSet<>()
+            : old.getAliases();
 
         int totalAliases = newAliases.size();
 

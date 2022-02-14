@@ -293,8 +293,8 @@ public class ThreadRun extends BaseSchema {
         int returnCode
     ) throws LHConnectionError {
         task.endTime = endTime;
-        task.stdout = LHUtil.jsonifyIfPossible(stdout);
-        task.stderr = LHUtil.jsonifyIfPossible(stderr);
+        task.stdout = LHUtil.jsonifyIfPossible(stdout, config);
+        task.stderr = LHUtil.jsonifyIfPossible(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 
@@ -925,7 +925,7 @@ public class ThreadRun extends BaseSchema {
         // adds a WFHaltReason which we dont wanna propagate to the interrupt thread.
         ThreadRun trun = wfRun.createThreadClientAdds(
             tspecname,
-            LHUtil.unsplat(payload.content),
+            LHUtil.unsplat(payload.content, config),
             this
         );
         trun.isInterruptThread = true;

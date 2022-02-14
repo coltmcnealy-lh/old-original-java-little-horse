@@ -33,46 +33,58 @@ public abstract class CoreMetadata extends BaseSchema {
     public Long lastUpdatedOffset;
 
     @JsonIgnore
-    public static String typeName;
+    public static String typename;
 
     @JsonIgnore
-    public static String getIdKafkaTopic(Config config) {
-        return config.getKafkaTopicPrefix() + "__" + typeName;
-    }
-
-    @JsonIgnore
-    public static String getAliasKafkaTopic(Config config) {
-        return getIdKafkaTopic(config) + "__aliases";
+    public static<T extends CoreMetadata> String getLHTypeName(Class<T> cls) {
+        return cls.getSimpleName();
     }
 
     @JsonIgnore
-    public static String getIdStoreName() {
-        return typeName;
+    public static <T extends CoreMetadata> String getIdKafkaTopic(
+        Config config, Class<T> cls
+    ) {
+        return config.getKafkaTopicPrefix() + "__" + T.getLHTypeName(cls);
     }
 
     @JsonIgnore
-    public static String getAliasStoreName() {
-        return getIdStoreName() + "__aliases";
+    public static<T extends CoreMetadata> String getAliasKafkaTopic(
+        Config config, Class<T> cls
+    ) {
+        return getIdKafkaTopic(config, cls) + "__aliases";
     }
 
-    public static String getAPIPath() {
-        return "/" + typeName;
+    @JsonIgnore
+    public static<T extends CoreMetadata> String getIdStoreName(Class<T> cls) {
+        return T.getLHTypeName(cls);
     }
 
-    public static String getAPIPath(String id) {
-        return getAPIPath() + "/" + id;
+    @JsonIgnore
+    public static<T extends CoreMetadata> String getAliasStoreName(Class<T> cls) {
+        return getIdStoreName(cls) + "__aliases";
     }
 
-    public static String getAliasPath() {
-        return getAPIPath() + "Alias";
+    public static<T extends CoreMetadata> String getAPIPath(Class<T> cls) {
+        return "/" + T.getLHTypeName(cls);
     }
 
-    public static String getAliasPath(String aliasName, String aliasValue) {
-        return getAliasPath() + "/" + aliasName + "/" + aliasValue;
+    public static<T extends CoreMetadata> String getAPIPath(String id, Class<T> cls) {
+        return getAPIPath(cls) + "/" + id;
     }
 
-    public static String getAliasPath(Map<String, String> aliases) {
-        String path = getAliasPath();
+    public static<T extends CoreMetadata> String getAliasPath(Class<T> cls) {
+        return getAPIPath(cls) + "Alias";
+    }
+
+    public static<T extends CoreMetadata> String getAliasPath(
+        String aliasName, String aliasValue, Class<T> cls) {
+        return getAliasPath(cls) + "/" + aliasName + "/" + aliasValue;
+    }
+
+    public static<T extends CoreMetadata> String getAliasPath(
+        Map<String, String> aliases, Class<T> cls
+    ) {
+        String path = getAliasPath(cls);
         if (aliases.size() == 0) return path;
 
         path += "?";
@@ -89,16 +101,16 @@ public abstract class CoreMetadata extends BaseSchema {
         return path.substring(0, path.length() - 1);
     }
 
-    public static String getWaitForAPIPath(
-        String id, String offset, String partition
+    public static<T extends CoreMetadata> String getWaitForAPIPath(
+        String id, String offset, String partition, Class<T> cls
     ) {
-        return getAPIPath() + "Offset/" + id + "/" + offset + "/" + partition;
+        return getAPIPath(cls) + "Offset/" + id + "/" + offset + "/" + partition;
     }
 
-    public static String getWaitForAPIPath(
-        String id, long offset, int partition
+    public static<T extends CoreMetadata> String getWaitForAPIPath(
+        String id, long offset, int partition, Class<T> cls
     ) {
-        return getAPIPath() + "Offset/" + id + "/" + String.valueOf(offset)
+        return getAPIPath(cls) + "Offset/" + id + "/" + String.valueOf(offset)
             + "/" + String.valueOf(partition);
     }
 
@@ -115,14 +127,16 @@ public abstract class CoreMetadata extends BaseSchema {
     @JsonIgnore
     public Future<RecordMetadata> save() {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            getIdKafkaTopic(this.config), getId(), this.toString());
+            getIdKafkaTopic(this.config, this.getClass()), getId(), this.toString());
         return this.config.send(record);
     }
 
     @JsonIgnore
-    public static Future<RecordMetadata> sendNullRecord(String id, Config config) {
+    public static<T extends CoreMetadata> Future<RecordMetadata> sendNullRecord(
+        String id, Config config, Class<T> cls
+    ) {
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            getIdKafkaTopic(config), id, null);
+            getIdKafkaTopic(config, cls), id, null);
         return config.send(record);
     }
 

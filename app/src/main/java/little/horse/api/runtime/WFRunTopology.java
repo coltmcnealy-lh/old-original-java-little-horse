@@ -61,15 +61,17 @@ public class WFRunTopology {
             TaskScheduleRequest.class, config
         );
 
-        WFRuntime runtime = new WFRuntime(config, wfSpec);
-
         topology.addSource(
             topoSource,
             Serdes.String().deserializer(),
             eventSerdes.deserializer(),
             topicPattern
         );
-        topology.addProcessor(runtimeProcessor, () -> {return runtime;}, topoSource);
+        topology.addProcessor(
+            runtimeProcessor,
+            () -> {return new WFRuntime(config, wfSpec);},
+            topoSource
+        );
 
         /*
         The runtimeProcessor forwards down the context a bunch of CoordinatorOutput
@@ -89,9 +91,12 @@ public class WFRunTopology {
         // First, the TaskQueue's
         for (TaskQueue tq: wfSpec.getAllTaskQueues()) {
             String procName = "Filter Processor " + tq.name;
-            TaskQueueFilterProcessor tpf = new TaskQueueFilterProcessor(tq);
 
-            topology.addProcessor(procName, () -> {return tpf;}, runtimeProcessor);
+            topology.addProcessor(
+                procName,
+                () -> {return new TaskQueueFilterProcessor(tq);},
+                runtimeProcessor
+            );
 
             // Fire it off to the actual kafka topic.
             topology.addSink(
@@ -115,7 +120,7 @@ public class WFRunTopology {
             // is fine for now but in the future it'll make it impossible to scale
             // up the number of partitions for the WFRun collector. We want to make
             // this 
-            WFRun.getIdKafkaTopic(config),
+            WFRun.getIdKafkaTopic(config, WFRun.class),
             Serdes.String().serializer(),
             runSerde.serializer(),
             wfRunSink

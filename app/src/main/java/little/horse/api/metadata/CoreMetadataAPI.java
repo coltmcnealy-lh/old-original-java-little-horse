@@ -30,25 +30,27 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         this.streamsContext = context;
 
         // GET /wfSpec/{id}
-        app.get(T.getAPIPath("/{id}"), this::get);
+        app.get(T.getAPIPath("/{id}", cls), this::get);
 
         // GET /wfSpecAlias/{aliasKey}/{aliasValue}
-        app.get(T.getAliasPath("{aliasKey}", "{aliasValue}"), this::getAlias);
+        app.get(T.getAliasPath("{aliasKey}", "{aliasValue}", cls), this::getAlias);
 
         // GET /wfSpecOffset/{id}/{offset}/{partition}
         app.get(
-            T.getWaitForAPIPath("{id}", "{offset}", "{partition}"),
+            T.getWaitForAPIPath("{id}", "{offset}", "{partition}", cls),
             this::waitForProcessing
         );
+
+        System.out.println("\n\n\nasdfasdfasdf\n\n\n");
 
         // A little bit of voodoo to allow for some special overriding stuff, eg for
         // WFRun.
         if (!T.onlyUseDefaultAPIforGET) {
             // POST /wfSpec
-            app.post(T.getAPIPath(), this::post);
+            app.post(T.getAPIPath(cls), this::post);
 
             // DELETE /wfSpec
-            app.delete(T.getAPIPath(), this::delete);
+            app.delete(T.getAPIPath(cls), this::delete);
         } else {
             T.overridePostAPIEndpoints(app, config);
         }
@@ -96,7 +98,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             streamsContext.waitForProcessing(
                 t.getId(), record.offset(), record.partition(), false,
                 T.getWaitForAPIPath(
-                    t.getId(), record.offset(), record.partition()
+                    t.getId(), record.offset(), record.partition(), cls
                 )
             );
 
@@ -139,11 +141,11 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                 result.message = "Could not find " + cls.getTypeName() +
                     " with id " + id;
             } else {
-                RecordMetadata record = T.sendNullRecord(id, config).get();
+                RecordMetadata record = T.sendNullRecord(id, config, cls).get();
                 streamsContext.waitForProcessing(
                     result.objectId, record.offset(), record.partition(), false,
                     T.getWaitForAPIPath(
-                        id, record.offset(), record.partition()
+                        id, record.offset(), record.partition(), cls
                     )
                 );
                 result.status = ResponseStatus.OK;
@@ -226,7 +228,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         try {
             streamsContext.waitForProcessing(
                 id, offset, partition, forceLocal, T.getWaitForAPIPath(
-                    id, offset, partition
+                    id, offset, partition, cls
                 )
             );
             response.status = ResponseStatus.OK;

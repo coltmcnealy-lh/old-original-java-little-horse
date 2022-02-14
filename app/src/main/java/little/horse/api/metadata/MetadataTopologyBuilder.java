@@ -25,18 +25,11 @@ public class MetadataTopologyBuilder {
             AliasEvent.class, config
         );
 
-        String theOgSource = T.typeName + " Metadata Events";
-        String byIdProcessorName = T.typeName + " Id Processor";
-        String aliasProcessorName = T.typeName + " Alias Processor";
-        String aliasSink = T.typeName + " Alias Sink";
-        String nameKeyedSource = T.typeName + " Alias Source";
-
-        BaseIdProcessor<T> baseIdProcessor = new BaseIdProcessor<T>(
-            cls, config
-        );
-        BaseAliasProcessor<T> baseAliasProcessor = new BaseAliasProcessor<T>(
-            cls, config
-        );
+        String theOgSource = T.getLHTypeName(cls) + " Metadata Events";
+        String byIdProcessorName = T.getLHTypeName(cls) + " Id Processor";
+        String aliasProcessorName = T.getLHTypeName(cls) + " Alias Processor";
+        String aliasSink = T.getLHTypeName(cls) + " Alias Sink";
+        String nameKeyedSource = T.getLHTypeName(cls) + " Alias Source";
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             serde.close();
@@ -48,7 +41,7 @@ public class MetadataTopologyBuilder {
             theOgSource,
             Serdes.String().deserializer(),
             serde.deserializer(),
-            T.getIdKafkaTopic(config)
+            T.getIdKafkaTopic(config, cls)
         );
 
         /*
@@ -60,7 +53,7 @@ public class MetadataTopologyBuilder {
         */
         topology.addProcessor(
             byIdProcessorName, // name of this processor
-            () -> {return baseIdProcessor;}, // the actual processing
+            () -> {return new BaseIdProcessor<T>(cls, config);}, // actual processing
             theOgSource // kafka streams source to process
         );
 
@@ -78,7 +71,7 @@ public class MetadataTopologyBuilder {
         // Sink the re-keyed stream into an intermediate topic
         topology.addSink(
             aliasSink, // name of this sink
-            T.getAliasKafkaTopic(config), // kafka topic to sink to
+            T.getAliasKafkaTopic(config, cls), // kafka topic to sink to
             Serdes.String().serializer(), // key serializer
             aliasSerde.serializer(), // value serializer
             byIdProcessorName // name of the processor to sink into kafka
@@ -89,13 +82,13 @@ public class MetadataTopologyBuilder {
             nameKeyedSource,
             Serdes.String().deserializer(),
             aliasSerde.deserializer(), // Picking up CoreMetadataAliases.
-            T.getAliasKafkaTopic(config)
+            T.getAliasKafkaTopic(config, cls)
         );
 
         // Now make the aliases queryable in their own store.
         topology.addProcessor(
             aliasProcessorName,
-            () -> {return baseAliasProcessor;},
+            () -> {return new BaseAliasProcessor<T>(cls, config);},
             theOgSource
         );
 
@@ -104,7 +97,7 @@ public class MetadataTopologyBuilder {
         // For querying things by ID.
         StoreBuilder<KeyValueStore<String, Bytes>> idStoreBuilder =
             Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore(T.getIdStoreName()),
+                Stores.persistentKeyValueStore(T.getIdStoreName(cls)),
                 Serdes.String(),
                 Serdes.Bytes()
         );
@@ -112,7 +105,7 @@ public class MetadataTopologyBuilder {
         // For querying things by alias.
         StoreBuilder<KeyValueStore<String, Bytes>> aliasStoreBuilder =
             Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore(T.getIdStoreName()),
+                Stores.persistentKeyValueStore(T.getAliasStoreName(cls)),
                 Serdes.String(),
                 Serdes.Bytes()
         );

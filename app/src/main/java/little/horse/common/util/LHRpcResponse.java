@@ -29,7 +29,7 @@ public class LHRpcResponse<T extends BaseSchema> {
         // hackity hack
         try {
             out.result = BaseSchema.fromString(
-                LHUtil.mapper.writeValueAsString(raw.result),
+                LHUtil.getObjectMapper(config).writeValueAsString(raw.result),
                 cls,
                 config
             );

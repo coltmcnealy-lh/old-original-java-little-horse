@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,15 +21,14 @@ import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHUtil;
 
 public class BaseSchema {
-    @JsonIgnore
+    @JacksonInject
     protected Config config;
-
-    public BaseSchema() {
-    }
 
     public BaseSchema(Config config) {
         this.config = config;
     }
+    // Use sparingly.
+    public BaseSchema(){}
 
     @JsonIgnore
     private String digest;
@@ -36,6 +36,9 @@ public class BaseSchema {
     public String getId() {
         return LHUtil.fullDigestify(getDigest());
     }
+    public void setId() {} // just here for jackson stupidity
+
+    @JsonIgnore public String id;
 
     @SuppressWarnings("unchecked")
     @JsonIgnore
@@ -120,7 +123,7 @@ public class BaseSchema {
     ) throws LHSerdeError {
         T result;
         try {
-            result = LHUtil.mapper.readValue(src, valueType);
+            result = LHUtil.getObjectMapper(config).readValue(src, valueType);
         } catch(JsonProcessingException parent) {
             parent.printStackTrace();
             throw new LHSerdeError(parent, "Failed to process json");
@@ -134,7 +137,7 @@ public class BaseSchema {
 
     public String toString() {
         try {
-            return LHUtil.mapper.writeValueAsString(this);
+            return LHUtil.getObjectMapper(config).writeValueAsString(this);
         } catch(Exception exn) {
             exn.printStackTrace();
             return null;

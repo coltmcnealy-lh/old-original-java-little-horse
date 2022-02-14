@@ -56,7 +56,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
     public T getTFromId(String id, boolean forceLocal)
     throws LHConnectionError {
         Bytes objBytes = queryStoreBytes(
-            id, T.getIdStoreName(), forceLocal, T.getAPIPath(id)
+            id, T.getIdStoreName(cls), forceLocal, T.getAPIPath(id, cls)
         );
 
         try {
@@ -80,7 +80,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
     throws LHConnectionError {
         // Need the ID in order to figure out the partition thing.
         Bytes objBytes = queryStoreBytes(
-            Constants.LATEST_OFFSET_ROCKSDB_KEY, T.getIdStoreName(), forceLocal,
+            Constants.LATEST_OFFSET_ROCKSDB_KEY, T.getIdStoreName(cls), forceLocal,
             apiPath, id
         );
         if (objBytes == null) return null;
@@ -91,11 +91,11 @@ public class APIStreamsContext<T extends CoreMetadata> {
     public AliasEntryCollection getTFromAlias(
         String aliasKey, String aliasValue, boolean forceLocal
     ) throws LHConnectionError {
-        String apiPath = T.getAliasPath(aliasKey, aliasValue);
+        String apiPath = T.getAliasPath(aliasKey, aliasValue, cls);
         AliasIdentifier entryID = new AliasIdentifier(aliasKey, aliasValue);
 
         Bytes aliasEntryCollectionBytes = queryStoreBytes(
-            T.getAliasStoreName(), entryID.getStoreKey(), forceLocal, apiPath
+            T.getAliasStoreName(cls), entryID.getStoreKey(), forceLocal, apiPath
         );
 
         try {
@@ -113,7 +113,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
         String key, long offset, int partition, boolean forceLocal, String apiPath
     ) throws LHConnectionError {
         KeyQueryMetadata metadata = streams.queryMetadataForKey(
-            T.getIdStoreName(),
+            T.getIdStoreName(cls),
             key,
             Serdes.String().serializer()
         );
@@ -121,20 +121,20 @@ public class APIStreamsContext<T extends CoreMetadata> {
         if (forceLocal || metadata.activeHost().equals(thisHost)) {
             while (true) {
                 OffsetInfoCollection infos;
+                Bytes b = getStore(T.getIdStoreName(cls)).get(
+                    Constants.LATEST_OFFSET_ROCKSDB_KEY
+                );
+
                 try {
-                    infos = BaseSchema.fromBytes(
-                        getStore(T.getIdStoreName()).get(
-                            Constants.LATEST_OFFSET_ROCKSDB_KEY
-                        ).get(),
-                        OffsetInfoCollection.class,
-                        config
-                    );
+                    infos = (b != null) ? BaseSchema.fromBytes(
+                        b.get(), OffsetInfoCollection.class, config
+                    ) : null;
                 } catch(LHSerdeError exn) {
                     exn.printStackTrace();
                     throw new RuntimeException("this should be impossible");
                 }
                 if (infos != null) {
-                    String mapKey = T.getIdKafkaTopic(config) + partition;
+                    String mapKey = T.getIdKafkaTopic(config, cls) + partition;
                     if (infos.partitionMap.get(mapKey).offset >= offset) {
                         break;
                     }

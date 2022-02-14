@@ -43,11 +43,10 @@ public class LittleHorseAPI {
 
         
         this.app = Javalin.create(javalinConf -> {
-            javalinConf.jsonMapper(new LHJavalinJson(config));
             javalinConf.prefer405over404 = true;
             javalinConf.enableCorsForAllOrigins();
         });
-        
+
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
             WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
             WFRun.class

@@ -12,6 +12,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
@@ -21,6 +22,9 @@ import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.lang3.StringUtils;
 
+import little.horse.common.Config;
+import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
 
 
@@ -29,7 +33,9 @@ public class LHUtil {
         return UUID.randomUUID().toString();
     }
 
-    public static final ObjectMapper mapper = new MapperInitializer().getMapper();
+    public static ObjectMapper getObjectMapper(Config cfg) {
+        return new MapperInitializer(cfg).getMapper();
+    }
 
     public static String toValidK8sName(String oldStr) {
         String str = new String(oldStr);
@@ -97,14 +103,14 @@ public class LHUtil {
      * @param obj the thing to unsplat
      * @return the unsplatted object
      */
-    public static HashMap<String, Object> unsplat(Object obj) {
+    public static HashMap<String, Object> unsplat(Object obj, Config cfg) {
         HashMap<String, Object> out;
         try {
             LHUtil.log("obj:", obj.toString());
 
             @SuppressWarnings("unchecked")
             HashMap<String, Object> tmp = (HashMap<String, Object>) jsonifyIfPossible(
-                obj.toString()
+                obj.toString(), cfg
             );
 
             out = tmp;
@@ -130,18 +136,18 @@ public class LHUtil {
         return out.toString();
     }
 
-    public static String jsonify(Object thing) {
+    public static String jsonify(Object thing, Config cfg) {
         try {
-            return mapper.writeValueAsString(thing);
+            return getObjectMapper(cfg).writeValueAsString(thing);
         } catch(JsonProcessingException exn) {
             exn.printStackTrace();
             return null;
         }
     }
 
-    public static Object jsonifyIfPossible(String data) {
+    public static Object jsonifyIfPossible(String data, Config cfg) {
         try {
-            Object obj = LHUtil.mapper.readValue(data, Object.class);
+            Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
             return data;
@@ -162,15 +168,22 @@ class MapperInitializer {
         return mapper;
     }
 
-    public MapperInitializer() {
-        SimpleModule module = new SimpleModule();
-        module.setDeserializerModifier(new BeanDeserializerModifier() {
-            @Override
-            public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, 
-                    BeanDescription beanDescription, JsonDeserializer<?> originalDeserializer) {
-                return new JsonMapKeyDeserializer(originalDeserializer, beanDescription);
-            }
-        });
-        mapper.registerModule(module);
+    public MapperInitializer(Config cfg) {
+        this.mapper = new ObjectMapper();
+
+        InjectableValues inject = new InjectableValues.Std().addValue(
+            BaseSchema.class, cfg
+        ).addValue(Config.class, cfg);
+
+        mapper.setInjectableValues(inject);
+        // SimpleModule module = new SimpleModule();
+        // module.setDeserializerModifier(new BeanDeserializerModifier() {
+        //     @Override
+        //     public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, 
+        //             BeanDescription beanDescription, JsonDeserializer<?> originalDeserializer) {
+        //         return new JsonMapKeyDeserializer(originalDeserializer, beanDescription);
+        //     }
+        // });
+        // mapper.registerModule(module);
     }
 }

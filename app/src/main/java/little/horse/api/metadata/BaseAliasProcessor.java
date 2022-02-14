@@ -16,15 +16,16 @@ public class BaseAliasProcessor<T extends CoreMetadata>
 implements Processor<String, AliasEvent, Void, Void> {
     private KeyValueStore<String, Bytes> kvStore;
     private Config config;
+    private Class<T> cls;
 
     public BaseAliasProcessor(Class<T> cls, Config config) {
-        // this.cls = cls;
+        this.cls = cls;
         this.config = config;
     }
 
     @Override
     public void init(final ProcessorContext<Void, Void> context) {
-        this.kvStore = context.getStateStore(T.getAliasStoreName());
+        this.kvStore = context.getStateStore(T.getAliasStoreName(cls));
     }
 
     @Override
@@ -52,7 +53,7 @@ implements Processor<String, AliasEvent, Void, Void> {
         }
 
         Bytes aliasBytes = kvStore.get(storeKey);
-        AliasEntryCollection entries = aliasBytes.get() != null ? BaseSchema.fromBytes(
+        AliasEntryCollection entries = aliasBytes != null ? BaseSchema.fromBytes(
             aliasBytes.get(), AliasEntryCollection.class, config
         ) : null;
 

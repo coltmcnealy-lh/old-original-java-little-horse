@@ -15,5 +15,5 @@ public class WFRunVariableDef extends BaseSchema {
     public String variableName;
 
     @JsonBackReference
-    public ThreadSpec thread;
+    public TaskDef thread;
 }

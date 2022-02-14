@@ -20,7 +20,7 @@ public class LHDatabaseClient {
     ) throws LHConnectionError {
 
         LHRpcCLient client = new LHRpcCLient(config);
-        String url = config.getAPIUrlFor(T.getAPIPath()) + "/" + guid;
+        String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + guid;
         LHRpcResponse<T> response = client.getResponse(url, cls);
 
         return response.result;

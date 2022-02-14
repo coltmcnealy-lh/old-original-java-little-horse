@@ -1,5 +1,7 @@
 package little.horse.common.objects.metadata;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.apache.kafka.clients.admin.NewTopic;
 
 import little.horse.common.Config;
@@ -7,21 +9,26 @@ import little.horse.common.objects.DigestIgnore;
 import little.horse.common.util.LHUtil;
 
 public class TaskQueue extends CoreMetadata {
-    @DigestIgnore
+    @JsonIgnore
     public static String typeName = "taskQueue";
 
     @DigestIgnore
-    public int partitions = config.getDefaultPartitions();
+    public int partitions;
 
     // This should be the only thing used in the digest.
     public String getKafkaTopic() {
         return this.name;
     }
+    // Again, here for the jackson
+    public void setKafkaTopic(String foo) {}
 
     @Override
     public String getId() {
         return this.name;
     }
+
+    // Just here for the Jackson stuff
+    public void setId(String foo) {}
 
     public void processChange(CoreMetadata old) {
         if (!(old == null || old instanceof TaskQueue)) {

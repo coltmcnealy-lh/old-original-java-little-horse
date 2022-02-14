@@ -27,21 +27,41 @@ class FrontendAPIApp {
         int partitions = 1;
         short replicationFactor = 1;
 
-        String[] topics = {
-            config.getWFSpecActionsTopic(),
-            config.getWFSpecTopic(),
-            config.getWFSpecIntermediateTopic(),
-            config.getTaskDefNameKeyedTopic(),
-            config.getTaskDefTopic(),
-            config.getWFSpecNameKeyedTopic(),
-            config.getExternalEventDefNameKeyedTopic(),
-            config.getWFRunTopic(),
-            config.getExternalEventDefTopic()
-        };
-        for (String topicName : topics) {
-            NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
-            config.createKafkaTopic(newTopic);
+        for (Class<? extends CoreMetadata> cls: Arrays.asList(
+            WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
+            WFRun.class
+        )) {
+            config.createKafkaTopic(
+                new NewTopic(
+                    CoreMetadata.getIdKafkaTopic(config, cls),
+                    partitions,
+                    replicationFactor
+                )
+            );
+
+            config.createKafkaTopic(
+                new NewTopic(
+                    CoreMetadata.getAliasKafkaTopic(config, cls),
+                    partitions,
+                    replicationFactor
+                )
+            );
         }
+        // String[] topics = {
+        //     config.getWFSpecActionsTopic(),
+        //     config.getWFSpecTopic(),
+        //     config.getWFSpecIntermediateTopic(),
+        //     config.getTaskDefNameKeyedTopic(),
+        //     config.getTaskDefTopic(),
+        //     config.getWFSpecNameKeyedTopic(),
+        //     config.getExternalEventDefNameKeyedTopic(),
+        //     config.getWFRunTopic(),
+        //     config.getExternalEventDefTopic()
+        // };
+        // for (String topicName : topics) {
+        //     NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
+        //     config.createKafkaTopic(newTopic);
+        // }
     }
 
     /**
@@ -103,6 +123,8 @@ public class App {
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
 
         } else {
+            Config config = new Config();
+            System.out.println(WFSpec.getIdKafkaTopic(config, WFSpec.class));
             System.out.println("Nothing to do");
         }
     }

@@ -18,6 +18,7 @@ public class AliasEntryCollection extends BaseSchema {
      */
     public ArrayList<AliasEntry> entries;
 
+    @JsonIgnore
     public AliasEntry getLatestEntry() {
         return (entries.size() > 0) ? entries.get(entries.size() - 1) : null;
     }
