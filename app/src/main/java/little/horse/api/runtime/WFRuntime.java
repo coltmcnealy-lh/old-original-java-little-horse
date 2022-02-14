@@ -1,5 +1,7 @@
 package little.horse.api.runtime;
 
+import java.util.ArrayList;
+
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -20,13 +22,10 @@ public class WFRuntime
     implements Processor<String, WFEvent, String, CoordinatorOutput>
 {
     private KeyValueStore<String, WFRun> wfRunStore;
-    private Config config;
     private WFSpec wfSpec;
     private ProcessorContext<String, CoordinatorOutput> context;
 
     public WFRuntime(Config config, WFSpec wfSpec) {
-        // this.config = config;
-        this.config = config;
         this.wfSpec = wfSpec;
     }
 
@@ -51,22 +50,6 @@ public class WFRuntime
         WFEvent event = record.value();
 
         WFRun wfRun = wfRunStore.get(wfRunGuid);
-        WFSpec wfSpec = getWFSpec(event.wfSpecDigest);
-
-        if (wfSpec == null && event.type == WFEventType.WF_RUN_STARTED) {
-            throw new RuntimeException("Implement wfspec lookup");
-        }
-
-        if (wfSpec == null) {
-            LHUtil.log(
-                "Got an event for which we either couldn't find wfSpec:\n",
-                event.toString()
-            );
-
-            // TODO: Catch the exceptions on loading wfSpec, and forward these failed
-            // records to another kafka topic so we can re-process them later.
-            return;
-        }
 
         if (wfRun == null) {
             if (event.type == WFEventType.WF_RUN_STARTED) {
@@ -84,6 +67,8 @@ public class WFRuntime
         wfRun.updateStatuses(event);
 
         boolean shouldAdvance = true;
+        ArrayList<TaskScheduleRequest> toSchedule = new ArrayList<>();
+
         while (shouldAdvance) {
             // This call here seems redundant but it's actually not...if I don't put it here
             // then the parent thread never notices if the exception handler thread has
@@ -92,12 +77,26 @@ public class WFRuntime
             boolean didAdvance = false;
             for (int i = 0; i < wfRun.threadRuns.size(); i++) {
                 ThreadRun thread = wfRun.threadRuns.get(i);
-                didAdvance = thread.advance(event) || didAdvance;
+                didAdvance = thread.advance(event, toSchedule) || didAdvance;
             }
             shouldAdvance = didAdvance;
             wfRun.updateStatuses(event);
         }
 
-        wfRunStore.put(wfRun.id, wfRun);
+        for (TaskScheduleRequest tsr: toSchedule) {
+            CoordinatorOutput co = new CoordinatorOutput();
+            co.request = tsr;
+            context.forward(new Record<String, CoordinatorOutput>(
+                wfRun.getId(), co, record.timestamp()
+            ));
+        }
+
+        CoordinatorOutput co = new CoordinatorOutput();
+        co.wfRun = wfRun;
+        context.forward(new Record<String, CoordinatorOutput>(
+            wfRun.getId(), co, record.timestamp()
+        ));
+
+        wfRunStore.put(wfRun.getId(), wfRun);
     }
 }

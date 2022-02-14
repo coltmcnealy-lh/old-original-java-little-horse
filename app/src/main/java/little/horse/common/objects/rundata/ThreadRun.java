@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
+import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
@@ -88,6 +89,11 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     private ThreadSpec getThreadSpec() throws LHConnectionError {
         return wfRun.getWFSpec().threadSpecs.get(threadSpecName);
+    }
+
+    @Override
+    public String getId() {
+        return String.valueOf(id);
     }
 
     /**
@@ -231,14 +237,12 @@ public class ThreadRun extends BaseSchema {
         tr.threadID = id;
         tr.number = taskRuns.size();
         tr.nodeName = node.name;
-        // tr.nodeGuid = node.guid; // this was there prolly for some reason...
         tr.wfSpecDigest = wfRun.getWFSpec().getId();
         tr.wfSpecName = wfRun.getWFSpec().name;
 
         tr.parentThread = this;
 
-        throw new RuntimeException("Oops");
-        // return tr;
+        return tr;
     }
 
     @JsonIgnore
@@ -569,7 +573,7 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public boolean advance(WFEvent event)
+    public boolean advance(WFEvent event, ArrayList<TaskScheduleRequest> toSchedule)
     throws LHConnectionError {
         if (status != LHExecutionStatus.RUNNING || upNext.size() == 0) {
             return false;
@@ -623,11 +627,13 @@ public class ThreadRun extends BaseSchema {
             return false;
         }
 
-        return activateNode(activatedNode, event);
+        return activateNode(activatedNode, event, toSchedule);
     }
 
     @JsonIgnore
-    private void scheduleTask(TaskRun tr, Node node) {
+    private void scheduleTask(
+        TaskRun tr, Node node, ArrayList<TaskScheduleRequest> toSchedule
+    ) {
         TaskScheduledEvent te = new TaskScheduledEvent();
         te.setConfig(config);
         te.taskType = node.taskDef.taskType;
@@ -643,8 +649,8 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     private boolean activateNode(
-        Node node, WFEvent event)
-    throws LHConnectionError {
+        Node node, WFEvent event, ArrayList<TaskScheduleRequest> toSchedule
+    ) throws LHConnectionError {
         if (node.nodeType == NodeType.TASK) {
             upNext = new ArrayList<Edge>();
             TaskRun tr = createNewTaskRun(node);
@@ -652,7 +658,7 @@ public class ThreadRun extends BaseSchema {
             log("Adding node on ", tr.nodeName, "length is ", taskRuns.size());
             LHUtil.log("actor.act", id, tr.nodeName);
 
-            scheduleTask(tr, node);
+            scheduleTask(tr, node, toSchedule);
             return true;
 
         } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
@@ -667,7 +673,7 @@ public class ThreadRun extends BaseSchema {
             for (ExternalEventCorrel candidate : relevantEvents) {
                 // In the future, we may want to add the ability to signal
                 // a specific thread rather than the whole wfRun. We would do that here.
-                if (candidate.event != null && candidate.assignedNodeGuid == null) {
+                if (candidate.event != null && candidate.assignedNodeName== null) {
                     correlSchema = candidate;
                 }
             }
@@ -675,18 +681,16 @@ public class ThreadRun extends BaseSchema {
 
             TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
-            throw new RuntimeException("oops");
-            // correlSchema.assignedNodeGuid = node.guid;
-            // correlSchema.assignedNodeName = node.name;
-            // correlSchema.assignedTaskRunExecutionNumber = tr.number;
-            // correlSchema.assignedThreadID = tr.threadID;
+            correlSchema.assignedNodeName = node.name;
+            correlSchema.assignedTaskRunExecutionNumber = tr.number;
+            correlSchema.assignedThreadID = tr.threadID;
 
-            // completeTask(
-            //     tr, LHStatus.COMPLETED, correlSchema.event.content.toString(),
-            //     null, correlSchema.event.timestamp, 0
-            // );
-            // upNext = new ArrayList<EdgeSchema>();
-            // return true; // Obviously something changed, we done did add a task.
+            completeTask(
+                tr, LHExecutionStatus.COMPLETED, correlSchema.event.content.toString(),
+                null, correlSchema.event.timestamp, 0
+            );
+            upNext = new ArrayList<Edge>();
+            return true; // Obviously something changed, we done did add a task.
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {
             upNext = new ArrayList<Edge>();
@@ -1053,6 +1057,17 @@ class Mutation {
         }
     }
 
+    /**
+     * Used to evaluate Workflow Conditional Branching Expressions. The Left is an
+     * object of some sort, and the right is another. Returns true if the Left
+     * has the Right inside it.
+     * @param left haystack
+     * @param right needle
+     * @return true if haystack has the needle in it.
+     * @throws VarSubOrzDash if we can't cast the left to a container of objects,
+     * or if we get an exception while comparing the equality of two things inside
+     * right.
+     */
     @SuppressWarnings("all")
     public static boolean contains(Object left, Object right) throws VarSubOrzDash {
         try {

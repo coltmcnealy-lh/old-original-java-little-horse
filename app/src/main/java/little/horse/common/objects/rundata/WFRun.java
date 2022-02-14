@@ -3,6 +3,7 @@ package little.horse.common.objects.rundata;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Stack;
 
@@ -90,17 +91,10 @@ public class WFRun extends CoreMetadata {
     public ThreadRun createThreadClientAdds(
         String threadName, Map<String, Object> variables, ThreadRun parent
     ) throws LHConnectionError {
-        getWFSpec();  // just make sure the thing isn't null;
-
-        // Since the wfSpec has already been validated (at the time it was created)
-        // via the API, this is supposedly hypotentially in theory guaranteed to
-        // return a ThreadSpecSchema (otherwise there would've been an error thrown
-        // at WFSpec creation time).
         ThreadSpec tspec = wfSpec.threadSpecs.get(threadName);
-        // TODO: do the fillOut() and linkUp() here.
 
         ThreadRun trun = new ThreadRun();
-        setConfig(config); // this will populate the ThreadRun as well
+        trun.setConfig(config);
 
         trun.id = threadRuns.size();
         trun.status = parent == null ? LHExecutionStatus.RUNNING : parent.status;
@@ -121,38 +115,40 @@ public class WFRun extends CoreMetadata {
         trun.upNext = new ArrayList<Edge>();
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
-        // trun.threadSpecGuid = trun.threadSpec.guid;
-        throw new RuntimeException("Oops");
-        // trun.errorMessage = "";
+        if (parent != null) {
+            trun.parentThreadID = parent.id;
+        }
 
-        // trun.activeInterruptThreadIDs = new ArrayList<Integer>();
-        // trun.handledInterruptThreadIDs = new ArrayList<Integer>();
+        trun.errorMessage = "";
 
-        // // Now add the entrypoint taskRun
-        // EdgeSchema fakeEdge = new EdgeSchema();
-        // fakeEdge.sinkNodeName = tspec.entrypointNodeName;
-        // trun.addEdgeToUpNext(fakeEdge);
+        trun.activeInterruptThreadIDs = new ArrayList<Integer>();
+        trun.handledInterruptThreadIDs = new ArrayList<Integer>();
 
-        // trun.childThreadIDs = new ArrayList<>();
-        // trun.wfRun = this;
-        // trun.variableLocks = new HashMap<String, Integer>();
+        // Now add the entrypoint taskRun
+        Edge fakeEdge = new Edge();
+        fakeEdge.sinkNodeName = tspec.entrypointNodeName;
+        trun.addEdgeToUpNext(fakeEdge);
 
-        // trun.completedExeptionHandlerThreads = new ArrayList<Integer>();
+        trun.childThreadIDs = new ArrayList<>();
+        trun.wfRun = this;
+        trun.variableLocks = new HashMap<String, Integer>();
 
-        // trun.haltReasons = new HashSet<>();
+        trun.completedExeptionHandlerThreads = new ArrayList<Integer>();
 
-        // if (parent != null) {
-        //     parent.childThreadIDs.add(trun.id);
-        //     trun.parentThreadID = parent.id;
+        trun.haltReasons = new HashSet<>();
 
-        //     if (parent.status == WFRunStatus.HALTED ||
-        //         parent.status == WFRunStatus.HALTING
-        //     ) {
-        //         trun.haltReasons.add(WFHaltReasonEnum.PARENT_STOPPED);
-        //     }
-        // }
+        if (parent != null) {
+            parent.childThreadIDs.add(trun.id);
+            trun.parentThreadID = parent.id;
 
-        // return trun;
+            if (parent.status == LHExecutionStatus.HALTED ||
+                parent.status == LHExecutionStatus.HALTING
+            ) {
+                trun.haltReasons.add(WFHaltReasonEnum.PARENT_STOPPED);
+            }
+        }
+
+        return trun;
     }
 
     @JsonIgnore
@@ -297,32 +293,6 @@ public class WFRun extends CoreMetadata {
             }
         }
     }
-
-    // public static HashSet<String> getNeededVars(NodeSchema n) {
-    //     HashSet<String> neededVars = new HashSet<String>();
-    //     // first figure out which variables we need as input
-    //     for (VariableAssignmentSchema var: n.variables.values()) {
-    //         if (var.wfRunVariableName != null) {
-    //             neededVars.add(var.wfRunVariableName);
-    //         }
-    //     }
-
-    //     // Now see which variables we need as output
-    //     for (Map.Entry<String, VariableMutationSchema> p:
-    //         n.variableMutations.entrySet()
-    //     ) {
-    //         // Add the variable that gets mutated
-    //         neededVars.add(p.getKey());
-
-    //         VariableAssignmentSchema rhsVarAssign = p.getValue().sourceVariable;
-    //         if (rhsVarAssign != null) {
-    //             if (rhsVarAssign.wfRunVariableName != null) {
-    //                 neededVars.add(rhsVarAssign.wfRunVariableName);
-    //             }
-    //         }
-    //     }
-    //     return neededVars;
-    // }
 
     @JsonIgnore
     public ThreadRun entrypointThreadRun() {
