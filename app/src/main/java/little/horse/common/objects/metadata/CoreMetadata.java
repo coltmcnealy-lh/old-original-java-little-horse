@@ -2,6 +2,7 @@ package little.horse.common.objects.metadata;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -129,6 +130,11 @@ public abstract class CoreMetadata extends BaseSchema {
     throws LHValidationError, LHConnectionError;
 
     public Set<AliasIdentifier> getAliases() {
-        throw new RuntimeException("implement me!");
+        HashSet<AliasIdentifier> out = new HashSet<>();
+        AliasIdentifier i = new AliasIdentifier();
+        i.aliasName = "name";
+        i.aliasValue = name;
+        out.add(i);
+        return out;
     }
 }
