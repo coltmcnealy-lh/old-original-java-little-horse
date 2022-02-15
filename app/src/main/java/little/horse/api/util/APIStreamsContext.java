@@ -181,13 +181,13 @@ public class APIStreamsContext<T extends CoreMetadata> {
             Serdes.String().serializer()
         );
 
-        if (metadata == null) {
-            LHUtil.log("orzdash");
-            LHUtil.log(storeName, storeKey, apiPath);
-            return null;
-        }
+        // if (metadata == null) {
+        //     LHUtil.log("orzdash");
+        //     LHUtil.log(storeName, storeKey, apiPath);
+        //     return null;
+        // }
 
-        if (forceLocal || metadata.activeHost().equals(thisHost)) {
+        if (forceLocal || metadata == null || metadata.activeHost().equals(thisHost)) {
             return getStore(storeName).get(storeKey);
 
         } else {
