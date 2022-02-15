@@ -13,7 +13,7 @@ import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
 
 public class WFEvent extends BaseSchema {
-    public String wfSpecDigest;
+    public String wfSpecId;
     public String wfSpecName;
     public String wfRunId;
     public Date timestamp;
@@ -29,7 +29,7 @@ public class WFEvent extends BaseSchema {
     public WFRun wfRun;
 
     @JsonIgnore
-    private WFSpec wfSpec;
+    public WFSpec wfSpec;
 
     @JsonIgnore
     private String kafkaTopic;
@@ -46,7 +46,7 @@ public class WFEvent extends BaseSchema {
 
         if (wfSpec == null) {
             wfSpec = LHDatabaseClient.lookupMeta(
-                wfSpecDigest, config, WFSpec.class
+                wfSpecId, config, WFSpec.class
             );
 
             if (wfSpec == null) {
@@ -54,9 +54,8 @@ public class WFEvent extends BaseSchema {
                     "Event has invalid wfSpec id!!"
                 );
             }
-            kafkaTopic = wfSpec.getEventTopic();
-            
         }
+        kafkaTopic = wfSpec.getEventTopic();
         return kafkaTopic;
     }
 
@@ -69,7 +68,7 @@ public class WFEvent extends BaseSchema {
 
         ProducerRecord<String, String> record = new ProducerRecord<String, String>(
             this.getKafkaTopic(),
-            wfRun.id,
+            wfRunId,
             this.toString()
         );
         config.send(record);

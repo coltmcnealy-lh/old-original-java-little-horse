@@ -14,9 +14,9 @@ import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHRpcResponse;
-import little.horse.common.util.LHUtil;
 
 public class CoreMetadataAPI<T extends CoreMetadata> {
     private Config config;
@@ -44,14 +44,14 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
 
         // A little bit of voodoo to allow for some special overriding stuff, eg for
         // WFRun.
-        if (!T.onlyUseDefaultAPIforGET) {
+        if (!cls.equals(WFRun.class)) {
             // POST /wfSpec
             app.post(T.getAPIPath(cls), this::post);
 
             // DELETE /wfSpec
             app.delete(T.getAPIPath(cls), this::delete);
         } else {
-            T.overridePostAPIEndpoints(app, config);
+            WFRun.overridePostAPIEndpoints(app, config);
         }
     }
 

@@ -130,7 +130,7 @@ public class Config {
         String tempCollectorImage = System.getenv(Constants.DEFAULT_WF_WORKER_IMAGE_KEY);
         this.wfWorkerImage = (
             tempCollectorImage == null
-        ) ? "little-horse-collector:latest" : tempCollectorImage;
+        ) ? "little-horse-api:latest" : tempCollectorImage;
 
         this.wfSpecGuid = System.getenv(Constants.WF_SPEC_ID_KEY);
         this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);

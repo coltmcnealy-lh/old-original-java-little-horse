@@ -37,7 +37,7 @@ import little.horse.common.util.LHUtil;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "guid"
+    property = "id"
 )
 public class WFRun extends CoreMetadata {
     // These fields are in the actual JSON for the WFRunSchema object
@@ -157,7 +157,7 @@ public class WFRun extends CoreMetadata {
         event.setConfig(config);
         event.type = type;
         event.wfRunId = id;
-        event.wfSpecDigest = wfSpecDigest;
+        event.wfSpecId = wfSpecDigest;
         event.wfSpecName = wfSpecName;
         event.timestamp = LHUtil.now();
         event.content = content.toString();
@@ -315,13 +315,14 @@ public class WFRun extends CoreMetadata {
     public static void overridePostAPIEndpoints(Javalin app, Config config) {
         apiStuff = new WFRunApiStuff(config);
 
-        app.post("/wfRun", apiStuff::postRun);
+        app.post("/WFRun", apiStuff::postRun);
+        LHUtil.log("asdfasdfasdf");
         app.post(
             "/externalEvent/{externalEventDefId}/{wfRunId}", apiStuff::postEvent
         );
 
-        app.post("/wfRun/stop/{wfRunId}/{tid}", apiStuff::postStopThread);
-        app.post("/wfRun/resume/{wfRunId}/{tid}", apiStuff::postResumeThread);
+        app.post("/WFRun/stop/{wfRunId}/{tid}", apiStuff::postStopThread);
+        app.post("/WFRun/resume/{wfRunId}/{tid}", apiStuff::postResumeThread);
 
 
     }
@@ -338,7 +339,20 @@ class WFRunApiStuff {
     public void postRun(Context ctx) {
         LHRpcResponse<WFRun> response = new LHRpcResponse<>();
 
-        WFRunRequest request = ctx.bodyAsClass(WFRunRequest.class);
+        WFRunRequest request;
+        try {
+            request = BaseSchema.fromBytes(
+                ctx.bodyAsBytes(),
+                WFRunRequest.class,
+                config
+            );
+        } catch(LHSerdeError exn) {
+            response.status = ResponseStatus.VALIDATION_ERROR;
+            response.message = exn.getMessage();
+            ctx.json(response);
+            return;
+        }
+
         WFEvent event = new WFEvent();
         event.setConfig(config);
         String guid = LHUtil.generateGuid();
@@ -346,11 +360,25 @@ class WFRunApiStuff {
         event.content = request.toString();
         event.type = WFEventType.WF_RUN_STARTED;
 
-        response.objectId = guid;
-
         try {
-            event.record();
-            response.status = ResponseStatus.OK;
+            WFSpec spec = LHDatabaseClient.lookupMeta(
+                request.wfSpecId,
+                config,
+                WFSpec.class
+            );
+            if (spec == null) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+                response.message = "Couldn't find wfspec " + request.wfSpecId;
+
+            } else {
+                response.objectId = guid;
+                event.wfSpecId = spec.getId();
+                event.wfSpecName = spec.name;
+                event.wfSpec = spec;
+                event.record();
+                response.status = ResponseStatus.OK;
+
+            }
         } catch(LHConnectionError exn) {
             response.status = ResponseStatus.INTERNAL_ERROR;
             response.message = exn.getMessage();
@@ -384,7 +412,7 @@ class WFRunApiStuff {
             event.wfRunId = wfRunGuid;
             event.type = WFEventType.WF_RUN_STOP_REQUEST;    
             event.threadID = tid;
-            event.wfSpecDigest = event.wfRun.wfSpecDigest;
+            event.wfSpecId = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
 
@@ -424,7 +452,7 @@ class WFRunApiStuff {
             event.wfRunId = wfRunGuid;
             event.type = WFEventType.WF_RUN_RESUME_REQUEST;    
             event.threadID = tid;
-            event.wfSpecDigest = event.wfRun.wfSpecDigest;
+            event.wfSpecId = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
 
@@ -479,7 +507,7 @@ class WFRunApiStuff {
 
             WFEvent wfEvent = new WFEvent();
             wfEvent.wfRunId = wfRun.getId();
-            wfEvent.wfSpecDigest = wfRun.wfSpecDigest;
+            wfEvent.wfSpecId = wfRun.wfSpecDigest;
             wfEvent.wfSpecName = wfRun.wfSpecName;
             wfEvent.type = WFEventType.EXTERNAL_EVENT;
             wfEvent.timestamp = LHUtil.now();

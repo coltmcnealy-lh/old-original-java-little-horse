@@ -226,7 +226,7 @@ public class WFSpec extends CoreMetadata {
         }
 
         wfRun.id = record.key();
-        wfRun.wfSpecDigest = event.wfSpecDigest;
+        wfRun.wfSpecDigest = event.wfSpecId;
         wfRun.wfSpecName = event.wfSpecName;
         wfRun.setWFSpec(this);
 
@@ -429,6 +429,7 @@ public class WFSpec extends CoreMetadata {
     @JsonIgnore
     public HashSet<TaskQueue> getAllTaskQueues() throws LHConnectionError {
         if (tqs != null) return tqs;
+        tqs = new HashSet<>();
 
         HashSet<TaskQueue> out = new HashSet<>();
 

@@ -111,7 +111,6 @@ public class App {
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
             WorkflowWorker.run();
         } else {
-            Config config = new Config();System.out.println("running the app");
             FrontendAPIApp.run();
         }
     }
