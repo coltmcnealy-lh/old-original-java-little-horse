@@ -23,6 +23,7 @@ import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHUtil;
 import little.horse.common.util.K8sStuff.EnvEntry;
 import okhttp3.OkHttpClient;
 
@@ -61,8 +62,9 @@ public class Config {
         conf.put("client.id", this.appId);
 
         String booty = System.getenv(Constants.KAFKA_BOOTSTRAP_SERVERS_KEY);
-        this.bootstrapServers = (booty == null) ? "host.docker.internal:39092" : booty;
+        this.bootstrapServers = (booty == null) ? "host.docker.internal:32100" : booty;
         conf.put("bootstrap.servers", this.bootstrapServers);
+        LHUtil.log("bootstrap servers:" , this.bootstrapServers);
 
         conf.put(
             "key.serializer",
@@ -73,7 +75,6 @@ public class Config {
             "org.apache.kafka.common.serialization.StringSerializer"
         );
         this.kafkaConfig = conf;
-
 
         // ************* Producer ************
         this.producer = new KafkaProducer<String, String>(this.kafkaConfig);
@@ -107,7 +108,7 @@ public class Config {
             defaultReplicas = Integer.valueOf(tempReplicas);
         } catch (Exception exn) {
             System.err.println(exn.getMessage());
-            defaultReplicas = 1;
+            defaultReplicas = 3;
         }
 
         this.httpClient = new OkHttpClient();

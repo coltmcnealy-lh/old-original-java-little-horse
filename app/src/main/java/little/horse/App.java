@@ -21,16 +21,18 @@ import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
+import little.horse.common.util.LHUtil;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
-        int partitions = 1;
-        short replicationFactor = 1;
+        int partitions = 3;
+        short replicationFactor = 3;
 
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
             WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
             WFRun.class
         )) {
+            LHUtil.log("About to create topics for ", cls.getName());
             config.createKafkaTopic(
                 new NewTopic(
                     CoreMetadata.getIdKafkaTopic(config, cls),
@@ -47,21 +49,6 @@ class FrontendAPIApp {
                 )
             );
         }
-        // String[] topics = {
-        //     config.getWFSpecActionsTopic(),
-        //     config.getWFSpecTopic(),
-        //     config.getWFSpecIntermediateTopic(),
-        //     config.getTaskDefNameKeyedTopic(),
-        //     config.getTaskDefTopic(),
-        //     config.getWFSpecNameKeyedTopic(),
-        //     config.getExternalEventDefNameKeyedTopic(),
-        //     config.getWFRunTopic(),
-        //     config.getExternalEventDefTopic()
-        // };
-        // for (String topicName : topics) {
-        //     NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
-        //     config.createKafkaTopic(newTopic);
-        // }
     }
 
     /**
@@ -116,12 +103,12 @@ class WorkflowWorker {
 }
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws LHConnectionError {
         if (args.length > 0 && args[0].equals("api")) {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
-
+            WorkflowWorker.run();
         } else {
             Config config = new Config();
             System.out.println(WFSpec.getIdKafkaTopic(config, WFSpec.class));

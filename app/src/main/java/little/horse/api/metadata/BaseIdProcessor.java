@@ -55,7 +55,14 @@ implements Processor<String, T, String, AliasEvent> {
     private void processHelper(final Record<String, T> record) throws LHSerdeError {
         T newMeta = record.value();
         Bytes b = kvStore.get(record.key());
-        T old = b != null ? BaseSchema.fromBytes(b.get(), cls, config) : null;
+
+        CoreMetadataEntry entry = b != null ?
+            BaseSchema.fromBytes(b.get(), CoreMetadataEntry.class, config) :
+            null;
+
+        T old = entry != null ?
+            BaseSchema.fromString(entry.content, cls, config) :
+            null;
 
         Optional<RecordMetadata> rm = context.recordMetadata();
         RecordMetadata recordMeta = rm.isPresent() ? rm.get() : null;
