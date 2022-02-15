@@ -3,6 +3,7 @@ package little.horse.common.objects.metadata;
 import java.util.HashMap;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
@@ -43,7 +44,7 @@ public class TaskDef extends CoreMetadata {
     }
 
     public void processChange(CoreMetadata old) {
-        if (!(old instanceof TaskDef)) {
+        if (old != null && !(old instanceof TaskDef)) {
             throw new RuntimeException(
                 "Whatever code made this call is nincompoop."
             );

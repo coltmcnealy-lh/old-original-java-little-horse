@@ -1,5 +1,7 @@
 package little.horse.common.objects.metadata;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.rundata.WFRunMetadataEnum;
 
@@ -17,4 +19,7 @@ public class VariableAssignment extends BaseSchema {
 
     // And you can provide a default (:
     public Object defaultValue;
+
+    @JsonBackReference
+    public Node node;
 }

@@ -36,9 +36,9 @@ public class BaseSchema {
     public String getId() {
         return LHUtil.fullDigestify(getDigest());
     }
-    public void setId() {} // just here for jackson stupidity
+    @JsonIgnore private String id;
+    // public void setId(String foo) {} // just here for jackson stupidity
 
-    @JsonIgnore public String id;
 
     @SuppressWarnings("unchecked")
     @JsonIgnore
@@ -126,7 +126,9 @@ public class BaseSchema {
             result = LHUtil.getObjectMapper(config).readValue(src, valueType);
         } catch(JsonProcessingException parent) {
             parent.printStackTrace();
-            throw new LHSerdeError(parent, "Failed to process json");
+            throw new LHSerdeError(
+                parent, "Failed to process json: " + parent.getMessage()
+            );
         } catch(IOException exn) {
             exn.printStackTrace();
             throw new LHSerdeError(exn, "Had an IO Exception, ooph");

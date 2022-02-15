@@ -42,8 +42,6 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             this::waitForProcessing
         );
 
-        System.out.println("\n\n\nasdfasdfasdf\n\n\n");
-
         // A little bit of voodoo to allow for some special overriding stuff, eg for
         // WFRun.
         if (!T.onlyUseDefaultAPIforGET) {
@@ -76,6 +74,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
 
             } else {
                 response.status = ResponseStatus.OK;
+                response.objectId = response.result.getId();
             }
         } catch(LHConnectionError exn) {
             exn.printStackTrace();
@@ -95,8 +94,6 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         try {
             T t = BaseSchema.fromBytes(ctx.bodyAsBytes(), this.cls, config);
             t.validate(config);
-
-            LHUtil.log(t);
 
             RecordMetadata record = t.save().get();
             streamsContext.waitForProcessing(

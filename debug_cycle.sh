@@ -7,8 +7,8 @@ kubectl delete deploy -llittlehorse.io/wfSpecGuid
 kubectl delete svc -llittlehorse.io/wfSpecGuid
 
 kubectl scale deploy little-horse-api --replicas=0
-${SCRIPT_DIR}/reset.sh &
-${SCRIPT_DIR}/docker_build.sh
+${SCRIPT_DIR}/local_dev/reset.sh &
+${SCRIPT_DIR}/local_dev/docker_build.sh
 kubectl scale deploy little-horse-api --replicas=1
 
 sleep 5

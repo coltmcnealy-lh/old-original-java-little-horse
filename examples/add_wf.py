@@ -4,7 +4,7 @@ import requests
 import time
 
 
-URL = "http://localhost:30000"
+URL = "http://localhost:5000"
 
 
 def print_prettily(response):
@@ -19,10 +19,9 @@ task_queue = {
     "partitions": 3,
 }
 
-
 task_definition = {
     "name": "task1",
-    "taskQueue": "my-task-queue",
+    "taskQueueName": "my-task-queue",
 }
 
 wf_definition = {
@@ -34,11 +33,13 @@ wf_definition = {
             "nodes": {
                 "firstNode": {
                     "nodeType": "TASK",
-                    "taskDefinitionName": "task1",
+                    "taskDefName": "task1",
+                    "taskDefId": "7d37205b84bcba6d21776e98b66234dee2668e2c4397ef8bb362be8d34a5b2c6"
                 },
                 "secondNode": {
                     "nodeType": "TASK",
-                    "taskDefinitionName": "task1",
+                    "taskDefName": "task1",
+                    "taskDefId": "7d37205b84bcba6d21776e98b66234dee2668e2c4397ef8bb362be8d34a5b2c6"
                 }
             },
             "edges": [{
@@ -52,8 +53,8 @@ wf_definition = {
 
 create_tq_response = requests.post(f"{URL}/TaskQueue", json=task_queue)
 print_prettily(create_tq_response)
-# create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition)
-# print_prettily(create_task_def_response)
-# create_wf_response = requests.post(f"{URL}/WFSpec", json=wf_definition)
-# print_prettily(create_wf_response)
+create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition)
+print_prettily(create_task_def_response)
+create_wf_response = requests.post(f"{URL}/WFSpec", json=wf_definition)
+print_prettily(create_wf_response)
 

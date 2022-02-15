@@ -28,7 +28,7 @@ spec:
           - 'api'
         env:
           - name: LHORSE_KAFKA_BOOTSTRAP_SERVERS
-            value: "host.docker.internal:32100"
+            value: "host.docker.internal:9092"
           - name: LHORSE_API_URL
             value: "http://host.docker.internal:30000"
           - name: LHORSE_ADVERTISED_HOST

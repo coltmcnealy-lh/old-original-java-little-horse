@@ -1,6 +1,7 @@
 package little.horse.common.objects.metadata;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.json.JsonMapKey;
@@ -14,6 +15,11 @@ public class WFRunVariableDef extends BaseSchema {
     @JsonMapKey
     public String variableName;
 
-    @JsonBackReference
-    public TaskDef thread;
+    // @JsonBackReference("vardef-to-thread")
+    @JsonIgnore
+    public Thread thread;
+
+    // @JsonBackReference("vardef-to-taskdef")
+    @JsonIgnore
+    public TaskDef taskDef;
 }

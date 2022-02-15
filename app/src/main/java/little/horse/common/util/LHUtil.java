@@ -176,14 +176,14 @@ class MapperInitializer {
         ).addValue(Config.class, cfg);
 
         mapper.setInjectableValues(inject);
-        // SimpleModule module = new SimpleModule();
-        // module.setDeserializerModifier(new BeanDeserializerModifier() {
-        //     @Override
-        //     public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, 
-        //             BeanDescription beanDescription, JsonDeserializer<?> originalDeserializer) {
-        //         return new JsonMapKeyDeserializer(originalDeserializer, beanDescription);
-        //     }
-        // });
-        // mapper.registerModule(module);
+        SimpleModule module = new SimpleModule();
+        module.setDeserializerModifier(new BeanDeserializerModifier() {
+            @Override
+            public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, 
+                    BeanDescription beanDescription, JsonDeserializer<?> originalDeserializer) {
+                return new JsonMapKeyDeserializer(originalDeserializer, beanDescription);
+            }
+        });
+        mapper.registerModule(module);
     }
 }

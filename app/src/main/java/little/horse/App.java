@@ -25,8 +25,8 @@ import little.horse.common.util.LHUtil;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
-        int partitions = 3;
-        short replicationFactor = 3;
+        int partitions = config.getDefaultPartitions();
+        short replicationFactor = (short) config.getDefaultReplicas();
 
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
             WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
@@ -61,6 +61,7 @@ class FrontendAPIApp {
         Config config = null;
         config = new Config();
 
+        LHUtil.log("Creating kafka topics");
         FrontendAPIApp.createKafkaTopics(config);
         Topology topology = new Topology();
 
@@ -110,9 +111,8 @@ public class App {
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
             WorkflowWorker.run();
         } else {
-            Config config = new Config();
-            System.out.println(WFSpec.getIdKafkaTopic(config, WFSpec.class));
-            System.out.println("Nothing to do");
+            Config config = new Config();System.out.println("running the app");
+            FrontendAPIApp.run();
         }
     }
 }

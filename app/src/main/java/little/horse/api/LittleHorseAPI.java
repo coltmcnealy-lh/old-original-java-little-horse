@@ -41,7 +41,6 @@ public class LittleHorseAPI {
         this.streams = streams;
         this.apis = new HashSet<>();
 
-        
         this.app = Javalin.create(javalinConf -> {
             javalinConf.prefer405over404 = true;
             javalinConf.enableCorsForAllOrigins();

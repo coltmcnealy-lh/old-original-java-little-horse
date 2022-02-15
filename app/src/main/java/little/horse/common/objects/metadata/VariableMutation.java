@@ -1,5 +1,7 @@
 package little.horse.common.objects.metadata;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import little.horse.common.objects.BaseSchema;
 
 public class VariableMutation extends BaseSchema {
@@ -25,4 +27,7 @@ public class VariableMutation extends BaseSchema {
     public String jsonPath;
     public Object literalValue;
     public VariableAssignment sourceVariable;
+
+    @JsonBackReference
+    public Node node;
 }

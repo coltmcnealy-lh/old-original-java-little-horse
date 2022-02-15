@@ -27,7 +27,7 @@ public class ThreadSpec extends BaseSchema {
     public String name;
     public String entrypointNodeName;
 
-    @JsonManagedReference
+    // @JsonManagedReference("vardef-to-thread")
     public HashMap<String, WFRunVariableDef> variableDefs;
     
     @JsonManagedReference

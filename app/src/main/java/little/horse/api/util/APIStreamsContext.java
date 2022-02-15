@@ -56,7 +56,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
     public T getTFromId(String id, boolean forceLocal)
     throws LHConnectionError {
         Bytes objBytes = queryStoreBytes(
-            id, T.getIdStoreName(cls), forceLocal, T.getAPIPath(id, cls)
+            T.getIdStoreName(cls), id, forceLocal, T.getAPIPath(id, cls)
         );
 
         try {
@@ -80,7 +80,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
     throws LHConnectionError {
         // Need the ID in order to figure out the partition thing.
         Bytes objBytes = queryStoreBytes(
-            Constants.LATEST_OFFSET_ROCKSDB_KEY, T.getIdStoreName(cls), forceLocal,
+            T.getIdStoreName(cls), Constants.LATEST_OFFSET_ROCKSDB_KEY, forceLocal,
             apiPath, id
         );
         if (objBytes == null) return null;
@@ -187,7 +187,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
         //     return null;
         // }
 
-        if (forceLocal || metadata == null || metadata.activeHost().equals(thisHost)) {
+        if (forceLocal || metadata.activeHost().equals(thisHost)) {
             return getStore(storeName).get(storeKey);
 
         } else {

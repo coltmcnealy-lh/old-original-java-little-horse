@@ -57,7 +57,7 @@ public class WFSpec extends CoreMetadata {
     public String name;
     public LHDeployStatus status;
     public LHDeployStatus desiredStatus;
-    
+
     // Actual definition here.
     @JsonManagedReference
     public HashMap<String, ThreadSpec> threadSpecs;
@@ -339,14 +339,15 @@ public class WFSpec extends CoreMetadata {
 
     @Override
     public void processChange(CoreMetadata old) throws LHConnectionError {
-        if (!(old instanceof WFSpec)) {
-            throw new RuntimeException(
-                "Called processChange on a non-WFSpec"
-            );
+        if (old != null && !(old instanceof WFSpec)) {
+            // throw new RuntimeException(
+            //     "Called processChange on a non-WFSpec"
+            // );
+            LHUtil.log(old.getClass().getName());
         }
 
         WFSpec oldSpec = (WFSpec) old;
-        if (oldSpec.status != desiredStatus) {
+        if (oldSpec == null || oldSpec.status != desiredStatus) {
             if (desiredStatus == LHDeployStatus.RUNNING) {
                 deploy();
             } else if (desiredStatus == LHDeployStatus.STOPPED) {
@@ -361,6 +362,7 @@ public class WFSpec extends CoreMetadata {
         if (status == null) status = LHDeployStatus.STOPPED;
         if (desiredStatus == null) desiredStatus = LHDeployStatus.RUNNING;
         if (namespace == null) namespace = "default";  // Trololol
+        if (allVarDefs == null) allVarDefs = new HashMap<>();
 
         // TODO: This doesn't yet support lookUpOrCreateExternalEvent.
         // In the future, we'll want to support that use case.
@@ -411,6 +413,7 @@ public class WFSpec extends CoreMetadata {
         }
         return kafkaTopic;
     }
+    public void setEventTopic(String foo) {} // just jackson again
 
     public String getK8sName() {
         if (k8sName == null) {
@@ -418,6 +421,7 @@ public class WFSpec extends CoreMetadata {
         }
         return k8sName;
     }
+    public void setK8sName(String foo) {} //just for the Jackson thing.
 
     @JsonIgnore
     private HashSet<TaskQueue> tqs;
@@ -452,7 +456,7 @@ public class WFSpec extends CoreMetadata {
         dp.metadata.labels = new HashMap<String, String>();
         dp.metadata.namespace = namespace;
         dp.metadata.labels.put("app", this.getK8sName());
-        dp.metadata.labels.put("littlehorse.io/wfSpecId", getId());
+        dp.metadata.labels.put("littlehorse.io/wfSpecId", getId().substring(0, 8));
         dp.metadata.labels.put("littlehorse.io/wfSpecName", name);
         dp.metadata.labels.put("littlehorse.io/active", "true");
 
@@ -460,6 +464,7 @@ public class WFSpec extends CoreMetadata {
         container.name = this.getK8sName();
         container.image = config.getWfWorkerImage();
         container.imagePullPolicy = "IfNotPresent";
+        container.command = config.getTaskDaemonCommand();
         container.env = config.getBaseK8sEnv();
         container.env.add(new EnvEntry(
             Constants.KAFKA_APPLICATION_ID_KEY,
@@ -475,7 +480,9 @@ public class WFSpec extends CoreMetadata {
         template.metadata.labels = new HashMap<String, String>();
         template.metadata.namespace = namespace;
         template.metadata.labels.put("app", this.getK8sName());
-        template.metadata.labels.put("littlehorse.io/wfSpecId", getId());
+        template.metadata.labels.put(
+            "littlehorse.io/wfSpecId", getId().substring(0, 8)
+        );
         template.metadata.labels.put("littlehorse.io/wfSpecName", name);
         template.metadata.labels.put("littlehorse.io/active", "true");
 
@@ -488,7 +495,9 @@ public class WFSpec extends CoreMetadata {
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
         dp.spec.selector.matchLabels.put("app", this.getK8sName());
-        dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecId", getId());
+        dp.spec.selector.matchLabels.put(
+            "littlehorse.io/wfSpecId", getId().substring(0, 8)
+        );
         dp.spec.selector.matchLabels.put("littlehorse.io/wfSpecName", name);
         dp.spec.selector.matchLabels.put("littlehorse.io/active", "true");
 
