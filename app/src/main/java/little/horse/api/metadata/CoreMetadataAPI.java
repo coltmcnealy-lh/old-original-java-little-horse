@@ -16,6 +16,7 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHRpcResponse;
+import little.horse.common.util.LHUtil;
 
 public class CoreMetadataAPI<T extends CoreMetadata> {
     private Config config;
@@ -94,6 +95,9 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         try {
             T t = BaseSchema.fromBytes(ctx.bodyAsBytes(), this.cls, config);
             t.validate(config);
+
+            LHUtil.log(t);
+
             RecordMetadata record = t.save().get();
             streamsContext.waitForProcessing(
                 t.getId(), record.offset(), record.partition(), false,
@@ -103,6 +107,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             );
 
             response.result = LHDatabaseClient.lookupMeta(t.getId(), config, cls);
+            response.objectId = t.getId();
             response.status = ResponseStatus.OK;
 
         } catch (LHSerdeError exn) {

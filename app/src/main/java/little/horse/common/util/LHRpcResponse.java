@@ -28,7 +28,7 @@ public class LHRpcResponse<T extends BaseSchema> {
 
         // hackity hack
         try {
-            out.result = BaseSchema.fromString(
+            out.result = raw.result == null ? null : BaseSchema.fromString(
                 LHUtil.getObjectMapper(config).writeValueAsString(raw.result),
                 cls,
                 config

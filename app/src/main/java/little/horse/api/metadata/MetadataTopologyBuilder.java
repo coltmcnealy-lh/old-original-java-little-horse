@@ -77,20 +77,20 @@ public class MetadataTopologyBuilder {
             byIdProcessorName // name of the processor to sink into kafka
         );
 
-        // Resume processing from this sink now that we've re-partitioned everything.
-        topology.addSource(
-            nameKeyedSource,
-            Serdes.String().deserializer(),
-            aliasSerde.deserializer(), // Picking up CoreMetadataAliases.
-            T.getAliasKafkaTopic(config, cls)
-        );
+        // // Resume processing from this sink now that we've re-partitioned everything.
+        // topology.addSource(
+        //     nameKeyedSource,
+        //     Serdes.String().deserializer(),
+        //     aliasSerde.deserializer(), // Picking up CoreMetadataAliases.
+        //     T.getAliasKafkaTopic(config, cls)
+        // );
 
-        // Now make the aliases queryable in their own store.
-        topology.addProcessor(
-            aliasProcessorName,
-            () -> {return new BaseAliasProcessor<T>(cls, config);},
-            theOgSource
-        );
+        // // Now make the aliases queryable in their own store.
+        // topology.addProcessor(
+        //     aliasProcessorName,
+        //     () -> {return new BaseAliasProcessor<T>(cls, config);},
+        //     theOgSource
+        // );
 
         // Done with the processing logic; now just add the state stores.
 
@@ -111,6 +111,6 @@ public class MetadataTopologyBuilder {
         );
 
         topology.addStateStore(idStoreBuilder, byIdProcessorName);
-        topology.addStateStore(aliasStoreBuilder, aliasProcessorName);
+        // topology.addStateStore(aliasStoreBuilder, aliasProcessorName);
     }
 }

@@ -60,7 +60,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
 
         try {
-            CoreMetadataEntry entry = BaseSchema.fromBytes(
+            CoreMetadataEntry entry = objBytes == null ? null : BaseSchema.fromBytes(
                 objBytes.get(),
                 CoreMetadataEntry.class,
                 config
@@ -180,6 +180,12 @@ public class APIStreamsContext<T extends CoreMetadata> {
             partitionKey,
             Serdes.String().serializer()
         );
+
+        if (metadata == null) {
+            LHUtil.log("orzdash");
+            LHUtil.log(storeName, storeKey, apiPath);
+            return null;
+        }
 
         if (forceLocal || metadata.activeHost().equals(thisHost)) {
             return getStore(storeName).get(storeKey);
