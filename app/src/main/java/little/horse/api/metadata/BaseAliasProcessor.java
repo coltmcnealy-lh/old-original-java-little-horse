@@ -11,6 +11,7 @@ import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHUtil;
 
 public class BaseAliasProcessor<T extends CoreMetadata>
 implements Processor<String, AliasEvent, Void, Void> {
@@ -77,6 +78,7 @@ implements Processor<String, AliasEvent, Void, Void> {
                 kvStore.delete(storeKey);
             } else {
                 kvStore.put(storeKey, new Bytes(entries.toBytes()));
+                LHUtil.log("PUT", storeKey, entries);
             }
 
         } else if (ae.operation == AliasOperation.CREATE) {
@@ -98,6 +100,7 @@ implements Processor<String, AliasEvent, Void, Void> {
             entries.entries.add(entry);
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));
+            LHUtil.log("PUT", storeKey, entries);
 
         } else if (ae.operation == AliasOperation.HEARTBEAT) {
             if (entries == null) {
@@ -118,6 +121,7 @@ implements Processor<String, AliasEvent, Void, Void> {
             entry.mostRecentOffset = ae.sourceOffset;
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));
+            LHUtil.log("PUT", storeKey, entries);
 
         } else {
             throw new RuntimeException("What?");

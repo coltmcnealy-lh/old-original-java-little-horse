@@ -32,6 +32,7 @@ public class AliasEntryCollection extends BaseSchema {
      */
     @JsonIgnore
     public Integer getIndexForGuid(String id) {
+        if (entries == null) entries = new ArrayList<>();
         for (int i = 0; i < entries.size(); i++) {
             if (entries.get(i).objectId.equals(id)) {
                 return i;
