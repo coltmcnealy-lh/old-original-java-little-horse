@@ -197,6 +197,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                 response.result = streamsContext.getTFromId(entry.objectId, forceLocal);
                 if (response.result != null) {
                     response.status = ResponseStatus.OK;
+                    response.objectId = response.result.getId();
                 } else {
                     response.status = ResponseStatus.OBJECT_NOT_FOUND;
                     response.message = "obj deleted and idx will follow soon.";

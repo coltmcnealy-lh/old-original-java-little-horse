@@ -14,12 +14,14 @@ def print_prettily(response):
     except Exception as exn:
         print(strdata)
 
+wf_spec = requests.get(f"{URL}/WFSpecAlias/name/{sys.argv[1]}")
+# print_prettily(wf_spec)
 
 wf_run_schema = {
     "variables": {
         "name": "colt"
     },
-    "wfSpecId": sys.argv[1]
+    "wfSpecId": wf_spec.json()['objectId']
 }
 
 run_wf_response = requests.post(f'{URL}/WFRun', json=wf_run_schema)
