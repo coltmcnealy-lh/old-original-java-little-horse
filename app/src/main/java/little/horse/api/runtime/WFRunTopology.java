@@ -1,7 +1,5 @@
 package little.horse.api.runtime;
 
-import java.util.regex.Pattern;
-
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -15,14 +13,14 @@ import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
-import little.horse.common.util.LHDatabaseClient;
+import little.horse.common.util.LHUtil;
 import little.horse.common.util.serdes.LHSerdes;
 
 
 public class WFRunTopology {
 
     public static void addStuff(
-        Topology topology, Config config, Pattern topicPattern
+        Topology topology, Config config, WFSpec wfSpec
     ) throws LHConnectionError {
         /*
         This topology is headless—it doesn't present an API for querying (that's done
@@ -52,7 +50,6 @@ public class WFRunTopology {
           cause some sort of problem or orzdash?
         */
 
-        WFSpec wfSpec = lookupWFSpecOrDie(config.getWfSpecId(), config);
         String topoSource = "WFRun Source";
         String runtimeProcessor = "WFRuntime";
         LHSerdes<WFEvent> eventSerdes = new LHSerdes<>(WFEvent.class, config);
@@ -65,7 +62,7 @@ public class WFRunTopology {
             topoSource,
             Serdes.String().deserializer(),
             eventSerdes.deserializer(),
-            topicPattern
+            wfSpec.getEventTopic()
         );
         topology.addProcessor(
             runtimeProcessor,
@@ -91,6 +88,8 @@ public class WFRunTopology {
         // First, the TaskQueue's
         for (TaskQueue tq: wfSpec.getAllTaskQueues()) {
             String procName = "Filter Processor " + tq.name;
+
+            LHUtil.log("Task queue", tq.getId());
 
             topology.addProcessor(
                 procName,
@@ -143,20 +142,5 @@ public class WFRunTopology {
             tsrSerdes.close();
             runSerde.close();
         }));
-    }
-
-    private static WFSpec lookupWFSpecOrDie(String id, Config config) {
-        WFSpec wfSpec = null;
-        try {
-            wfSpec = LHDatabaseClient.lookupMeta(
-                config.getWfSpecId(), config, WFSpec.class
-            );
-        } catch (LHConnectionError exn) {
-            exn.printStackTrace();
-        }
-        if (wfSpec == null) {
-            throw new RuntimeException("Couldn't load wfSpec");
-        }
-        return wfSpec;
     }
 }

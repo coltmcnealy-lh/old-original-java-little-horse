@@ -4,7 +4,6 @@
 package little.horse;
 
 import java.util.Arrays;
-import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.streams.KafkaStreams;
@@ -21,6 +20,7 @@ import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
+import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
 class FrontendAPIApp {
@@ -89,17 +89,36 @@ class WorkflowWorker {
         Config config = new Config();
 
         Topology topology = new Topology();
+        WFSpec wfSpec = lookupWFSpecOrDie(config.getWfSpecId(), config);
+
         WFRunTopology.addStuff(
             topology,
             config,
-            Pattern.compile(config.getWFRunTopic())
+            wfSpec
         );
+
+        System.out.println(topology.describe().toString());
 
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
         streams.start();
+    }
+
+    private static WFSpec lookupWFSpecOrDie(String id, Config config) {
+        WFSpec wfSpec = null;
+        try {
+            wfSpec = LHDatabaseClient.lookupMeta(
+                config.getWfSpecId(), config, WFSpec.class
+            );
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+        }
+        if (wfSpec == null) {
+            throw new RuntimeException("Couldn't load wfSpec");
+        }
+        return wfSpec;
     }
 }
 

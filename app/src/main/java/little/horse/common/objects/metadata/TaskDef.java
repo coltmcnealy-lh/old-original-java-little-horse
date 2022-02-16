@@ -23,7 +23,6 @@ public class TaskDef extends CoreMetadata {
 
     public HashMap<String, WFRunVariableDef> requiredVars;
     public String taskQueueName;
-    public String taskType;
 
     @JsonIgnore
     private TaskQueue taskQueue;

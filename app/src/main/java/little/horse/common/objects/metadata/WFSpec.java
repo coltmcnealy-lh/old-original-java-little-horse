@@ -430,8 +430,6 @@ public class WFSpec extends CoreMetadata {
         if (tqs != null) return tqs;
         tqs = new HashSet<>();
 
-        HashSet<TaskQueue> out = new HashSet<>();
-
         for (ThreadSpec t: threadSpecs.values()) {
             for (Node n: t.nodes.values()) {
                 if (n.nodeType == NodeType.TASK) {
@@ -439,8 +437,6 @@ public class WFSpec extends CoreMetadata {
                 }
             }
         }
-
-        tqs = out;
         return tqs;
     }
 

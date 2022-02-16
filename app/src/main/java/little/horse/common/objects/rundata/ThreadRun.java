@@ -19,7 +19,6 @@ import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
 import little.horse.common.events.TaskRunEvent;
 import little.horse.common.events.TaskRunStartedEvent;
-import little.horse.common.events.TaskScheduledEvent;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
@@ -634,17 +633,16 @@ public class ThreadRun extends BaseSchema {
     private void scheduleTask(
         TaskRun tr, Node node, ArrayList<TaskScheduleRequest> toSchedule
     ) {
-        TaskScheduledEvent te = new TaskScheduledEvent();
+        TaskScheduleRequest te = new TaskScheduleRequest();
         te.setConfig(config);
-        te.taskType = node.taskDef.taskType;
         te.taskQueueName = node.taskDef.taskQueueName;
-        te.wfRunGuid = wfRun.id;
-        te.wfSpecDigest = wfRun.wfSpecDigest;
+        te.wfRunId = wfRun.id;
+        te.wfSpecId = wfRun.wfSpecDigest;
         te.wfSpecName = wfRun.wfSpecName;
-        te.taskExecutionGuid = wfRun.id + "_" + String.valueOf(id) + "_" +
-            String.valueOf(taskRuns.size());
+        te.threadRunNumber = id;
+        te.taskRunNumber = tr.number;
 
-        te.record();
+        toSchedule.add(te);
     }
 
     @JsonIgnore
