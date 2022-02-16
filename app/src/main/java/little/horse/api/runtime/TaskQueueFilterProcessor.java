@@ -25,7 +25,11 @@ public class TaskQueueFilterProcessor implements Processor<
     public void process(final Record<String, CoordinatorOutput> record) {
         CoordinatorOutput o = record.value();
 
-        if (o != null && o.request != null && o.request.taskDefName.equals(tq.name)) {
+        if (o == null || o.request == null) {
+            return;
+        }
+
+        if (o.request.taskQueueName.equals(tq.name)) {
             context.forward(new Record<String, TaskScheduleRequest>(
                 record.key(),
                 o.request,

@@ -26,7 +26,6 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
-import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHRpcCLient;
 import little.horse.common.util.LHRpcResponse;
@@ -183,12 +182,6 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
 
         if (forceLocal || metadata.activeHost().equals(thisHost)) {
-            if (cls.equals(WFSpec.class)) {
-                LHUtil.log("querying local:", storeKey, storeName, apiPath);
-                Bytes out = getStore(storeName).get(storeKey);
-                LHUtil.log("GOT:", out);
-                return out;
-            }
 
             return getStore(storeName).get(storeKey);
 

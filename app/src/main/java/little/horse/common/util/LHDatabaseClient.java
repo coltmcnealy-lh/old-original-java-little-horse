@@ -12,16 +12,24 @@ import little.horse.common.objects.metadata.CoreMetadata;
  * the LittleHorse API (that is what the public static methods in this class do).
  * 
  * IMPORTANT: 
+ * <<1 week later...wtf was I about to say? I left the note blank and forgot what
+ *   I was gonna say>>
  */
 public class LHDatabaseClient {
 
     public static<T extends CoreMetadata> T lookupMeta(
-        String guid, Config config, Class<T> cls
+        String idOrName, Config config, Class<T> cls
     ) throws LHConnectionError {
 
         LHRpcCLient client = new LHRpcCLient(config);
-        String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + guid;
+        String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + idOrName;
         LHRpcResponse<T> response = client.getResponse(url, cls);
+
+        if (response.result == null) {
+            // Try to look up by name.
+            url = config.getAPIUrlFor(T.getAliasPath(cls)) + "/name/" + idOrName;
+            response = client.getResponse(url, cls);
+        }
 
         return response.result;
     }

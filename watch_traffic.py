@@ -2,7 +2,6 @@ import os
 import requests
 import subprocess
 import sys
-import threading
 
 
 URL = 'http://localhost:30000'
@@ -31,12 +30,15 @@ for thread_name in wf_spec['threadSpecs'].keys():
         topics.append(get_task_queue_name(node))
 
 
-def watch_topic(topic):
-    print("Watching topic:", topic)
+def get_watch_command(topic):
     command = f"kubectl exec -it {pod} -- /bin/kafka-console-consumer --bootstrap-server kafka-broker:9092 --topic {topic} --from-beginning"
-    os.system(command)
+    return command
 
+
+processes = []
 
 for topic in set(topics):
-    t = threading.Thread(target=watch_topic, args=(topic,))
-    t.start()
+    processes.append(subprocess.Popen(get_watch_command(topic).split()))
+
+for p in processes:
+    p.wait()

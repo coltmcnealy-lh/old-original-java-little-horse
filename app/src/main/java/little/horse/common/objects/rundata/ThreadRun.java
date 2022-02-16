@@ -641,6 +641,14 @@ public class ThreadRun extends BaseSchema {
         te.wfSpecName = wfRun.wfSpecName;
         te.threadRunNumber = id;
         te.taskRunNumber = tr.number;
+        try {
+            te.taskDefName = tr.getNode().taskDefName;
+            te.taskDefId = tr.getNode().taskDefId;
+        } catch(LHConnectionError exn) {
+            throw new RuntimeException(
+                "Shouldn't happen because we should have already loaded the wfspec"
+            );
+        }
 
         toSchedule.add(te);
     }
@@ -653,8 +661,6 @@ public class ThreadRun extends BaseSchema {
             upNext = new ArrayList<Edge>();
             TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
-            log("Adding node on ", tr.nodeName, "length is ", taskRuns.size());
-            LHUtil.log("actor.act", id, tr.nodeName);
 
             scheduleTask(tr, node, toSchedule);
             return true;

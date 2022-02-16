@@ -25,11 +25,10 @@ wf_run_schema = {
 }
 
 run_wf_response = requests.post(f'{URL}/WFRun', json=wf_run_schema)
-print(run_wf_response)
-print(run_wf_response.content)
+
 import time
 time.sleep(0.3)
 
-response = requests.get(f"{URL}/WFRun/{run_wf_response.json()['guid']}")
+response = requests.get(f"{URL}/WFRun/{run_wf_response.json()['objectId']}")
 
 print(response.content.decode())

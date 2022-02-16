@@ -77,7 +77,10 @@ class FrontendAPIApp {
 
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Closing streams!");
+            streams.close();
+        }));
 
         streams.start();
         lapi.run();
