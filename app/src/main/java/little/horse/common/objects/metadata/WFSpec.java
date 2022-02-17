@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.Map;
 
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.streams.processor.api.Record;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -209,11 +208,8 @@ public class WFSpec extends CoreMetadata {
     }
 
     @JsonIgnore
-    public WFRun newRun(
-        final Record<String, WFEvent> record
-    ) throws LHConnectionError {
+    public WFRun newRun(String id, WFEvent event) throws LHConnectionError {
         WFRun wfRun = new WFRun();
-        WFEvent event = record.value();
         WFRunRequest runRequest;
         try {
             runRequest = BaseSchema.fromString(
@@ -224,7 +220,7 @@ public class WFSpec extends CoreMetadata {
             throw new RuntimeException("TODO: Handle when the runRequest is invalid");
         }
 
-        wfRun.id = record.key();
+        wfRun.id = id;
         wfRun.wfSpecDigest = event.wfSpecId;
         wfRun.wfSpecName = event.wfSpecName;
         wfRun.setWFSpec(this);

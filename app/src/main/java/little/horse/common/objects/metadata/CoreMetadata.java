@@ -115,7 +115,7 @@ public abstract class CoreMetadata extends BaseSchema {
     }
 
     public abstract void processChange(CoreMetadata old) throws LHConnectionError;
-    
+
     /**
      * Idempotent cleanup of resources when the CoreMetadata is deleted from the API.
      * For example, undeploys the WFRuntime deployer on WFSpec.

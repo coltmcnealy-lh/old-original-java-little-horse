@@ -53,7 +53,7 @@ public class WFRuntime
 
         if (wfRun == null) {
             if (event.type == WFEventType.WF_RUN_STARTED) {
-                wfRun = wfSpec.newRun(record);
+                wfRun = wfSpec.newRun(record.key(), record.value());
                 wfRun.setWFSpec(wfSpec);
             } else {
                 LHUtil.logError("Couldnt find wfRun for event", event);

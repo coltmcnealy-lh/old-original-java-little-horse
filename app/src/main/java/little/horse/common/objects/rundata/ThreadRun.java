@@ -18,6 +18,7 @@ import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
 import little.horse.common.events.TaskRunEvent;
+import little.horse.common.events.TaskRunResult;
 import little.horse.common.events.TaskRunStartedEvent;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
@@ -286,11 +287,12 @@ public class ThreadRun extends BaseSchema {
     private void completeTask(
         TaskRun task,
         LHExecutionStatus taskStatus,
-        String stdout,
-        String stderr,
-        Date endTime,
-        int returnCode
+        TaskRunResult result,
+        Date endTime
     ) throws LHConnectionError {
+        String stdout = result.stdout;
+        String stderr = result.stderr;
+        int returnCode = result.returncode;
         task.endTime = endTime;
         task.stdout = LHUtil.jsonifyIfPossible(stdout, config);
         task.stderr = LHUtil.jsonifyIfPossible(stderr, config);
@@ -329,12 +331,11 @@ public class ThreadRun extends BaseSchema {
     throws LHConnectionError {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunEndedEvent event = trEvent.endedEvent;
-        LHExecutionStatus taskStatus = event.success
+        LHExecutionStatus taskStatus = event.result.success
             ? LHExecutionStatus.COMPLETED : LHExecutionStatus.FAILED;
 
         completeTask(
-            tr, taskStatus, event.stdout, event.stderr, trEvent.timestamp,
-            event.returncode
+            tr, taskStatus, event.result, trEvent.timestamp
         );
     }
 
@@ -441,12 +442,6 @@ public class ThreadRun extends BaseSchema {
             case NOT_IN: return !Mutation.contains(lhs, rhs);
             default: return false;
         }
-    }
-
-    private void log(Object... things) {
-        if (id != 0) return;
-
-        LHUtil.logBack(1, things);
     }
 
     public void updateStatus() {
@@ -689,9 +684,12 @@ public class ThreadRun extends BaseSchema {
             correlSchema.assignedTaskRunExecutionNumber = tr.number;
             correlSchema.assignedThreadID = tr.threadID;
 
+            TaskRunResult result = new TaskRunResult(
+                correlSchema.event.content.toString(), null, true, 0
+            );
+
             completeTask(
-                tr, LHExecutionStatus.COMPLETED, correlSchema.event.content.toString(),
-                null, correlSchema.event.timestamp, 0
+                tr, LHExecutionStatus.COMPLETED, result, correlSchema.event.timestamp
             );
             upNext = new ArrayList<Edge>();
             return true; // Obviously something changed, we done did add a task.
@@ -730,8 +728,9 @@ public class ThreadRun extends BaseSchema {
             ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
             wfRun.awaitableThreads.get(tr.nodeName).add(meta);
             taskRuns.add(tr);
+            TaskRunResult result = new TaskRunResult(meta.toString(), null, true, 0);
             completeTask(
-                tr, LHExecutionStatus.COMPLETED, meta.toString(), null, event.timestamp, 0
+                tr, LHExecutionStatus.COMPLETED, result, event.timestamp
             );
             return true;
 
@@ -741,10 +740,11 @@ public class ThreadRun extends BaseSchema {
             TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
             exceptionName = node.exceptionToThrow;
-            completeTask(
-                tr, LHExecutionStatus.FAILED, "", "Throwing exception " + exceptionName,
-                event.timestamp, -1
+
+            TaskRunResult result = new TaskRunResult(
+                null, "Throwing exception " + exceptionName, false, -1
             );
+            completeTask(tr, LHExecutionStatus.FAILED, result, event.timestamp);
             return true;
         }
         throw new RuntimeException("invalid node type: " + node.nodeType);
@@ -796,8 +796,8 @@ public class ThreadRun extends BaseSchema {
         if (allCompleted) {
             taskRuns.add(tr);
             completeTask(
-                tr, LHExecutionStatus.COMPLETED, awaitables.toString(),
-                null, event.timestamp, 0
+                tr, LHExecutionStatus.COMPLETED,
+                new TaskRunResult(awaitables.toString(), null, true, 0), event.timestamp
             );
         } else {
             // TODO: We're going to combine the exception handler infra with the
@@ -819,15 +819,17 @@ public class ThreadRun extends BaseSchema {
                 thread.exceptionName
             );
             if (hspec == null) {
-
+                throw new RuntimeException(
+                    "Colt, you need to address case where there is no handler.");
             } else {
                 String msg = "TaskRun on " + tr.nodeName +
                 " Failed with exception " + hspec.handlerThreadSpecName + ", so" +
                 " we are handling it.";
 
                 completeTask(
-                    tr, LHExecutionStatus.FAILED,
-                    awaitables.toString(), msg, event.timestamp, 1
+                    tr, LHExecutionStatus.FAILED, new TaskRunResult(
+                        awaitables.toString(), msg, false, 1
+                    ), event.timestamp
                 );
                 handleException(
                     hspec.handlerThreadSpecName, tr, LHFailureReason.TASK_FAILURE, msg

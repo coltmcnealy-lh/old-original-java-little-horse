@@ -11,7 +11,6 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -21,7 +20,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
-import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 import little.horse.common.util.K8sStuff.EnvEntry;
@@ -64,8 +62,6 @@ public class Config {
         String booty = System.getenv(Constants.KAFKA_BOOTSTRAP_SERVERS_KEY);
         this.bootstrapServers = (booty == null) ? "host.docker.internal:9092" : booty;
         conf.put("bootstrap.servers", this.bootstrapServers);
-        LHUtil.log("bootstrap servers:" , this.bootstrapServers);
-
         conf.put(
             "key.serializer",
             "org.apache.kafka.common.serialization.StringSerializer"
@@ -188,34 +184,6 @@ public class Config {
         return this.apiURL;
     }
 
-    public String getTaskDefTopic() {
-        return this.taskDeftopic;
-    }
-
-    public String getExternalEventDefTopic() {
-        return this.externalEventDefTopic;
-    }
-
-    public String getTaskDefNameKeyedTopic() {
-        return this.taskDeftopic + "__nameKeyed";
-    }
-
-    public String getExternalEventDefNameKeyedTopic() {
-        return this.externalEventDefTopic + "__nameKeyed";
-    }
-
-    public String getWFSpecActionsTopic() {
-        return this.wfSpecTopic + "__actions";
-    }
-
-    public String getWFSpecNameKeyedTopic() {
-        return this.wfSpecTopic + "__nameKeyed";
-    }
-
-    public String getWFSpecIntermediateTopic() {
-        return this.wfSpecTopic + "__intermediate";
-    }
-
     public ArrayList<String> getTaskDaemonCommand() {
         ArrayList<String> out = new ArrayList<String>();
         out.add("java");
@@ -276,10 +244,19 @@ public class Config {
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, (new Serdes.StringSerde()).getClass().getName());
         props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 4000);
-        props.put(StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 4000);
+        props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, "exactly_once");
+        props.put(
+            StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
+            Serdes.StringSerde.class.getName()
+        );
+        props.put(
+            StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
+            Serdes.StringSerde.class.getName()
+        );
+        props.put(
+            StreamsConfig.consumerPrefix(ConsumerConfig.METADATA_MAX_AGE_CONFIG), 4000
+        );
         props.put(
             StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
             org.apache.kafka.streams.errors.LogAndContinueExceptionHandler.class
@@ -291,6 +268,7 @@ public class Config {
         Properties props = new Properties();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId + appIdSuffix);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
         return props;
     }
 
@@ -322,18 +300,6 @@ public class Config {
 
     public String getThreadSpecName() {
         return this.threadSpecName;
-    }
-
-    public KafkaConsumer<String, WFRun> getWFRunConsumer(
-        ArrayList<String> topics, String appIdSuffix
-    ) {
-        Properties consumerConfig = getConsumerConfig(appIdSuffix);
-        KafkaConsumer<String, WFRun> cons = new KafkaConsumer<String, WFRun>(
-            consumerConfig
-        );
-        Runtime.getRuntime().addShutdownHook(new Thread(cons::close));
-        cons.subscribe(topics);
-        return cons;
     }
 
     public String getWFRunTopic() {

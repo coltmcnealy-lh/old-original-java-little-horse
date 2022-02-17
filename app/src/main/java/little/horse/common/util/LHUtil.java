@@ -24,7 +24,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import little.horse.common.Config;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
 
 

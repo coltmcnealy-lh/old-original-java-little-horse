@@ -3,7 +3,6 @@ package little.horse.common.objects.metadata;
 import java.util.HashMap;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
