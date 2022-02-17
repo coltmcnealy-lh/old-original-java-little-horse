@@ -19,8 +19,13 @@ task_queue = {
     "partitions": 3,
 }
 
-task_definition = {
+task_definition1 = {
     "name": "task1",
+    "taskQueueName": "my-task-queue",
+}
+
+task_definition2 = {
+    "name": "task3",
     "taskQueueName": "my-task-queue",
 }
 
@@ -37,7 +42,7 @@ wf_definition = {
                 },
                 "secondNode": {
                     "nodeType": "TASK",
-                    "taskDefName": "task1",
+                    "taskDefName": "task3",
                 }
             },
             "edges": [{
@@ -51,8 +56,12 @@ wf_definition = {
 
 create_tq_response = requests.post(f"{URL}/TaskQueue", json=task_queue)
 print_prettily(create_tq_response)
-create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition)
+create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition1)
 print_prettily(create_task_def_response)
+create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition2)
+print_prettily(create_task_def_response)
+
+time.sleep(0.03)
 create_wf_response = requests.post(f"{URL}/WFSpec", json=wf_definition)
 print(create_wf_response.json())
 

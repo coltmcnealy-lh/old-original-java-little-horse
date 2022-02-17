@@ -11,8 +11,6 @@ import little.horse.common.util.LHDatabaseClient;
 
 
 public class TaskDef extends CoreMetadata {
-    @JsonIgnore
-    public static String typeName = "taskDef";
 
     public TaskDef() {}
 

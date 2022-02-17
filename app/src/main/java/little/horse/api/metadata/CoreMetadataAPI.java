@@ -103,7 +103,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                 )
             );
 
-            response.result = LHDatabaseClient.lookupMeta(t.getId(), config, cls);
+            response.result = LHDatabaseClient.lookupMetaNameOrId(t.getId(), config, cls);
             response.objectId = t.getId();
             response.status = ResponseStatus.OK;
 

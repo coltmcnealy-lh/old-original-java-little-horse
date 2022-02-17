@@ -18,6 +18,7 @@ import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
+import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.util.LHUtil;
 
 public class BaseSchema {
@@ -46,6 +47,11 @@ public class BaseSchema {
         if (digest != null) return digest;
 
         HashMap<String, String> digests = new HashMap<>();
+
+        if (this instanceof CoreMetadata) {
+            CoreMetadata thisCm = (CoreMetadata) this;
+            digests.put("name", thisCm.name);
+        }
 
         for (Field field: this.getClass().getDeclaredFields()) {
             if (

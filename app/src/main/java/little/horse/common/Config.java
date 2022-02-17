@@ -21,7 +21,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
-import little.horse.common.util.LHUtil;
 import little.horse.common.util.K8sStuff.EnvEntry;
 import okhttp3.OkHttpClient;
 
@@ -31,9 +30,6 @@ public class Config {
     private String appId;
     public String bootstrapServers;
     private Properties kafkaConfig;
-    private String wfSpecTopic;
-    private String taskDeftopic;
-    private String externalEventDefTopic;
     private String kafkaTopicPrefix;
     private String stateDirectory;
     private String apiURL;
@@ -79,10 +75,6 @@ public class Config {
 
         String kTopicPrefix = System.getenv(Constants.KAFKA_TOPIC_PREFIX_KEY);
         this.kafkaTopicPrefix = (kTopicPrefix == null) ? "" : kTopicPrefix;
-
-        this.wfSpecTopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "WFSpec";
-        this.taskDeftopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "TaskDef";
-        this.externalEventDefTopic = this.kafkaTopicPrefix + Constants.SYSTEM_PREFIX + "ExternalEventDef";
 
         String theHost = System.getenv(Constants.ADVERTISED_HOST_KEY);
         this.advertisedHost = (theHost == null) ? "localhost" : theHost;
@@ -165,10 +157,6 @@ public class Config {
 
     public OkHttpClient getHttpClient() {
         return this.httpClient;
-    }
-
-    public String getWFSpecTopic() {
-        return this.wfSpecTopic;
     }
 
     public String getAPIUrlFor(String extension) {

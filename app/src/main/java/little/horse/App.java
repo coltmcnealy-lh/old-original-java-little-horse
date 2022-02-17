@@ -133,7 +133,24 @@ public class App {
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
             WorkflowWorker.run();
         } else {
-            FrontendAPIApp.run();
+            TaskQueue tq = new TaskQueue();
+            tq.name = "tqname";
+            TaskDef td = new TaskDef();
+            td.taskQueueName = "tqname";
+            td.setTaskQueue(tq);
+            td.name = "firstname";
+
+            System.out.println("first digest: " + td.getId());
+
+            td = new TaskDef();
+            TaskQueue tq2 = new TaskQueue();
+            tq2.name = "tqname2";
+            td.taskQueueName = "tqname2";
+            td.setTaskQueue(tq2);
+            td.name = "secondName";
+
+            System.out.println("second digest: " + td.getId());
+
         }
     }
 }

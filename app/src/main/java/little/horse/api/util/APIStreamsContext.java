@@ -12,8 +12,10 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.HostInfo;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
@@ -171,6 +173,17 @@ public class APIStreamsContext<T extends CoreMetadata> {
         return queryStoreBytes(storeName, storeKey, forceLocal, apiPath, storeKey);
     }
 
+    public void dumpStore(String storeName) {
+        KeyValueIterator<String, Bytes> it = getStore(storeName).all();
+
+        System.out.println("\n\n\n\n\n\n**********************");
+        while (it.hasNext()) {
+            KeyValue<String, Bytes> kvp = it.next();
+            System.out.println(kvp.key + "\t\t" + new String(kvp.value.get()));
+        }
+        System.out.println("**********************\n\n\n\n\n\n");
+    }
+
     private Bytes queryStoreBytes(
         String storeName, String storeKey, boolean forceLocal,
         String apiPath, String partitionKey
@@ -182,6 +195,10 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
 
         if (forceLocal || metadata.activeHost().equals(thisHost)) {
+
+            if (storeName.equals(T.getAliasStoreName(cls))) {
+                dumpStore(storeName);
+            }
 
             return getStore(storeName).get(storeKey);
 
