@@ -272,7 +272,7 @@ public class ThreadRun extends BaseSchema {
 
         tr.status = LHExecutionStatus.RUNNING;
         tr.startTime = trEvent.timestamp;
-        tr.bashCommand = event.bashCommand;
+        tr.workerId = event.workerId;
         tr.stdin = event.stdin;
     }
 
@@ -627,7 +627,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     private void scheduleTask(
         TaskRun tr, Node node, ArrayList<TaskScheduleRequest> toSchedule
-    ) {
+    ) throws LHConnectionError {
         TaskScheduleRequest te = new TaskScheduleRequest();
         te.setConfig(config);
         te.taskQueueName = node.taskDef.taskQueueName;
@@ -636,6 +636,7 @@ public class ThreadRun extends BaseSchema {
         te.wfSpecName = wfRun.wfSpecName;
         te.threadRunNumber = id;
         te.taskRunNumber = tr.number;
+        te.kafkaTopic = wfRun.getWFSpec().getEventTopic();
         try {
             te.taskDefName = tr.getNode().taskDefName;
             te.taskDefId = tr.getNode().taskDefId;

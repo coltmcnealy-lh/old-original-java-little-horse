@@ -5,6 +5,7 @@ import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.utils.Bytes;
 
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
@@ -66,10 +67,10 @@ public class WFEvent extends BaseSchema {
             );
         }
 
-        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
+        ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
             this.getKafkaTopic(),
             wfRunId,
-            this.toString()
+            new Bytes(this.toBytes())
         );
         config.send(record);
     }

@@ -1,6 +1,5 @@
 package little.horse.common.objects.rundata;
 
-import java.util.ArrayList;
 import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -22,7 +21,7 @@ public class TaskRun extends BaseSchema {
     public String nodeName;
     public String nodeDigest;
 
-    public ArrayList<String> bashCommand;
+    public String workerId;
     public Object stdin;
     public int attemptNumber = 1;
 

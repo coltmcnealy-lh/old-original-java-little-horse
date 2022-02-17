@@ -84,7 +84,6 @@ public class WFRuntime
         }
 
         for (TaskScheduleRequest tsr: toSchedule) {
-            LHUtil.log("\n\n\n", tsr.taskDefName);
             CoordinatorOutput co = new CoordinatorOutput();
             co.request = tsr;
             context.forward(new Record<String, CoordinatorOutput>(

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.utils.Bytes;
 
 import io.javalin.Javalin;
 import little.horse.api.metadata.AliasIdentifier;
@@ -126,8 +127,11 @@ public abstract class CoreMetadata extends BaseSchema {
 
     @JsonIgnore
     public Future<RecordMetadata> save() {
-        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
-            getIdKafkaTopic(this.config, this.getClass()), getId(), this.toString());
+        ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
+            getIdKafkaTopic(this.config, this.getClass()),
+            getId(),
+            new Bytes(this.toBytes())
+        );
         return this.config.send(record);
     }
 
@@ -135,7 +139,7 @@ public abstract class CoreMetadata extends BaseSchema {
     public static<T extends CoreMetadata> Future<RecordMetadata> sendNullRecord(
         String id, Config config, Class<T> cls
     ) {
-        ProducerRecord<String, String> record = new ProducerRecord<String, String>(
+        ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
             getIdKafkaTopic(config, cls), id, null);
         return config.send(record);
     }

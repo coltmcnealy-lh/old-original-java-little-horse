@@ -11,8 +11,10 @@ import org.apache.kafka.streams.Topology;
 
 import little.horse.api.LittleHorseAPI;
 import little.horse.api.metadata.MetadataTopologyBuilder;
+import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.api.runtime.WFRunTopology;
 import little.horse.common.Config;
+import little.horse.common.events.TaskRunResult;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDef;
@@ -22,6 +24,8 @@ import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
+import little.horse.lib.worker.TaskExecutor;
+import little.horse.lib.worker.TaskWorker;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
@@ -72,7 +76,9 @@ class FrontendAPIApp {
             MetadataTopologyBuilder.addStuff(topology, config, cls);
         }
 
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
+        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig(
+            config.getAppId()
+        ));
         LittleHorseAPI lapi = new LittleHorseAPI(config, streams);
 
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
@@ -102,7 +108,9 @@ class WorkflowWorker {
 
         System.out.println(topology.describe().toString());
 
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
+        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig(
+            config.getAppId()
+        ));
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
@@ -132,6 +140,13 @@ public class App {
             FrontendAPIApp.run();
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
             WorkflowWorker.run();
+
+            LHUtil.log("\n\n\n\n\n\n\n\nasdfasdfasdfasdf\n\n\n\n\n\n");
+            TaskExecutor executor = new SimpleExecutor();
+            TaskWorker tw = new TaskWorker(new Config(), "my-task-queue", executor, 10);
+            tw.run();
+            LHUtil.log("\n\n\n\n\n\n\n\nasdfasdfasdfasdf\n\n\n\n\n\n");
+
         } else {
             TaskQueue tq = new TaskQueue();
             tq.name = "tqname";
@@ -152,5 +167,16 @@ public class App {
             System.out.println("second digest: " + td.getId());
 
         }
+    }
+}
+
+
+class SimpleExecutor implements TaskExecutor {
+    public TaskRunResult executeTask(TaskScheduleRequest request) {
+        TaskRunResult result = new TaskRunResult();
+        result.returncode = 0;
+        result.stdout = "hello there!";
+        result.success = true;
+        return result;
     }
 }

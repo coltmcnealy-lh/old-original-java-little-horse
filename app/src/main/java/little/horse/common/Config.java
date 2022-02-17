@@ -1,5 +1,6 @@
 package little.horse.common;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Properties;
@@ -11,12 +12,14 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
@@ -26,10 +29,13 @@ import okhttp3.OkHttpClient;
 
 
 public class Config {
-    private KafkaProducer<String, String> producer;
+    private KafkaProducer<String, Bytes> txnProducer;
+    private KafkaProducer<String, Bytes> producer;
+    private KafkaConsumer<String, Bytes> consumer;
+
     private String appId;
+    private String appInstanceId;
     public String bootstrapServers;
-    private Properties kafkaConfig;
     private String kafkaTopicPrefix;
     private String stateDirectory;
     private String apiURL;
@@ -45,31 +51,23 @@ public class Config {
     private int advertisedPort;
     private String advertisedProtocol;
 
+    public String getAppId() {
+        return this.appId;
+    }
+
     public Config() {
         // TODO: Make this more readable
 
-        // ********* Kafka Config *************
-        Properties conf = new Properties();
+        // ********* Kafka Stuff *************
 
         String theAppId = System.getenv(Constants.KAFKA_APPLICATION_ID_KEY);
         this.appId = this.kafkaTopicPrefix + ((theAppId == null) ? "test" : appId);
-        conf.put("client.id", this.appId);
+        String theIid = System.getenv(Constants.KAFKA_APPLICATION_IID_KEY);
+        this.appInstanceId = this.kafkaTopicPrefix + ((theIid == null) ?
+            "first" : appId);
 
         String booty = System.getenv(Constants.KAFKA_BOOTSTRAP_SERVERS_KEY);
         this.bootstrapServers = (booty == null) ? "host.docker.internal:9092" : booty;
-        conf.put("bootstrap.servers", this.bootstrapServers);
-        conf.put(
-            "key.serializer",
-            "org.apache.kafka.common.serialization.StringSerializer"
-        );
-        conf.put(
-            "value.serializer",
-            "org.apache.kafka.common.serialization.StringSerializer"
-        );
-        this.kafkaConfig = conf;
-
-        // ************* Producer ************
-        this.producer = new KafkaProducer<String, String>(this.kafkaConfig);
 
         // ************* Misc env var stuff **********
 
@@ -202,18 +200,88 @@ public class Config {
         return this.defaultReplicas;
     }
 
-    public Future<RecordMetadata> send(ProducerRecord<String, String> record) {
-        return (Future<RecordMetadata>) this.producer.send(record);
+    public KafkaProducer<String, Bytes> getTxnProducer() {
+        if (this.txnProducer == null) {
+            Properties conf = new Properties();
+            conf.put("bootstrap.servers", this.bootstrapServers);
+            conf.put(
+                "key.serializer",
+                "org.apache.kafka.common.serialization.StringSerializer"
+            );
+            conf.put(
+                "value.serializer",
+                "org.apache.kafka.common.serialization.BytesSerializer"
+            );
+            conf.put("transactional.id", this.appId);
+            conf.put("enable.idempotence", "true");
+
+            this.txnProducer = new KafkaProducer<String, Bytes>(conf);   
+            this.txnProducer.initTransactions(); 
+        }
+
+        return this.txnProducer;
+    }
+
+    public KafkaProducer<String, Bytes> getProducer() {
+        if (this.producer == null) {
+            Properties conf = new Properties();
+            conf.put("bootstrap.servers", this.bootstrapServers);
+            conf.put(
+                "key.serializer",
+                "org.apache.kafka.common.serialization.StringSerializer"
+            );
+            conf.put(
+                "value.serializer",
+                "org.apache.kafka.common.serialization.BytesSerializer"
+            );
+            conf.put("enable.idempotence", "true");
+
+            this.producer = new KafkaProducer<String, Bytes>(conf);
+        }
+
+        return this.producer;
+    }
+
+    /**
+     * Returns a kafka consumer configured to consume from the kafka broker. The
+     * result is NOT threadsafe and is a singleton for the entire application. The
+     * result has properly-configured group.id and group.instance.id. The result has
+     * disabled automatic offset committing as it is intended that all consumption in
+     * LittleHorse will be done in an exactly-once manner; meaning that automatic
+     * offset commits are unpalatable.
+     * @return a KafkaConsumer<String, Bytes>
+     */
+    public KafkaConsumer<String, Bytes> getConsumer() {
+        if (this.consumer == null) {
+            Properties conf = new Properties();
+            conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId);
+            conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.appInstanceId);
+            conf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+            conf.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
+            conf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+            conf.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+            conf.put(
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                org.apache.kafka.common.serialization.StringDeserializer.class
+            );
+            conf.put(
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                org.apache.kafka.common.serialization.BytesDeserializer.class
+            );
+            this.consumer = new KafkaConsumer<String, Bytes>(conf);
+        }
+
+        return this.consumer;
+    }
+
+    public Future<RecordMetadata> send(ProducerRecord<String, Bytes> record) {
+        return (Future<RecordMetadata>) this.getProducer().send(record);
     }
 
     public Future<RecordMetadata> send(
-            ProducerRecord<String, String> record,
+            ProducerRecord<String, Bytes> record,
             Callback callback) {
-        return this.producer.send(record, callback);
-    }
-
-    public Properties getStreamsConfig() {
-        return this.getStreamsConfig("");
+        return this.getProducer().send(record, callback);
     }
 
     public String getAdvertisedUrl() {
@@ -223,6 +291,10 @@ public class Config {
             advertisedHost,
             advertisedPort
         );
+    }
+
+    public Duration getTaskPollDuration() {
+        return Duration.ofMillis(10);
     }
 
     public Properties getStreamsConfig(String appIdSuffix) {
@@ -249,14 +321,11 @@ public class Config {
             StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
             org.apache.kafka.streams.errors.LogAndContinueExceptionHandler.class
         );
-        return props;
-    }
-
-    public Properties getConsumerConfig(String appIdSuffix) {
-        Properties props = new Properties();
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId + appIdSuffix);
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
-        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
+        props.put(
+            StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG,
+            org.apache.kafka.streams.errors.DefaultProductionExceptionHandler.class
+        );
+        props.put(StreamsConfig.TOPOLOGY_OPTIMIZATION_CONFIG, "all");
         return props;
     }
 
@@ -266,7 +335,7 @@ public class Config {
      * block. Due to lack of Deconstructor in java.
      */
     public void cleanup() {
-        this.producer.close();
+        this.txnProducer.close();
         this.kafkaAdmin.close();
     }
 

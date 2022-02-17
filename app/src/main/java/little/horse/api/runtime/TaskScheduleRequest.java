@@ -16,4 +16,9 @@ public class TaskScheduleRequest extends BaseSchema {
     public int taskRunNumber;
 
     public HashMap<String, Object> variableSubstitutions;
+
+    /**
+     * The kafka topic to which the TaskCompletedEvent should be fired.
+     */
+    public String kafkaTopic;
 }
