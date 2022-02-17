@@ -112,7 +112,7 @@ class WorkflowWorker {
     private static WFSpec lookupWFSpecOrDie(String id, Config config) {
         WFSpec wfSpec = null;
         try {
-            wfSpec = LHDatabaseClient.lookupMeta(
+            wfSpec = LHDatabaseClient.lookupMetaNameOrId(
                 config.getWfSpecId(), config, WFSpec.class
             );
         } catch (LHConnectionError exn) {

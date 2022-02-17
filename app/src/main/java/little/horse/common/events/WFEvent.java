@@ -45,7 +45,7 @@ public class WFEvent extends BaseSchema {
         }
 
         if (wfSpec == null) {
-            wfSpec = LHDatabaseClient.lookupMeta(
+            wfSpec = LHDatabaseClient.lookupMetaNameOrId(
                 wfSpecId, config, WFSpec.class
             );
 

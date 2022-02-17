@@ -82,7 +82,7 @@ public class WFRun extends CoreMetadata {
     public WFSpec getWFSpec() throws LHConnectionError {
         if (wfSpec == null) {
             String id = (wfSpecDigest == null) ? wfSpecName : wfSpecDigest;
-            setWFSpec(LHDatabaseClient.lookupMeta(id, config, WFSpec.class));
+            setWFSpec(LHDatabaseClient.lookupMetaNameOrId(id, config, WFSpec.class));
         }
         return wfSpec;
     }
@@ -361,7 +361,7 @@ class WFRunApiStuff {
         event.type = WFEventType.WF_RUN_STARTED;
 
         try {
-            WFSpec spec = LHDatabaseClient.lookupMeta(
+            WFSpec spec = LHDatabaseClient.lookupMetaNameOrId(
                 request.wfSpecId,
                 config,
                 WFSpec.class
@@ -398,7 +398,7 @@ class WFRunApiStuff {
 
         try {
 
-            WFRun wfRun = LHDatabaseClient.lookupMeta(wfRunGuid, config, WFRun.class);
+            WFRun wfRun = LHDatabaseClient.lookupMetaNameOrId(wfRunGuid, config, WFRun.class);
             if (wfRun == null) {
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
                 response.message = "Could not find provided wfRun with provided id.";
@@ -438,7 +438,7 @@ class WFRunApiStuff {
 
         try {
 
-            WFRun wfRun = LHDatabaseClient.lookupMeta(wfRunGuid, config, WFRun.class);
+            WFRun wfRun = LHDatabaseClient.lookupMetaNameOrId(wfRunGuid, config, WFRun.class);
             if (wfRun == null) {
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
                 response.message = "Could not find provided wfRun with provided id.";
@@ -480,7 +480,7 @@ class WFRunApiStuff {
         LHRpcResponse<WFRun> response = new LHRpcResponse<>();
 
         try {
-            wfRun = LHDatabaseClient.lookupMeta(wfRunId, config, WFRun.class);
+            wfRun = LHDatabaseClient.lookupMetaNameOrId(wfRunId, config, WFRun.class);
             if (wfRun == null) {
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
                 response.message = "Couldn't find wfRun with id " + wfRunId;
@@ -488,7 +488,7 @@ class WFRunApiStuff {
                 return;
             }
 
-            evd = LHDatabaseClient.lookupMeta(
+            evd = LHDatabaseClient.lookupMetaNameOrId(
                 externalEventDefID, config, ExternalEventDef.class
             );
 

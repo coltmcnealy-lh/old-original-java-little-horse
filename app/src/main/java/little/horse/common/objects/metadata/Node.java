@@ -126,7 +126,7 @@ public class Node extends BaseSchema {
         if (externalEventDefId != null || externalEventDefName != null) {
             String eedGuid = (externalEventDefId == null) ?
                 externalEventDefName : externalEventDefId;
-            externalEventDef = LHDatabaseClient.lookupMeta(
+            externalEventDef = LHDatabaseClient.lookupMetaNameOrId(
                 eedGuid, config, ExternalEventDef.class
             );
         }
@@ -203,7 +203,7 @@ public class Node extends BaseSchema {
             ));
         }
 
-        taskDef = LHDatabaseClient.lookupMeta(
+        taskDef = LHDatabaseClient.lookupMetaNameOrId(
             taskDefKey, config, TaskDef.class
         );
 
@@ -229,7 +229,7 @@ public class Node extends BaseSchema {
                 name, threadSpec.name
             ));
         }
-        externalEventDef = LHDatabaseClient.lookupMeta(
+        externalEventDef = LHDatabaseClient.lookupMetaNameOrId(
             eedKey, config, ExternalEventDef.class
         );
 

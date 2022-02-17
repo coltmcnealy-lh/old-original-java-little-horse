@@ -29,7 +29,7 @@ public class TaskDef extends CoreMetadata {
     @JsonIgnore
     public TaskQueue getTaskQueue() throws LHConnectionError {
         if (taskQueue == null) {
-            taskQueue = LHDatabaseClient.lookupMeta(
+            taskQueue = LHDatabaseClient.lookupMetaNameOrId(
                 taskQueueName, config, TaskQueue.class
             );
         }
@@ -55,7 +55,7 @@ public class TaskDef extends CoreMetadata {
         this.config = config;
 
         // ALl we gotta do is make sure the taskQueue exists.
-        taskQueue = LHDatabaseClient.lookupMeta(
+        taskQueue = LHDatabaseClient.lookupMetaNameOrId(
             taskQueueName, config, TaskQueue.class
         );
         if (taskQueue == null) {

@@ -18,7 +18,7 @@ public class TaskWorker {
         Config config, String taskQueueName, TaskExecutor executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
-        this.taskQueue = LHDatabaseClient.lookupMeta(
+        this.taskQueue = LHDatabaseClient.lookupMetaNameOrId(
             taskQueueName, config, TaskQueue.class
         );
         this.executor = executor;

@@ -17,7 +17,7 @@ import little.horse.common.objects.metadata.CoreMetadata;
  */
 public class LHDatabaseClient {
 
-    public static<T extends CoreMetadata> T lookupMeta(
+    public static<T extends CoreMetadata> T lookupMetaNameOrId(
         String idOrName, Config config, Class<T> cls
     ) throws LHConnectionError {
 
@@ -30,6 +30,17 @@ public class LHDatabaseClient {
             url = config.getAPIUrlFor(T.getAliasPath(cls)) + "/name/" + idOrName;
             response = client.getResponse(url, cls);
         }
+
+        return response.result;
+    }
+
+    public static<T extends CoreMetadata> T lookupMeta(
+        String id, Config config, Class<T> cls
+    ) throws LHConnectionError {
+
+        LHRpcCLient client = new LHRpcCLient(config);
+        String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + id;
+        LHRpcResponse<T> response = client.getResponse(url, cls);
 
         return response.result;
     }
