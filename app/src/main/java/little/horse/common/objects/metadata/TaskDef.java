@@ -20,6 +20,7 @@ public class TaskDef extends CoreMetadata {
 
     public HashMap<String, WFRunVariableDef> requiredVars;
     public String taskQueueName;
+    public String taskType;
 
     @JsonIgnore
     private TaskQueue taskQueue;
@@ -61,6 +62,9 @@ public class TaskDef extends CoreMetadata {
                 "Task Def %s refers to nonexistent task queue %s!",
                 name, taskQueueName
             ));
+        }
+        if (taskType == null) {
+            throw new LHValidationError("No task type specified!");
         }
 
     }

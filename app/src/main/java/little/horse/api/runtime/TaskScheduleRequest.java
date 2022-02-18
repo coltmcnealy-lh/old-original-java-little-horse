@@ -8,6 +8,7 @@ public class TaskScheduleRequest extends BaseSchema {
     public String taskDefName;
     public String taskDefId;
     public String taskQueueName;
+    public String taskType;
 
     public String wfRunId;
     public String wfSpecId;

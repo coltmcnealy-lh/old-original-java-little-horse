@@ -631,6 +631,7 @@ public class ThreadRun extends BaseSchema {
         TaskScheduleRequest te = new TaskScheduleRequest();
         te.setConfig(config);
         te.taskQueueName = node.taskDef.taskQueueName;
+        te.taskType = node.taskDef.taskType;
         te.wfRunId = wfRun.id;
         te.wfSpecId = wfRun.wfSpecDigest;
         te.wfSpecName = wfRun.wfSpecName;
