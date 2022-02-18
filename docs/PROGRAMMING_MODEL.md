@@ -18,5 +18,44 @@ The core workflow engine manages the scheduling of `TaskRun`'s according to a `W
 * When a `TaskRun` is to be scheduled, LittleHorse pushes a `TaskScheduleRequest` to the appropriate `TaskQueue`. The event contains information about any variables needed to run the task, the `taskType`, correlated `WFRun` and `WFSpec` info, and other potentially useful metadata.
 * A Task Worker reads the `TaskScheduleRequest` from the `TaskQueue` and commits the offset (and optionally sends a `TaskStartedEvent` marking the `TaskRun` as started). When the task is completed, the Task Worker notifies LittleHorse via a `TaskRunEndedEvent`.
 
-## Threading Model
+A `TaskRun` may be in any of the following states:
+* `SCHEDULED`
+* `RUNNING`
+* `COMPLETED`
+* `FAILED`
 
+## `WFSpec` Primitives
+*Note: A `WFSPec` consists of one or more `ThreadSpec`'s and has a single `ThreadSpec` which is designated as the entrypoint. Just like a thread in normal programming, a thread may spawn child threads—those mechanics are discussed below.*
+
+The status of a `WFRun` is simply the status of the entrypoint `ThreadRun`. A `ThreadRun` may be in any of the following states:
+* `SCHEDULED`
+* `RUNNING`
+* `COMPLETED`
+* `HALTING`
+* `HALTED`
+* `FAILING`
+* `FAILED`
+
+### Variables
+A `ThreadSpec` may define variables to be shared between `Node`'s. Variables are persisted in JSON form, and as such may be of type JSON Object, JSON array, String, Integer, Float, or Boolean.
+
+Variables may be initialized with a default value or as the result of a `Node` which has the `variableMutations` field set (discussed below).
+
+A user of LittleHorse may optionally specify whether they want `ThreadRun`'s and their parent `WFRun`'s to be indexed based on the values of their variables. When enabled, this feature allows a user to query the LittleHorse API to, for example, "give me all `ThreadRun`'s where the variable `customerEmail` is `'gordon.ramsay@gmail.com'`".
+
+### Task Execution
+A `Node` may be of type `TASK`, in which case it should specify a `TaskDef` to execute. A `TaskDef` may require input variables, and if so, the `Node` must also specify how to set those input variables. The following methods are legal:
+* Assigning the variable a literal value.
+* Assigning metadata about the `WFRun` (either the `WFRun`'s id, )
+
+### Blocking `ExternalEvent`
+
+### Conditional Branching
+
+### Spawning Threads
+
+### Joining Threads
+
+### Interrupt Handlers
+
+### Exception Handlers
