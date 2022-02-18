@@ -11,7 +11,7 @@
     - [Passing Variables: `VariableAssignment`](#passing-variables-variableassignment)
     - [Mutating Variables: `VariableMutation`](#mutating-variables-variablemutation)
     - [Blocking `ExternalEvent`](#blocking-externalevent)
-    - [Conditional Branching](#conditional-branching)
+    - [Conditional Branching: `EdgeCondition`](#conditional-branching-edgecondition)
     - [Spawning Threads](#spawning-threads)
     - [Joining Threads](#joining-threads)
     - [Interrupt Handlers](#interrupt-handlers)
@@ -100,7 +100,12 @@ The value of the RHS may be provided by any of the following ways:
 
 ### Blocking `ExternalEvent`
 
-### Conditional Branching
+A `Node` may be of type `EXTERNAL_EVENT`, in which case a `ThreadRun`'s execution will halt at that `Node` until an `ExternalEvent` of the specified type is recorded. Just like a `TASK Node`, an `EXTERNAL_EVENT Node` may also mutate variables through the `VariableMutation`.
+
+If multiple `ThreadRun`'s are blocking for the same type of `ExternalEvent`, and a single `ExternalEvent` comes in, only one `ThreadRun` will become unblocked. That is, there is a 1:1 relationship between `Node` and `ExternalEvent`. As of now, an `ExternalEvent` is simply associated with a `WFRun` by the `WFRun`'s id; and if multiple `ThreadRun`'s are blocked on the same event, the `ThreadRun` to be unblocked is chosen randomly. Pending customer feedback and use-cases, this model will be extended and improved.
+
+### Conditional Branching: `EdgeCondition`
+
 
 ### Spawning Threads
 
