@@ -1,5 +1,24 @@
 # LittleHorse Programming Model
 
+<!-- TOC -->
+
+- [LittleHorse Programming Model](#littlehorse-programming-model)
+  - [What is a Workflow?](#what-is-a-workflow)
+  - [Task Execution: `TaskDef` and `TaskQueue`](#task-execution-taskdef-and-taskqueue)
+  - [`WFSpec` Primitives](#wfspec-primitives)
+    - [Storing Data: `WFRunVariable`](#storing-data-wfrunvariable)
+    - [Task Execution: `TaskRun`](#task-execution-taskrun)
+    - [Passing Variables: `VariableAssignment`](#passing-variables-variableassignment)
+    - [Mutating Variables: `VariableMutation`](#mutating-variables-variablemutation)
+    - [Blocking `ExternalEvent`](#blocking-externalevent)
+    - [Conditional Branching](#conditional-branching)
+    - [Spawning Threads](#spawning-threads)
+    - [Joining Threads](#joining-threads)
+    - [Interrupt Handlers](#interrupt-handlers)
+    - [Exception Handlers](#exception-handlers)
+
+<!-- /TOC -->
+
 *NOTE: This document describes the constructs available when writing LittleHorse Workflows, and how those constructs behave. This document is a conceptual guide for users regarding how the system behaves; it is not a formal API specification, nor is it a description of how that API is implemented.*
 
 LittleHorse is a Workflow Engine: a client can define Workflows (thus creating a `WFSpec`), and then submit requests to run a `WFSpec`, thus creating a `WFRun`. LittleHorse provides reliability guarantees out of the box—a `WFRun` execution will either complete or report an error. No work can be done without first being journalled in LittleHorse, and no work will be scheduled and forgotten about.
