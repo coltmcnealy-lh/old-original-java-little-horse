@@ -1007,7 +1007,7 @@ class Mutation {
 
         // Now we handle every operation that's legal. Because I'm lazy, there's
         // only two so far.
-        if (op == VariableMutationOperation.SET) {
+        if (op == VariableMutationOperation.ASSIGN) {
             if (!defTypeCls.isInstance(rhs)) {
                 throw new VarSubOrzDash(null,
                     "Tried to set var " + varName + ", which is of type " +

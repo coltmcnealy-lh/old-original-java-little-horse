@@ -36,19 +36,19 @@ The status of a `WFRun` is simply the status of the entrypoint `ThreadRun`. A `T
 * `FAILING`
 * `FAILED`
 
-### `WFRunVariable`
+### Storing Data: `WFRunVariable`
 A `ThreadSpec` may define variables to be shared between `Node`'s. Variables are persisted in JSON form, and as such may be of type JSON Object, JSON array, String, Integer, Float, or Boolean.
 
 Variables may be initialized with a default value or as the result of a `Node` which has the `variableMutations` field set (discussed below).
 
 A user of LittleHorse may optionally specify whether they want `ThreadRun`'s and their parent `WFRun`'s to be indexed based on the values of their variables. When enabled, this feature allows a user to query the LittleHorse API to, for example, "give me all `ThreadRun`'s where the variable `customerEmail` is `'gordon.ramsay@gmail.com'`".
 
-### Task Execution
+### Task Execution: `TaskRun`
 A `Node` may be of type `TASK`, in which case it should specify a `TaskDef` to execute. A `TaskDef` may require input variables, and if so, the `Node` must also specify how to set those input variables using a `VariableAssignment` (discussed below).
 
-When the Node produces output, 
+A `TASK Node` may also optionally mutate variables using the `VariableMutation` (discussed below).
 
-### `VariableAssignment`
+### Passing Variables: `VariableAssignment`
 `TaskDef`'s and `EdgeCondition`'s often require input variables to either execute a `TaskRun` or deciee whether an `Edge` should be activated or not.  The following methods are supported:
 * Assigning the variable a literal value.
 * Assigning metadata about the `WFRun`:
@@ -60,6 +60,24 @@ When the Node produces output,
   * A `jsonpath` may optionally be provided if the variable is a Json Object or Json Array. If a `jsonpath` is provided, the resulting value is the result of evaluating the `jsonpath` on the provided `WFRunVariable`.
 
 If a specified value is of the wrong type, or a `jsonpath` expression fails, the `ThreadRun` is marked as `FAILED` with an appropriate error message.
+
+### Mutating Variables: `VariableMutation`
+Just as you assign new values to variables in programming, you may mutate a `WFRunVariable` in LittleHorse. A `VariableMutation` mutates a `WFRunVariable` with a RHS (discussed below) in any of the following ways:
+* `ASSIGN` the variable to the value of the RHS (all types).
+* `ADD` the RHS to the variable (Integer or Double).
+* `SUBTRACT` the RHS from the variable (Integer or Double).
+* `DIVIDE` the variable by the RHS (Integer or Double).
+* `MULTIPLY` the variable by the RHS (Integer or Double).
+* `APPEND` the RHS to the variable (Array or String).
+* `REMOVE_IF_PRESENT` the RHS from the variable (Array or Object).
+* `REMOVE_INDEX` removes the object at provided index (Array).
+* `REMOVE_KEY` removes the object at the given key (Object).
+
+The value of the RHS may be provided by any of the following ways:
+* Directly from node output (valid if the mutation has an associated `Node` only).
+* Using a `jsonpath` on the `Node` output (valid if the mutation has an associated `Node` only).
+* Using a literal value.
+* Using a `VariableAssignment`, giving access to all `WFRunVariables`.
 
 ### Blocking `ExternalEvent`
 
