@@ -12,12 +12,12 @@
     - [Mutating Variables: `VariableMutation`](#mutating-variables-variablemutation)
     - [Blocking `ExternalEvent`](#blocking-externalevent)
     - [Conditional Branching: `EdgeCondition`](#conditional-branching-edgecondition)
-  - [Threading](#threading)
     - [Spawning Threads](#spawning-threads)
     - [Joining Threads](#joining-threads)
     - [Interrupt Handlers](#interrupt-handlers)
     - [Throwing Exceptions](#throwing-exceptions)
     - [Exception Handlers](#exception-handlers)
+  - [](#)
 
 <!-- /TOC -->
 
@@ -118,11 +118,9 @@ Just as programming languages allow you to execute code via `if` and `else` stat
 * `IN` true if the RHS object is a collection containing LHS
 * `NOT_IN` true if the RHS object is a collection NOT containing LHS
 
-## Threading
+### Spawning Threads
 
 Recall that a `WFSpec` has several `ThreadSpec`'s, and that one of those `ThreadSpec`'s is run as the entrypoint `ThreadRun`.
-
-### Spawning Threads
 
 A `Node` in a `ThreadSpec` of type `SPAWN_THREAD` will result in the creation of a new `ThreadRun` that runs concurrently with the parent thread and all other threads in the workflow. The created thread will be a Child of the creator thread, or the Parent.
 
@@ -148,4 +146,19 @@ An interrupt thread may access and mutate any variable in the scope of the inter
 
 ### Throwing Exceptions
 
+A `Node` of type `THROW_EXCEPTION` causes a `ThreadRun` that reaches that `Node` to move to the `FAILING` and then `FAILED` state.
+
+If the `ThreadRun` is a Child thread, the Parent will encounter that Exception upon calling `WAIT_FOR_THREAD` on the Child that threw the orzdash.
+
+As of now, there is no differentiation between Exceptions; i.e. an orzdash is an orzdash.
+
 ### Exception Handlers
+
+A `Node` may fail for several reasons:
+* An `EXTERNAL_EVENT` node may time out, or the `VariableMutation` may fail due to invalid output.
+* A `TASK` node may fail because the `TaskRun` fails.
+* A `WAIT_FOR_THREAD` node may fail because the Child thread failed.
+
+Every `Node` may define an Exception Handler thread which executes in response to any failure. If the resulting `ThreadRun` runs to the `COMPLETED` state, the parent thread will recover and continue; however, if the resulting `ThreadRun` fails or throws an exception, the parent thread will move to the `FAILED` state.
+
+## 
