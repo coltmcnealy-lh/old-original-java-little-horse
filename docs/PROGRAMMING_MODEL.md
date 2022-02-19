@@ -12,9 +12,11 @@
     - [Mutating Variables: `VariableMutation`](#mutating-variables-variablemutation)
     - [Blocking `ExternalEvent`](#blocking-externalevent)
     - [Conditional Branching: `EdgeCondition`](#conditional-branching-edgecondition)
+  - [Threading](#threading)
     - [Spawning Threads](#spawning-threads)
     - [Joining Threads](#joining-threads)
     - [Interrupt Handlers](#interrupt-handlers)
+    - [Throwing Exceptions](#throwing-exceptions)
     - [Exception Handlers](#exception-handlers)
 
 <!-- /TOC -->
@@ -106,11 +108,40 @@ If multiple `ThreadRun`'s are blocking for the same type of `ExternalEvent`, and
 
 ### Conditional Branching: `EdgeCondition`
 
+Just as programming languages allow you to execute code via `if` and `else` statements, LittleHorse supports `Edge`'s between `Node`'s that are activated based on certain conditions. To specify this, use the `EdgeCondition`. An `EdgeCondition` has three parts: a LHS, a RHS, and an operation. The LHS and RHS are both specified by `VariableAssignment`'s (see above), and the operator can be any of:
+* `LESS_THAN`: true if LHS < RHS
+* `GREATER_THAN`: true if LHS > RHS
+* `LESS_THAN_EQ`: true if LHS <= RHS
+* `GREATER_THAN_EQ`: true if LHS >= RHS
+* `EQUALS`: true if LHS == RHS
+* `NOT_EQUALS`: true if LHS != RHS
+* `IN` true if the RHS object is a collection containing LHS
+* `NOT_IN` true if the RHS object is a collection NOT containing LHS
+
+## Threading
+
+Recall that a `WFSpec` has several `ThreadSpec`'s, and that one of those `ThreadSpec`'s is run as the entrypoint `ThreadRun`.
 
 ### Spawning Threads
 
+A `Node` in a `ThreadSpec` of type `SPAWN_THREAD` will result in the creation of a new `ThreadRun` that runs concurrently with the parent thread and all other threads in the workflow. The created thread will be a Child of the creator thread, or the Parent.
+
+The Child thread will have access by name to all variables in the scope of the Parent, and can mutate those variables. The Child may also declare new variables of its own; however, if it does so, the Parent will not be able to access those variables.
+
+If a Child `ThreadSpec` requires input variables (i.e. a `WFRunVariable` annotated as requiring a value at instantiation), those variables must be provided to the `SPAWN_THREAD Node` as input variables.
+
+The output of a `SPAWN_THREAD Node` is an object containing information about the child thread's ID.
+
 ### Joining Threads
 
+A `Node` of type `WAIT_FOR_THREAD` must provide as input the id of a Child thread. The `Node` will block until the Child thread is `COMPLETED` or `FAILED`. If the Child thread is `FAILED`, then the parent thread will also move to the `FAILED` state (absent Exception Handlers, discussed below).
+
+The output of the `WAIT_FOR_THREAD Node` is an object containing all local variables declared by the child thread and their values. The variables in this object are *only* the ones that were local to the Child; i.e. the parent previously did not have visibility to them.
+
 ### Interrupt Handlers
+
+
+
+### Throwing Exceptions
 
 ### Exception Handlers
