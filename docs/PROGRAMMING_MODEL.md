@@ -140,7 +140,11 @@ The output of the `WAIT_FOR_THREAD Node` is an object containing all local varia
 
 ### Interrupt Handlers
 
+When an `ExternalEvent` is sent to a `ThreadRun` whose `ThreadSpec` has an `InterruptDef` defined for that `ExternalEvent`, that `ThreadRun` is interrupted. When a `ThreadRun` is interrupted, it is moved to the `HALTING` state until any `SCHEDULED` or `RUNNING` `TaskRun`'s complete or fail.
 
+Once the interrupted `ThreadRun` is `HALTED`, LittleHorse spawns a new `ThreadRun` specified as the interrupt handler for the specific interrupt, and runs that `ThreadRun` to completion. Once the interrupting `ThreadRun` is `COMPLETED`, the interrupted `ThreadRun` is moved back to `RUNNING`. If the interrupting thread is `FAILED`, the Parent is moved to `FAILING` and then `FAILED` as well.
+
+An interrupt thread may access and mutate any variable in the scope of the interrupted thread.
 
 ### Throwing Exceptions
 
