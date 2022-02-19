@@ -1,5 +1,3 @@
-# LittleHorse Programming Model
-
 <!-- TOC -->
 
 - [LittleHorse Programming Model](#littlehorse-programming-model)
@@ -17,9 +15,11 @@
     - [Interrupt Handlers](#interrupt-handlers)
     - [Throwing Exceptions](#throwing-exceptions)
     - [Exception Handlers](#exception-handlers)
-  - [](#)
+  - [`ThreadRun` Life Cycle](#threadrun-life-cycle)
+  - [`WFRun` Life Cycle](#wfrun-life-cycle)
 
 <!-- /TOC -->
+# LittleHorse Programming Model
 
 *NOTE: This document describes the constructs available when writing LittleHorse Workflows, and how those constructs behave. This document is a conceptual guide for users regarding how the system behaves; it is not a formal API specification, nor is it a description of how that API is implemented.*
 
@@ -161,4 +161,37 @@ A `Node` may fail for several reasons:
 
 Every `Node` may define an Exception Handler thread which executes in response to any failure. If the resulting `ThreadRun` runs to the `COMPLETED` state, the parent thread will recover and continue; however, if the resulting `ThreadRun` fails or throws an exception, the parent thread will move to the `FAILED` state.
 
-## 
+## `ThreadRun` Life Cycle
+
+The possible states for a `ThreadRun` are:
+* `RUNNING`
+* `COMPLETED`
+* `HALTING`
+* `HALTED`
+* `FAILING`
+* `FAILED`
+
+The `COMPLETED` and `FAILED` states are final, meaning that a `ThreadRun` in those states will not have a state change absent an administrator manually rewriting history (not yet supported, but on the roadmap).
+
+A `ThreadRun` may be `HALTED` for the following reasons:
+* An Interrupt.
+* An Exception that was caught by an Exception Handler. In this case, the `ThreadRun` is `HALTED` until the handler terminates.
+* The Parent of this `ThreadRun` is `HALTED` or `FAILED`.
+* An administrator manually stops the `ThreadRun` (supported).
+
+A `ThreadRun` may be `FAILED` if a `Node` throws an uncaught error (see [Throwing Exceptions](#throwing-exceptions)).
+
+A `ThreadRun` moves to the `HALTING` state before being put into the `HALTED` state, and remains `HALTING` until:
+* Any `SCHEDULED` or `RUNNING` `TaskRun`'s are terminated by completion, failure, or timeout, AND
+* All Child `ThreadRuns` are `HALTED`.
+
+Similarly, a `ThreadRun` that encounters an uncaught exception moves to the `FAILING` state before being `FAILED`, and remains in `FAILING` until:
+* All Child `ThreadRun`'s are `HALTED` or `FAILED`.
+
+A `ThreadRun` is `COMPLETED` when:
+* The last `Node` executed has no outgoing edges AND
+* All Child threads spawned by the `ThreadRun` are `COMPLETED` or `FAILED`.
+
+## `WFRun` Life Cycle
+
+The status and lifecycle of a `WFRun` is simply given by the status and lifecycle of its entrypoint `ThreadRun`.
