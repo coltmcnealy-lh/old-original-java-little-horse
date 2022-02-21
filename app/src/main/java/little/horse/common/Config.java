@@ -3,6 +3,7 @@ package little.horse.common;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
@@ -31,7 +32,8 @@ import okhttp3.OkHttpClient;
 public class Config {
     private KafkaProducer<String, Bytes> txnProducer;
     private KafkaProducer<String, Bytes> producer;
-    private KafkaConsumer<String, Bytes> consumer;
+    
+    private HashMap<String, KafkaConsumer<String, Bytes>> consumers;
 
     private String appId;
     private String appInstanceId;
@@ -251,27 +253,36 @@ public class Config {
      * offset commits are unpalatable.
      * @return a KafkaConsumer<String, Bytes>
      */
-    public KafkaConsumer<String, Bytes> getConsumer() {
-        if (this.consumer == null) {
-            Properties conf = new Properties();
-            conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId);
-            conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.appInstanceId);
-            conf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
-            conf.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
-            conf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-            conf.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-            conf.put(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                org.apache.kafka.common.serialization.StringDeserializer.class
+    public KafkaConsumer<String, Bytes> getConsumer(String topic) {
+        if (consumers == null) consumers = new HashMap<>();
+
+        if (consumers.containsKey(topic)) {
+            throw new RuntimeException(
+                "Tried to get same consumer twice for topic " + topic + " which is" +
+                " not threadsafe!"
             );
-            conf.put(
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                org.apache.kafka.common.serialization.BytesDeserializer.class
-            );
-            this.consumer = new KafkaConsumer<String, Bytes>(conf);
         }
 
-        return this.consumer;
+        Properties conf = new Properties();
+        conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId);
+        conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.appInstanceId);
+        conf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        conf.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
+        conf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        conf.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        conf.put(
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+            org.apache.kafka.common.serialization.StringDeserializer.class
+        );
+        conf.put(
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+            org.apache.kafka.common.serialization.BytesDeserializer.class
+        );
+
+        KafkaConsumer<String, Bytes> cons = new KafkaConsumer<String, Bytes>(conf);
+        cons.subscribe(Collections.singleton(topic));
+        consumers.put(topic, cons);
+        return cons;
     }
 
     public Future<RecordMetadata> send(ProducerRecord<String, Bytes> record) {
@@ -335,8 +346,15 @@ public class Config {
      * block. Due to lack of Deconstructor in java.
      */
     public void cleanup() {
-        this.txnProducer.close();
-        this.kafkaAdmin.close();
+        if (this.txnProducer != null) this.txnProducer.close();
+        if (this.producer != null) this.producer.close();
+        if (this.kafkaAdmin != null) this.kafkaAdmin.close();
+
+        if (this.consumers != null) {
+            for (KafkaConsumer<String, Bytes> cons: consumers.values()) {
+                cons.close();
+            }
+        }
     }
 
     public int getDefaultPartitions() {

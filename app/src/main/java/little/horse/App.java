@@ -14,7 +14,6 @@ import little.horse.api.metadata.MetadataTopologyBuilder;
 import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.api.runtime.WFRunTopology;
 import little.horse.common.Config;
-import little.horse.common.events.TaskRunResult;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDef;
@@ -26,6 +25,7 @@ import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.worker.TaskExecutor;
 import little.horse.lib.worker.TaskWorker;
+import little.horse.lib.worker.WorkerContext;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
@@ -170,13 +170,9 @@ public class App {
     }
 }
 
-
 class SimpleExecutor implements TaskExecutor {
-    public TaskRunResult executeTask(TaskScheduleRequest request) {
-        TaskRunResult result = new TaskRunResult();
-        result.returncode = 0;
-        result.stdout = "hello there!";
-        result.success = true;
-        return result;
+    public Object executeTask(TaskScheduleRequest request, WorkerContext ctx) {
+        ctx.log("foobar hello there");
+        return "the Force is with us";
     }
 }

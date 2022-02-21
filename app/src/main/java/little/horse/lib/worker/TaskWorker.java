@@ -1,6 +1,7 @@
 package little.horse.lib.worker;
 
-import java.util.Collections;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,11 +51,7 @@ public class TaskWorker {
 
         this.txnProducer = config.getTxnProducer();
         this.producer = config.getProducer();
-        this.consumer = config.getConsumer();
-
-        this.consumer.subscribe(
-            Collections.singleton(this.taskQueue.getKafkaTopic())
-        );
+        this.consumer = config.getConsumer(this.taskQueue.getKafkaTopic());
     }
 
     public void run() {
@@ -125,7 +122,7 @@ public class TaskWorker {
         tre.startedEvent = trs;
         tre.taskRunNumber = schedReq.taskRunNumber;
         tre.timestamp = LHUtil.now();
-        
+
         WFEvent event = new WFEvent();
         event.content = tre.toString();
         event.wfRunId = schedReq.wfRunId;
@@ -143,42 +140,66 @@ public class TaskWorker {
         LHUtil.log("about to submit the actual task");
 
         // Now, execute the actual thing.
-        this.threadPool.submit(() -> {
+        this.threadPool.submit(() -> { this.herdCats(schedReq);});            
+    }
 
-            LHUtil.log("hello there");
-            TaskRunResult result = this.executor.executeTask(schedReq);
-            LHUtil.log("got here");
-            
-            TaskRunEndedEvent out = new TaskRunEndedEvent();
-            out.result = result;
-            out.taskRunNumber = schedReq.taskRunNumber;
-            out.threadRunId = schedReq.threadRunNumber;
+    private void herdCats(TaskScheduleRequest schedReq) {
+        LHUtil.log("hello there");
+        WorkerContext ctx = new WorkerContext(config, schedReq);
 
-            TaskRunEvent tre2 = new TaskRunEvent();
-            tre2.endedEvent = out;
-            tre2.taskRunNumber = schedReq.taskRunNumber;
-            tre2.timestamp = LHUtil.now();
+        Object output = null;
+        TaskRunResult result = new TaskRunResult();
+        try {
+            output = this.executor.executeTask(schedReq, ctx);
+            try {
+                result.stdout = LHUtil.getObjectMapper(
+                    config
+                ).writeValueAsString(output);
+                result.stderr = ctx.getStderr();
+            } catch (Exception exn) {
+                exn.printStackTrace();
+                result.stdout = output == null ? null : output.toString();
+            }
+            result.success = true;
+        } catch (Exception exn) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            exn.printStackTrace(pw);
+            result.stderr = sw.toString();
+            result.stderr += "\n\n\n\n" + ctx.getStderr();
+            result.returncode = -1;
+            result.success = false;
+        }
 
-            WFEvent completedEvent = new WFEvent();
-            completedEvent.wfRunId = schedReq.wfRunId;
-            completedEvent.threadID = schedReq.threadRunNumber;
-            completedEvent.timestamp = tre2.timestamp;
-            completedEvent.wfSpecId = schedReq.wfSpecId;
-            completedEvent.wfSpecName = schedReq.wfSpecName;
-            completedEvent.content = tre2.toString();
-            completedEvent.type = WFEventType.TASK_EVENT;
+        TaskRunEndedEvent out = new TaskRunEndedEvent();
+        out.result = result;
+        out.taskRunNumber = schedReq.taskRunNumber;
+        out.threadRunId = schedReq.threadRunNumber;
 
-            LHUtil.log(completedEvent.toString());
+        TaskRunEvent tre2 = new TaskRunEvent();
+        tre2.endedEvent = out;
+        tre2.taskRunNumber = schedReq.taskRunNumber;
+        tre2.timestamp = LHUtil.now();
 
-            ProducerRecord<String, Bytes> completedRecord = new ProducerRecord<
-                String, Bytes
-            >(
-                schedReq.kafkaTopic, schedReq.wfRunId, new Bytes(
-                    completedEvent.toBytes()
-                )
-            );
+        WFEvent completedEvent = new WFEvent();
+        completedEvent.wfRunId = schedReq.wfRunId;
+        completedEvent.threadID = schedReq.threadRunNumber;
+        completedEvent.timestamp = tre2.timestamp;
+        completedEvent.wfSpecId = schedReq.wfSpecId;
+        completedEvent.wfSpecName = schedReq.wfSpecName;
+        completedEvent.content = tre2.toString();
+        completedEvent.type = WFEventType.TASK_EVENT;
 
-            this.producer.send(completedRecord);
-        });
+        LHUtil.log(completedEvent.toString());
+
+        ProducerRecord<String, Bytes> completedRecord = new ProducerRecord<
+            String, Bytes
+        >(
+            schedReq.kafkaTopic, schedReq.wfRunId, new Bytes(
+                completedEvent.toBytes()
+            )
+        );
+
+        this.producer.send(completedRecord);
     }
 }

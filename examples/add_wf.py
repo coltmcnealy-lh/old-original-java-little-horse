@@ -21,11 +21,13 @@ task_queue = {
 
 task_definition1 = {
     "name": "task1",
+    "taskType": "my-type",
     "taskQueueName": "my-task-queue",
 }
 
 task_definition2 = {
     "name": "task3",
+    "taskType": "my-type-3",
     "taskQueueName": "my-task-queue",
 }
 
