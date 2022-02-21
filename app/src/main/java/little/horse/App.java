@@ -140,12 +140,12 @@ public class App {
             FrontendAPIApp.run();
         } else if (args.length > 0 && args[0].equals("workflow-worker")) {
             WorkflowWorker.run();
+        } else if (args.length == 2 && args[0].equals("task-worker")) {
 
-            LHUtil.log("\n\n\n\n\n\n\n\nasdfasdfasdfasdf\n\n\n\n\n\n");
+            LHUtil.log("about to start task executor for", args[1]);
             TaskExecutor executor = new SimpleExecutor();
-            TaskWorker tw = new TaskWorker(new Config(), "my-task-queue", executor, 10);
+            TaskWorker tw = new TaskWorker(new Config(), args[1], executor, 10);
             tw.run();
-            LHUtil.log("\n\n\n\n\n\n\n\nasdfasdfasdfasdf\n\n\n\n\n\n");
 
         } else {
             TaskQueue tq = new TaskQueue();
@@ -167,6 +167,7 @@ public class App {
             System.out.println("second digest: " + td.getId());
 
         }
+
     }
 }
 

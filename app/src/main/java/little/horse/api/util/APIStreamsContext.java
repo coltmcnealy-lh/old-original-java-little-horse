@@ -195,11 +195,6 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
 
         if (forceLocal || metadata.activeHost().equals(thisHost)) {
-
-            if (storeName.equals(T.getAliasStoreName(cls))) {
-                dumpStore(storeName);
-            }
-
             return getStore(storeName).get(storeKey);
 
         } else {

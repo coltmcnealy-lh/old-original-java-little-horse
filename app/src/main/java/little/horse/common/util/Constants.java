@@ -23,7 +23,7 @@ public class Constants {
     public static String THREAD_SPEC_NAME_KEY = "LHORSE_THREAD_SPEC_NAME";
 
     public static String DEFAULT_WF_WORKER_IMAGE_KEY = "LHORSE_DEFAULT_WF_WORKER_IMAGE";
-    public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_K8S_REPLICAS";
+    public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_REPLICAS";
 
     // TODO: make this a reserved word.
     public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";

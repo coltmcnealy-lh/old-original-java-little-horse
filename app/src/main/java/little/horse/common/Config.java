@@ -89,7 +89,7 @@ public class Config {
         this.stateDirectory = (sdir == null) ? "/tmp/kafkaState" : sdir;
 
         String tempApiURL = System.getenv(Constants.API_URL_KEY);
-        this.apiURL = (tempApiURL == null) ? "http://localhost:5000" : tempApiURL;
+        this.apiURL = (tempApiURL == null) ? "http://host.docker.internal:30000" : tempApiURL;
 
         String tempReplicas = System.getenv(Constants.DEFAULT_REPLICAS_KEY);
         try {

@@ -63,7 +63,7 @@ print_prettily(create_task_def_response)
 create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition2)
 print_prettily(create_task_def_response)
 
-time.sleep(0.1)
+time.sleep(0.3)
 create_wf_response = requests.post(f"{URL}/WFSpec", json=wf_definition)
 print(create_wf_response.json())
 

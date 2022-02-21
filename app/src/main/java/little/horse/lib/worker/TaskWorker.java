@@ -92,6 +92,7 @@ public class TaskWorker {
                 TaskScheduleRequest.class,
                 config
             );
+            LHUtil.log("Processing:", schedReq);
         } catch(LHSerdeError exn) {
             exn.printStackTrace();
             return;

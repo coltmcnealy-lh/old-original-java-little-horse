@@ -2,13 +2,18 @@
 set -ex
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
 
-kubectl delete deploy -llittlehorse.io/wfSpecId
-kubectl delete svc -llittlehorse.io/wfSpecId
+kubectl scale deploy little-horse-api --replicas=0 &
+kubectl delete deploy -llittlehorse.io/wfSpecId &
+kubectl delete svc -llittlehorse.io/wfSpecId &
 
-kubectl scale deploy little-horse-api --replicas=0
-${SCRIPT_DIR}/local_dev/reset.sh &
-${SCRIPT_DIR}/local_dev/docker_build.sh
+# ${SCRIPT_DIR}/local_dev/reset.sh &
+
+${SCRIPT_DIR}/local_dev/docker_build.sh &
+docker-compose -f ${SCRIPT_DIR}/local_dev/docker-compose.yml down && docker-compose -f ${SCRIPT_DIR}/local_dev/docker-compose.yml up -d
+wait
+
 kubectl scale deploy little-horse-api --replicas=1
 
 sleep 5
