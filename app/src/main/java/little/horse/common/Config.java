@@ -1,5 +1,6 @@
 package little.horse.common;
 
+import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +26,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
-import little.horse.common.util.K8sStuff.EnvEntry;
+import little.horse.lib.deployers.WorkflowDeployer;
 import okhttp3.OkHttpClient;
 
 
@@ -181,16 +182,48 @@ public class Config {
         return out;
     }
 
-    public ArrayList<EnvEntry> getBaseK8sEnv() {
-        ArrayList<EnvEntry> out = new ArrayList<EnvEntry>();
-        out.add(new EnvEntry(Constants.API_URL_KEY, this.getAPIUrl()));
-        out.add(new EnvEntry(Constants.STATE_DIR_KEY, this.stateDirectory));
-        out.add(new EnvEntry(
+    public String getWorkflowDeployerClassName() {
+        return "little.horse.lib.deployers.NullWFSpecDeployer";
+    }
+
+    public WorkflowDeployer getWorkflowDeployer() {
+        String clsnm = getWorkflowDeployerClassName();
+        Class<?> cls;
+
+        try {
+            cls = Class.forName(clsnm);
+        } catch (ClassNotFoundException exn) {
+            throw new RuntimeException(
+                "Unable to find provided classname " + clsnm + ": "
+                + exn.getMessage(), exn
+            );
+        }
+
+        try {
+            return WorkflowDeployer.class.cast(
+                cls.getDeclaredConstructor().newInstance()
+            );
+        } catch(IllegalAccessException
+                | InvocationTargetException
+                | NoSuchMethodException 
+                | InstantiationException exn) {
+            throw new RuntimeException(
+                "Unable to instantiate Object of type " + clsnm + ": " +
+                exn.getMessage(), exn
+            );
+        }
+    }
+
+    public HashMap<String, String> getBaseEnv() {
+        HashMap<String, String> out = new HashMap<String, String>();
+        out.put(Constants.API_URL_KEY, this.getAPIUrl());
+        out.put(Constants.STATE_DIR_KEY, this.stateDirectory);
+        out.put(
             Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.bootstrapServers
-        ));
-        out.add(new EnvEntry(
+        );
+        out.put(
             Constants.KAFKA_TOPIC_PREFIX_KEY, this.kafkaTopicPrefix
-        ));
+        );
         return out;
     }
 
