@@ -22,6 +22,15 @@ public class TaskDef extends CoreMetadata {
     public String taskQueueName;
     public String taskType;
 
+    /**
+     * Used by the TaskDeployer to aid in the deployment of this TaskDef. Can
+     * be anything; if the schema is invalid, the TaskDeployer should throw an error
+     * in the validate() call.
+     * 
+     * Recommended use: Serialized JSON.
+     */
+    public String deployMetadata;
+
     @JsonIgnore
     private TaskQueue taskQueue;
 

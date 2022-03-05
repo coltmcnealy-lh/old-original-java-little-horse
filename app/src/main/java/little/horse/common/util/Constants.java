@@ -21,6 +21,8 @@ public class Constants {
     public static String WF_SPEC_ID_KEY = "LHORSE_WF_SPEC_GUID";
     public static String NODE_NAME_KEY = "LHORSE_NODE_NAME";
     public static String THREAD_SPEC_NAME_KEY = "LHORSE_THREAD_SPEC_NAME";
+    public static String TASK_QUEUE_ID_KEY = "LHORSE_TASK_QUEUE_NAME";
+    public static String TASK_DEF_ID_KEY = "LHORSE_TASK_DEF_ID";
 
     public static String DEFAULT_WF_WORKER_IMAGE_KEY = "LHORSE_DEFAULT_WF_WORKER_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_REPLICAS";

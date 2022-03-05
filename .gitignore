@@ -7,3 +7,5 @@ app/build
 app/bin/
 
 *~
+
+dockerBinary

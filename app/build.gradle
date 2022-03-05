@@ -45,6 +45,11 @@ dependencies {
 
     // JSONPath
     implementation 'com.jayway.jsonpath:json-path:2.6.0'
+
+    // Docker compatibility.
+    // TODO: Do we want to make this optional since not everyone uses the docker
+    // deployer? It might be considered dead weight in that case.
+    implementation 'com.github.docker-java:docker-java:3.0.14'
 }
 
 
