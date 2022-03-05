@@ -630,8 +630,7 @@ public class ThreadRun extends BaseSchema {
     ) throws LHConnectionError {
         TaskScheduleRequest te = new TaskScheduleRequest();
         te.setConfig(config);
-        te.taskQueueName = node.taskDef.taskQueueName;
-        te.taskType = node.taskDef.taskType;
+        te.taskDefName = node.taskDef.name;
         te.wfRunId = wfRun.id;
         te.wfSpecId = wfRun.wfSpecDigest;
         te.wfSpecName = wfRun.wfSpecName;

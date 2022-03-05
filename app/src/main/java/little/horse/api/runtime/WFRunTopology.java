@@ -9,7 +9,7 @@ import org.apache.kafka.streams.state.Stores;
 import little.horse.common.Config;
 import little.horse.common.events.WFEvent;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.metadata.TaskQueue;
+import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.Constants;
@@ -86,7 +86,7 @@ public class WFRunTopology {
         */
 
         // First, the TaskQueue's
-        for (TaskQueue tq: wfSpec.getAllTaskQueues()) {
+        for (TaskDef tq: wfSpec.getAllTaskDefs()) {
             String procName = "Filter Processor " + tq.name;
 
             LHUtil.log("Task queue", tq.getId());

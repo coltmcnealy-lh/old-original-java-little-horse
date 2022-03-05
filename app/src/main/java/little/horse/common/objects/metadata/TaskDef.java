@@ -2,25 +2,27 @@ package little.horse.common.objects.metadata;
 
 import java.util.HashMap;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.kafka.clients.admin.NewTopic;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHDatabaseClient;
+import little.horse.lib.deployers.TaskDeployer;
 
 
 public class TaskDef extends CoreMetadata {
+    public HashMap<String, WFRunVariableDef> requiredVars;
+    public int partitions;
 
-    public TaskDef() {}
-
-    public TaskDef(TaskQueue tq) {
-        this.setTaskQueue(tq);
+    @Override
+    public String getId() {
+        return this.name;
     }
 
-    public HashMap<String, WFRunVariableDef> requiredVars;
-    public String taskQueueName;
-    public String taskType;
+    public String getKafkaTopic() {
+        return this.name;
+    }
 
     /**
      * Used by the TaskDeployer to aid in the deployment of this TaskDef. Can
@@ -31,50 +33,52 @@ public class TaskDef extends CoreMetadata {
      */
     public String deployMetadata;
 
-    @JsonIgnore
-    private TaskQueue taskQueue;
-
-    @JsonIgnore
-    public TaskQueue getTaskQueue() throws LHConnectionError {
-        if (taskQueue == null) {
-            taskQueue = LHDatabaseClient.lookupMetaNameOrId(
-                taskQueueName, config, TaskQueue.class
-            );
-        }
-        return taskQueue;
-    }
-
-    @JsonIgnore
-    public void setTaskQueue(TaskQueue tq) {
-        this.taskQueue = tq;
-    }
-
-    public void processChange(CoreMetadata old) {
+    public void processChange(CoreMetadata old) throws LHConnectionError {
         if (old != null && !(old instanceof TaskDef)) {
             throw new RuntimeException(
                 "Whatever code made this call is nincompoop."
             );
         }
 
-        // Nothing really to do here since we TaskDef doesn't have side effects.
+        TaskDef oldTD = (TaskDef) old;
+        TaskDeployer deployer = config.getTaskDeployer();
+    
+        if (oldTD != null) {
+            if (oldTD.partitions != partitions) {
+                throw new RuntimeException("Oh boy, this is bad");
+            }
+
+            if (!java.util.Objects.equals(oldTD.deployMetadata, deployMetadata)) {
+                deployer.undeploy(oldTD, config);
+                deployer.deploy(this, config);
+            }
+            
+        } else {
+            config.createKafkaTopic(new NewTopic(
+                name, partitions, (short) config.getDefaultReplicas()
+            ));
+            deployer.deploy(this, config);
+        }
+
+
     }
 
     public void validate(Config config) throws LHValidationError, LHConnectionError {
         this.config = config;
 
-        // ALl we gotta do is make sure the taskQueue exists.
-        taskQueue = LHDatabaseClient.lookupMetaNameOrId(
-            taskQueueName, config, TaskQueue.class
-        );
-        if (taskQueue == null) {
-            throw new LHValidationError(String.format(
-                "Task Def %s refers to nonexistent task queue %s!",
-                name, taskQueueName
-            ));
-        }
-        if (taskType == null) {
-            throw new LHValidationError("No task type specified!");
+        // ALl we gotta do is make sure the TaskDef exists.
+        TaskDef old = LHDatabaseClient.lookupMeta(getId(), config, TaskDef.class);
+
+        if (old != null) {
+            if (old.partitions != partitions) {
+                throw new LHValidationError(String.format(
+                    "Can't change number of partitions from %d to %d!",
+                    old.partitions, partitions
+                ));
+            }
         }
 
+        TaskDeployer deployer = config.getTaskDeployer();
+        deployer.validate(this, config);
     }
 }

@@ -5,9 +5,8 @@ import java.util.HashMap;
 import little.horse.common.objects.BaseSchema;
 
 public class TaskScheduleRequest extends BaseSchema {
-    public String taskDefName;
     public String taskDefId;
-    public String taskQueueName;
+    public String taskDefName;
     public String taskType;
 
     public String wfRunId;

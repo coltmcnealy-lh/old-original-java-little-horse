@@ -13,7 +13,6 @@ import little.horse.common.Config;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
-import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
  
@@ -47,8 +46,7 @@ public class LittleHorseAPI {
         });
 
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
-            WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
-            WFRun.class
+            WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
         )) {
             addApi(cls);
         }

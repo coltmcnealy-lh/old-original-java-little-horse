@@ -26,13 +26,13 @@ import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.TaskQueue;
+import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 
 public class TaskWorker {
     private Config config;
-    private TaskQueue taskQueue;
+    private TaskDef taskDef;
     private TaskExecutor executor;
     private ExecutorService threadPool;
     private KafkaConsumer<String, Bytes> consumer;
@@ -43,15 +43,15 @@ public class TaskWorker {
         Config config, String taskQueueName, TaskExecutor executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
-        this.taskQueue = LHDatabaseClient.lookupMetaNameOrId(
-            taskQueueName, config, TaskQueue.class
+        this.taskDef = LHDatabaseClient.lookupMetaNameOrId(
+            taskQueueName, config, TaskDef.class
         );
         this.executor = executor;
         this.threadPool = Executors.newFixedThreadPool(numThreads);
 
         this.txnProducer = config.getTxnProducer();
         this.producer = config.getProducer();
-        this.consumer = config.getConsumer(this.taskQueue.getKafkaTopic());
+        this.consumer = config.getConsumer(this.taskDef.getKafkaTopic());
     }
 
     public void run() {

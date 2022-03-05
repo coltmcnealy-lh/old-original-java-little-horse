@@ -26,6 +26,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
+import little.horse.lib.deployers.TaskDeployer;
 import little.horse.lib.deployers.WorkflowDeployer;
 import okhttp3.OkHttpClient;
 
@@ -182,6 +183,38 @@ public class Config {
         return out;
     }
 
+    public String getTaskDeployerClassName() {
+        return "little.horse.lib.deployers.NullTaskDefDeployer";
+    }
+
+    public TaskDeployer getTaskDeployer() {
+        String clsnm = getTaskDeployerClassName();
+        Class<?> cls;
+
+        try {
+            cls = Class.forName(clsnm);
+        } catch (ClassNotFoundException exn) {
+            throw new RuntimeException(
+                "Unable to find provided classname " + clsnm + ": "
+                + exn.getMessage(), exn
+            );
+        }
+
+        try {
+            return TaskDeployer.class.cast(
+                cls.getDeclaredConstructor().newInstance()
+            );
+        } catch(IllegalAccessException
+                | InvocationTargetException
+                | NoSuchMethodException 
+                | InstantiationException exn) {
+            throw new RuntimeException(
+                "Unable to instantiate Object of type " + clsnm + ": " +
+                exn.getMessage(), exn
+            );
+        }
+    }
+    
     public String getWorkflowDeployerClassName() {
         return "little.horse.lib.deployers.NullWFSpecDeployer";
     }

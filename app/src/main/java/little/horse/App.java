@@ -18,7 +18,6 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
-import little.horse.common.objects.metadata.TaskQueue;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHDatabaseClient;
@@ -33,8 +32,7 @@ class FrontendAPIApp {
         short replicationFactor = (short) config.getDefaultReplicas();
 
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
-            WFSpec.class, TaskDef.class, TaskQueue.class, ExternalEventDef.class,
-            WFRun.class
+            WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
         )) {
             LHUtil.log("About to create topics for ", cls.getName());
             config.createKafkaTopic(
@@ -70,8 +68,7 @@ class FrontendAPIApp {
         Topology topology = new Topology();
 
         for (Class<? extends CoreMetadata> cls: Arrays.asList(
-            WFSpec.class, TaskDef.class, TaskQueue.class,
-            ExternalEventDef.class, WFRun.class
+            WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
         )) {
             MetadataTopologyBuilder.addStuff(topology, config, cls);
         }
@@ -148,24 +145,7 @@ public class App {
             tw.run();
 
         } else {
-            TaskQueue tq = new TaskQueue();
-            tq.name = "tqname";
-            TaskDef td = new TaskDef();
-            td.taskQueueName = "tqname";
-            td.setTaskQueue(tq);
-            td.name = "firstname";
-
-            System.out.println("first digest: " + td.getId());
-
-            td = new TaskDef();
-            TaskQueue tq2 = new TaskQueue();
-            tq2.name = "tqname2";
-            td.taskQueueName = "tqname2";
-            td.setTaskQueue(tq2);
-            td.name = "secondName";
-
-            System.out.println("second digest: " + td.getId());
-
+            System.out.println("TODO: run some experiment for funsies.");
         }
 
     }

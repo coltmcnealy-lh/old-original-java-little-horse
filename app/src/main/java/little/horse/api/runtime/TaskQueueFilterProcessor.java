@@ -4,15 +4,15 @@ import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 
-import little.horse.common.objects.metadata.TaskQueue;
+import little.horse.common.objects.metadata.TaskDef;
 
 public class TaskQueueFilterProcessor implements Processor<
     String, CoordinatorOutput, String, TaskScheduleRequest
 > {
-    private TaskQueue tq;
+    private TaskDef tq;
     private ProcessorContext<String, TaskScheduleRequest> context;
 
-    public TaskQueueFilterProcessor(TaskQueue tq) {
+    public TaskQueueFilterProcessor(TaskDef tq) {
         this.tq = tq;
     }
 
@@ -29,7 +29,7 @@ public class TaskQueueFilterProcessor implements Processor<
             return;
         }
 
-        if (o.request.taskQueueName.equals(tq.name)) {
+        if (o.request.taskDefName.equals(tq.name)) {
             context.forward(new Record<String, TaskScheduleRequest>(
                 record.key(),
                 o.request,

@@ -369,21 +369,20 @@ public class WFSpec extends CoreMetadata {
     public void setK8sName(String foo) {} //just for the Jackson thing.
 
     @JsonIgnore
-    private HashSet<TaskQueue> tqs;
+    private HashSet<TaskDef> tqs;
 
     @JsonIgnore
-    public HashSet<TaskQueue> getAllTaskQueues() throws LHConnectionError {
+    public HashSet<TaskDef> getAllTaskDefs() throws LHConnectionError {
         if (tqs != null) return tqs;
         tqs = new HashSet<>();
 
         for (ThreadSpec t: threadSpecs.values()) {
             for (Node n: t.nodes.values()) {
                 if (n.nodeType == NodeType.TASK) {
-                    tqs.add(n.taskDef.getTaskQueue());
+                    tqs.add(n.taskDef);
                 }
             }
         }
         return tqs;
     }
-
 }
