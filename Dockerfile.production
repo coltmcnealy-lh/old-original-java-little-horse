@@ -1,0 +1,22 @@
+# This file builds little-horse completely within docker and has no dependencies
+# on the host machine.
+
+FROM openjdk:18-slim AS builder
+
+RUN apt-get update && apt-get install -y unzip wget
+
+RUN wget https://services.gradle.org/distributions/gradle-7.3-bin.zip -P /tmp
+RUN unzip -d /opt/gradle /tmp/gradle-*.zip
+
+ENV GRADLE_HOME=/opt/gradle/gradle-7.3
+ENV PATH=$PATH:${GRADLE_HOME}/bin
+
+RUN mkdir /little-horse-build
+
+COPY . /little-horse-build
+
+RUN cd /little-horse-build && gradle fatJar
+
+FROM openjdk:18-slim AS container
+COPY --from=builder /little-horse-build/app/build/libs/app-all.jar /littleHorse.jar
+ENTRYPOINT ["java", "-jar", "/littleHorse.jar"]
