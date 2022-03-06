@@ -39,7 +39,7 @@ public class DockerWFSpecDeployer implements WorkflowDeployer {
             "lh-wf-" + spec.getId()
         ).withCmd(
             "docker-workflow-worker"
-        ).exec();
+        ).withNetworkMode("host").exec();
 
         client.startContainerCmd(container.getId()).exec();
         LHUtil.log("Deployed container, got id:", container.getId());
