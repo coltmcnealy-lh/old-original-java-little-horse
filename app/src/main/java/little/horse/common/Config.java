@@ -48,9 +48,9 @@ public class Config {
     private Admin kafkaAdmin;
     private int defaultPartitions;
     private String wfWorkerImage;
-    private String wfSpecGuid;
-    private String wfNodeName;
-    private String threadSpecName;
+    // private String wfSpecGuid;
+    // private String wfNodeName;
+    // private String threadSpecName;
     private String advertisedHost;
     private int advertisedPort;
     private String advertisedProtocol;
@@ -122,9 +122,9 @@ public class Config {
             tempCollectorImage == null
         ) ? "little-horse-api:latest" : tempCollectorImage;
 
-        this.wfSpecGuid = System.getenv(Constants.WF_SPEC_ID_KEY);
-        this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
-        this.threadSpecName = System.getenv(Constants.THREAD_SPEC_NAME_KEY);
+        // this.wfSpecGuid = System.getenv(Constants.WF_SPEC_ID_KEY);
+        // this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
+        // this.threadSpecName = System.getenv(Constants.THREAD_SPEC_NAME_KEY);
     }
 
     public HostInfo getHostInfo() {
@@ -427,21 +427,21 @@ public class Config {
         return this.defaultPartitions;
     }
 
-    /**
-     * Gets the WFSpecGuid from Environment
-     * @return the wfSpecGuid for this 
-     */
-    public String getWfSpecId() {
-        return this.wfSpecGuid;
-    }
+    // /**
+    //  * Gets the WFSpecGuid from Environment
+    //  * @return the wfSpecGuid for this 
+    //  */
+    // public String getWfSpecId() {
+    //     return this.wfSpecGuid;
+    // }
 
-    public String getNodeName() {
-        return this.wfNodeName;
-    }
+    // public String getNodeName() {
+    //     return this.wfNodeName;
+    // }
 
-    public String getThreadSpecName() {
-        return this.threadSpecName;
-    }
+    // public String getThreadSpecName() {
+    //     return this.threadSpecName;
+    // }
 
     public String getWFRunTopic() {
         return this.getKafkaTopicPrefix() + "wfRunEventLog";

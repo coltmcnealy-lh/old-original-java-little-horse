@@ -12,7 +12,6 @@ import org.apache.kafka.streams.Topology;
 import little.horse.api.LittleHorseAPI;
 import little.horse.api.metadata.MetadataTopologyBuilder;
 import little.horse.api.runtime.TaskScheduleRequest;
-import little.horse.api.runtime.WFRunTopology;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
@@ -20,8 +19,9 @@ import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
-import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
+import little.horse.lib.deployers.docker.DDConfig;
+import little.horse.lib.deployers.docker.DockerWorkflowWorker;
 import little.horse.lib.worker.TaskExecutor;
 import little.horse.lib.worker.TaskWorker;
 import little.horse.lib.worker.WorkerContext;
@@ -90,54 +90,14 @@ class FrontendAPIApp {
     }
 }
 
-class WorkflowWorker {
-    public static void run() throws LHConnectionError {
-        Config config = new Config();
-
-        Topology topology = new Topology();
-        WFSpec wfSpec = lookupWFSpecOrDie(config.getWfSpecId(), config);
-
-        WFRunTopology.addStuff(
-            topology,
-            config,
-            wfSpec
-        );
-
-        System.out.println(topology.describe().toString());
-
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig(
-            config.getAppId()
-        ));
-        Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
-
-        streams.start();
-    }
-
-    private static WFSpec lookupWFSpecOrDie(String id, Config config) {
-        WFSpec wfSpec = null;
-        try {
-            wfSpec = LHDatabaseClient.lookupMetaNameOrId(
-                config.getWfSpecId(), config, WFSpec.class
-            );
-        } catch (LHConnectionError exn) {
-            exn.printStackTrace();
-        }
-        if (wfSpec == null) {
-            throw new RuntimeException("Couldn't load wfSpec");
-        }
-        return wfSpec;
-    }
-}
-
 public class App {
     public static void main(String[] args) throws LHConnectionError {
         if (args.length > 0 && args[0].equals("api")) {
             System.out.println("running the app");
             FrontendAPIApp.run();
-        } else if (args.length > 0 && args[0].equals("workflow-worker")) {
-            WorkflowWorker.run();
-        } else if (args.length == 2 && args[0].equals("task-worker")) {
+        } else if (args.length > 0 && args[0].equals("docker-workflow-worker")) {
+            new DockerWorkflowWorker(new DDConfig(), new Config()).run();
+        } else if (args.length == 2  && args[0].equals("task-worker")) {
 
             LHUtil.log("about to start task executor for", args[1]);
             TaskExecutor executor = new SimpleExecutor();
