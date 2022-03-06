@@ -25,6 +25,7 @@ services:
 
   little-horse-api:
     build: .
+    # image: little-horse-api:latest
     container_name: little-horse-api
     depends_on:
       - broker
@@ -37,5 +38,11 @@ services:
       LHORSE_DEFAULT_PARTITIONS: "1"
       LHORSE_DEFAULT_REPLICAS: "1"
     network_mode: "host"
+    entrypoint:
+      - 'java'
+      - '-jar'
+      - '/littleHorse.jar'
     command:
       - "api"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

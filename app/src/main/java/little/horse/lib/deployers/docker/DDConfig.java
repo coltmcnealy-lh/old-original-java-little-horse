@@ -11,7 +11,7 @@ public class DDConfig {
         wfSpecId = System.getenv(DDConstants.WF_SPEC_ID_KEY);
         dockerHost = System.getenv(DDConstants.DOCKER_HOST_KEY);
         dockerHost = (dockerHost == null)
-            ? "tcp://host.docker.internal:2375" : dockerHost;
+            ? "unix:///var/run/docker.sock" : dockerHost;
     }
 
     public String getDockerHost() {

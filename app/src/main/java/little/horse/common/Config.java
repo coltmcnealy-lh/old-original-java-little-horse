@@ -26,8 +26,11 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
+import little.horse.lib.deployers.NullTaskDeployer;
 import little.horse.lib.deployers.TaskDeployer;
 import little.horse.lib.deployers.WorkflowDeployer;
+import little.horse.lib.deployers.docker.DockerTaskDeployer;
+import little.horse.lib.deployers.docker.DockerWFSpecDeployer;
 import okhttp3.OkHttpClient;
 
 
@@ -184,7 +187,7 @@ public class Config {
     }
 
     public String getTaskDeployerClassName() {
-        return "little.horse.lib.deployers.NullTaskDefDeployer";
+        return NullTaskDeployer.class.getCanonicalName();
     }
 
     public TaskDeployer getTaskDeployer() {
@@ -216,7 +219,7 @@ public class Config {
     }
     
     public String getWorkflowDeployerClassName() {
-        return "little.horse.lib.deployers.NullWFSpecDeployer";
+        return DockerWFSpecDeployer.class.getCanonicalName();
     }
 
     public WorkflowDeployer getWorkflowDeployer() {

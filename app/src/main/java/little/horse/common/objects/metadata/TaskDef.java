@@ -13,13 +13,25 @@ import little.horse.lib.deployers.TaskDeployer;
 
 public class TaskDef extends CoreMetadata {
     public HashMap<String, WFRunVariableDef> requiredVars;
-    public int partitions;
+    private Integer partitions = null;
+
+    public int getPartitions() {
+        if (partitions == null) {
+            return config.getDefaultPartitions();
+        }
+        return partitions;
+    }
+
+    public void setPartitions(int partitions) {
+        this.partitions = partitions;
+    }
 
     @Override
     public String getId() {
         return this.name;
     }
 
+    public void setKafkaTopic(String foo) {} // just to make Jackson happy
     public String getKafkaTopic() {
         return this.name;
     }

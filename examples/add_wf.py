@@ -14,21 +14,13 @@ def print_prettily(response):
     except Exception as exn:
         print(strdata)
 
-task_queue = {
-    "name": "my-task-queue",
-    "partitions": 3,
-}
 
 task_definition1 = {
     "name": "task1",
-    "taskType": "my-type",
-    "taskQueueName": "my-task-queue",
 }
 
 task_definition2 = {
-    "name": "task3",
-    "taskType": "my-type-3",
-    "taskQueueName": "my-task-queue",
+    "name": "task2",
 }
 
 wf_definition = {
@@ -44,7 +36,7 @@ wf_definition = {
                 },
                 "secondNode": {
                     "nodeType": "TASK",
-                    "taskDefName": "task3",
+                    "taskDefName": "task2",
                 }
             },
             "edges": [{
@@ -56,8 +48,6 @@ wf_definition = {
 }
 
 
-create_tq_response = requests.post(f"{URL}/TaskQueue", json=task_queue)
-print_prettily(create_tq_response)
 create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition1)
 print_prettily(create_task_def_response)
 create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition2)
