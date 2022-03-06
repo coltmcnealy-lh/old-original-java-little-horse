@@ -63,6 +63,10 @@ task fatJar(type: Jar) {
   manifest {
     attributes 'Main-Class': 'little.horse.App'
   }
+
+  // TODO: something safer?
+  exclude("META-INF/*.RSA", "META-INF/*.DSA", "META-INF/*.SF")
+
   archiveClassifier = "all"
   duplicatesStrategy = "exclude"
   from {
