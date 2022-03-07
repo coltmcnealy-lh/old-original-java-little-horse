@@ -26,8 +26,6 @@ import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.TaskDeployer;
-import little.horse.lib.deployers.WorkflowDeployer;
 import little.horse.lib.deployers.docker.DockerTaskDeployer;
 import little.horse.lib.deployers.docker.DockerWFSpecDeployer;
 import okhttp3.OkHttpClient;
@@ -176,31 +174,18 @@ public class Config {
         return this.apiURL;
     }
 
-    public ArrayList<String> getTaskDaemonCommand() {
-        ArrayList<String> out = new ArrayList<String>();
-        out.add("java");
-        out.add("-jar");
-        out.add("/littleHorse.jar");
-        out.add("workflow-worker");
-        return out;
+    public String getDefaultTaskDeployerClassName() {
+        return System.getenv().getOrDefault(
+            Constants.DEFAULT_TASK_DEPLOYER_KEY,
+            DockerTaskDeployer.class.getCanonicalName()
+        );
     }
 
-    public String getTaskDeployerClassName() {
-        return DockerTaskDeployer.class.getCanonicalName();
-    }
-
-    public TaskDeployer getTaskDeployer() {
-        String clsnm = getTaskDeployerClassName();
-        return LHUtil.loadClass(clsnm);
-    }
-    
-    public String getWorkflowDeployerClassName() {
-        return DockerWFSpecDeployer.class.getCanonicalName();
-    }
-
-    public WorkflowDeployer getWorkflowDeployer() {
-        String clsnm = getWorkflowDeployerClassName();
-        return LHUtil.loadClass(clsnm);
+    public String getDefaultWFDeployerClassName() {
+        return System.getenv().getOrDefault(
+            Constants.DEFAULT_WF_DEPLOYER_KEY,
+            DockerWFSpecDeployer.class.getCanonicalName()
+        );
     }
 
     public HashMap<String, String> getBaseEnv() {

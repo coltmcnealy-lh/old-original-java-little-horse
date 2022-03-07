@@ -2,12 +2,15 @@ package little.horse.common.objects.metadata;
 
 import java.util.HashMap;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.apache.kafka.clients.admin.NewTopic;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHDatabaseClient;
+import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.TaskDeployer;
 
 
@@ -36,6 +39,22 @@ public class TaskDef extends CoreMetadata {
         return this.name;
     }
 
+    private String taskDeployerClassName;
+    public String getTaskDeployerClassName() {
+        if (taskDeployerClassName == null) {
+            taskDeployerClassName = config.getDefaultTaskDeployerClassName();
+        }
+        return taskDeployerClassName;
+    }
+
+    /**
+     * Should only be called by Jackson...humans, don't call this!
+     * @param foo NO TOUCHY TOUCHY!
+     */
+    public void setTaskDeployerClassName(String foo) {
+        taskDeployerClassName = foo;
+    }
+
     /**
      * Used by the TaskDeployer to aid in the deployment of this TaskDef. Can
      * be anything; if the schema is invalid, the TaskDeployer should throw an error
@@ -45,6 +64,11 @@ public class TaskDef extends CoreMetadata {
      */
     public String deployMetadata;
 
+    @JsonIgnore
+    public TaskDeployer getTaskDeployer() {
+        return LHUtil.loadClass(getTaskDeployerClassName());
+    }
+
     public void processChange(CoreMetadata old) throws LHConnectionError {
         if (old != null && !(old instanceof TaskDef)) {
             throw new RuntimeException(
@@ -53,8 +77,8 @@ public class TaskDef extends CoreMetadata {
         }
 
         TaskDef oldTD = (TaskDef) old;
-        TaskDeployer deployer = config.getTaskDeployer();
-    
+        TaskDeployer deployer = getTaskDeployer();
+
         if (oldTD != null) {
             if (oldTD.partitions != partitions) {
                 throw new RuntimeException("Oh boy, this is bad");
@@ -64,14 +88,13 @@ public class TaskDef extends CoreMetadata {
                 deployer.undeploy(oldTD, config);
                 deployer.deploy(this, config);
             }
-            
+
         } else {
             config.createKafkaTopic(new NewTopic(
                 name, partitions, (short) config.getDefaultReplicas()
             ));
             deployer.deploy(this, config);
         }
-
 
     }
 
@@ -82,7 +105,7 @@ public class TaskDef extends CoreMetadata {
         TaskDef old = LHDatabaseClient.lookupMeta(getId(), config, TaskDef.class);
 
         if (old != null) {
-            if (old.partitions != partitions) {
+            if (partitions != null && old.partitions != partitions) {
                 throw new LHValidationError(String.format(
                     "Can't change number of partitions from %d to %d!",
                     old.partitions, partitions
@@ -90,7 +113,7 @@ public class TaskDef extends CoreMetadata {
             }
         }
 
-        TaskDeployer deployer = config.getTaskDeployer();
+        TaskDeployer deployer = getTaskDeployer();
         deployer.validate(this, config);
     }
 }

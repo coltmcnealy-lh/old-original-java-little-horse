@@ -1,8 +1,5 @@
 package little.horse.common.objects.metadata;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,6 +26,7 @@ import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
 import little.horse.common.util.LHUtil;
+import little.horse.lib.deployers.WorkflowDeployer;
 
 
 // Just scoping for the purposes of the json parser
@@ -49,13 +47,26 @@ public class WFSpec extends CoreMetadata {
     public HashMap<String, ThreadSpec> threadSpecs;
     public HashSet<String> interruptEvents;
     public String entrypointThreadName;
-    
+
     // Stuff for deployment info
     @JsonIgnore // see getter()
     private String k8sName;
     public String namespace;
     @JsonIgnore // see getter()
     private String kafkaTopic;
+
+    private String wfDeployerClassName;
+    public String getWfDeployerClassName() {
+        if (wfDeployerClassName == null) {
+            wfDeployerClassName = config.getDefaultWFDeployerClassName();
+        }
+        return wfDeployerClassName;
+    }
+
+    @JsonIgnore
+    public WorkflowDeployer getWFDeployer() {
+        return LHUtil.loadClass(getWfDeployerClassName());
+    }
 
     // Internal bookkeeping for validation
     @JsonIgnore
@@ -244,51 +255,21 @@ public class WFSpec extends CoreMetadata {
             getReplicationFactor())
         );
 
-        config.getWorkflowDeployer().deploy(this, config);
-
+        getWFDeployer().deploy(this, config);
     }
 
     @JsonIgnore
     @Override
     public void remove() throws LHConnectionError {
-        try {
-            Process process = Runtime.getRuntime().exec(
-                "kubectl delete deploy -llittlehorse.io/wfSpecId=" + getId()
-            );
-            process.getOutputStream().close();
-            process.waitFor();
-            BufferedReader input = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
-            );
-            String line = null;
-            while ((line = input.readLine()) != null) {
-                LHUtil.log(line);
-            }
-    
-            BufferedReader error = new BufferedReader(
-                new InputStreamReader(process.getErrorStream())
-            );
-            line = null;
-            while ((line = error.readLine()) != null) {
-                LHUtil.log(line);
-            }
-    
-            this.status = LHDeployStatus.STOPPED;
-        } catch(IOException|InterruptedException exn) {
-            throw new LHConnectionError(
-                exn, "Failed to deploy the wf: " + exn.getMessage()
-            );
-        }
-        
+        getWFDeployer().undeploy(this, config);        
     }
 
     @Override
     public void processChange(CoreMetadata old) throws LHConnectionError {
         if (old != null && !(old instanceof WFSpec)) {
-            // throw new RuntimeException(
-            //     "Called processChange on a non-WFSpec"
-            // );
-            LHUtil.log(old.getClass().getName());
+            throw new RuntimeException(
+                "Called processChange on a non-WFSpec"
+            );
         }
 
         WFSpec oldSpec = (WFSpec) old;

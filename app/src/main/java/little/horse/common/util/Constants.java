@@ -20,6 +20,8 @@ public class Constants {
 
     public static String DEFAULT_WF_WORKER_IMAGE_KEY = "LHORSE_DEFAULT_WF_WORKER_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_REPLICAS";
+    public static String DEFAULT_TASK_DEPLOYER_KEY = "LHORSE_DEFAULT_TASK_DEPLOYER";
+    public static String DEFAULT_WF_DEPLOYER_KEY = "LHORSE_DEFAULT_WF_DEPLOYER";
 
     // TODO: make this a reserved word.
     public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";
