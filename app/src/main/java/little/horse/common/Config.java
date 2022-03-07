@@ -192,7 +192,7 @@ public class Config {
         HashMap<String, String> out = new HashMap<String, String>();
         out.put(Constants.API_URL_KEY, this.getAPIUrl());
         out.put(Constants.STATE_DIR_KEY, this.stateDirectory);
-        LHUtil.log("\n\n\n\n", this.bootstrapServers, "\n\n\n\n");
+
         out.put(
             Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.bootstrapServers
         );

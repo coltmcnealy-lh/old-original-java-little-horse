@@ -19,7 +19,7 @@ public class DockerWorkflowWorker {
 
     public void run() throws LHConnectionError {
         Topology topology = new Topology();
-        WFSpec wfSpec = ddConfig.lookupWFSpecOrDie(ddConfig.getWFSpecId(), config);
+        WFSpec wfSpec = ddConfig.lookupWFSpecOrDie(config);
 
         WFRunTopology.addStuff(
             topology,

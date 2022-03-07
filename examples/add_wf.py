@@ -17,10 +17,26 @@ def print_prettily(response):
 
 task_definition1 = {
     "name": "task1",
+    "deployMetadata": json.dumps({
+        "dockerImage": "little-horse-api:latest",
+        "metadata": json.dumps({
+            "bashCommand": ["ls"]
+        }),
+        "secondaryValidatorClassName": "little.horse.examples.bashExecutor.BashValidator",
+        "taskExecutorClassName": "little.horse.examples.bashExecutor.BashExecutor",
+    })
 }
 
 task_definition2 = {
     "name": "task2",
+    "deployMetadata": json.dumps({
+        "dockerImage": "little-horse-api:latest",
+        "metadata": json.dumps({
+            "bashCommand": ["ls -a"]
+        }),
+        "secondaryValidatorClassName": "little.horse.examples.bashExecutor.BashValidator",
+        "taskExecutorClassName": "little.horse.examples.bashExecutor.BashExecutor",
+    })
 }
 
 wf_definition = {
@@ -46,7 +62,6 @@ wf_definition = {
         }
     }
 }
-
 
 create_task_def_response = requests.post(f"{URL}/TaskDef", json=task_definition1)
 print_prettily(create_task_def_response)

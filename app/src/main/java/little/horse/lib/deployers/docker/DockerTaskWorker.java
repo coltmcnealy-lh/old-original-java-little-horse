@@ -13,10 +13,7 @@ public class DockerTaskWorker {
     public DockerTaskWorker(DDConfig ddConfig, Config config) {
         this.executor = ddConfig.getTaskExecutor();
         this.executor.init(ddConfig, config);
-        TaskDef taskDef = ddConfig.lookupTaskDefOrDie(
-            ddConfig.getTaskDefId(),
-            config
-        );
+        TaskDef taskDef = ddConfig.lookupTaskDefOrDie(config);
         try {
             this.worker = new TaskWorker(
                 config, taskDef.name, executor, ddConfig.getNumThreads()

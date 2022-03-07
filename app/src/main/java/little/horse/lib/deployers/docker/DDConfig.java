@@ -56,7 +56,7 @@ public class DDConfig {
         return taskDefId;
     }
 
-    public WFSpec lookupWFSpecOrDie(String id, Config config) {
+    public WFSpec lookupWFSpecOrDie(Config config) {
         WFSpec wfSpec = null;
         try {
             wfSpec = LHDatabaseClient.lookupMetaNameOrId(
@@ -66,22 +66,22 @@ public class DDConfig {
             exn.printStackTrace();
         }
         if (wfSpec == null) {
-            throw new RuntimeException("Couldn't load wfSpec");
+            throw new RuntimeException("Couldn't load wfSpec" + getWFSpecId());
         }
         return wfSpec;
     }
 
-    public TaskDef lookupTaskDefOrDie(String id, Config config) {
+    public TaskDef lookupTaskDefOrDie(Config config) {
         TaskDef taskDef = null;
         try {
             taskDef = LHDatabaseClient.lookupMetaNameOrId(
-                this.getWFSpecId(), config, TaskDef.class
+                this.getTaskDefId(), config, TaskDef.class
             );
         } catch (LHConnectionError exn) {
             exn.printStackTrace();
         }
         if (taskDef == null) {
-            throw new RuntimeException("Couldn't load taskDef");
+            throw new RuntimeException("Couldn't load taskDef: " + getTaskDefId());
         }
         return taskDef;
 

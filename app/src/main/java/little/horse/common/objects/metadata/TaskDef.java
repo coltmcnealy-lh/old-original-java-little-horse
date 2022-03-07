@@ -50,7 +50,7 @@ public class TaskDef extends CoreMetadata {
     private String k8sName;
     public String getK8sName() {
         if (k8sName == null) {
-            k8sName = LHUtil.toValidK8sName(name + "-" + getId().substring(0, 8));
+            k8sName = LHUtil.toValidK8sName(getId());
         }
         return k8sName;
     }

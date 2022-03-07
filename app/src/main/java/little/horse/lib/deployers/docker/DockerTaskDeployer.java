@@ -1,18 +1,19 @@
 package little.horse.lib.deployers.docker;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.core.DockerClientBuilder;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
+import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
+import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHClassLoadError;
@@ -22,16 +23,16 @@ import little.horse.lib.deployers.TaskDeployer;
 
 public class DockerTaskDeployer implements TaskDeployer {
     public void deploy(TaskDef spec, Config config) throws LHConnectionError {
-        DockerClient client = DockerClientBuilder.getInstance(
-            "tcp://host.docker.internal:2375"
-        ).build();
+        LHUtil.log("Ok got here");
+        DDConfig ddConfig = new DDConfig();
+        DockerClient client = ddConfig.getDockerClient();
 
         DockerTaskDeployMetadata meta;
         try {
-            meta = new ObjectMapper().readValue(
-                spec.deployMetadata, DockerTaskDeployMetadata.class
+            meta = BaseSchema.fromString(
+                spec.deployMetadata, DockerTaskDeployMetadata.class, config
             );
-        } catch (IOException exn) {
+        } catch (LHSerdeError exn) {
             throw new RuntimeException("Should be impossible", exn);
         }
 
@@ -42,22 +43,35 @@ public class DockerTaskDeployer implements TaskDeployer {
         env.put(DDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
         env.put(DDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
 
-        for (Map.Entry<String, String> envEntry: config.getBaseEnv().entrySet()) {
+        HashMap<String, String> labels = new HashMap<>();
+        labels.put("io.littlehorse/deployedBy", "true");
+        labels.put("io.littlehorse/active", "true");
+        labels.put("io.littlehorse/taskDefId", spec.getId());
+
+        LHUtil.log("Got labels", labels);
+
+        for (Map.Entry<String, String> envEntry: env.entrySet()) {
             envList.add(String.format(
                 "%s=%s", envEntry.getKey(), envEntry.getValue())
             );
         }
 
-        CreateContainerResponse container = client.createContainerCmd(
+        CreateContainerCmd ccc = client.createContainerCmd(
             meta.dockerImage
         ).withEnv(envList).withName(
             "lh-task-" + spec.getId()
         ).withCmd(
             "java", "-jar", "/littleHorse.jar", "docker-task-worker"
-        ).exec();
+        ).withLabels(labels);
+
+        ccc.withHostConfig(ccc.getHostConfig().withNetworkMode("host"));
+
+        CreateContainerResponse container = ccc.exec();
 
         LHUtil.log("Deployed container, got id:", container.getId());
         client.startContainerCmd(container.getId()).exec();
+
+        LHUtil.log("Started container!");
     }
 
     public void undeploy(TaskDef spec, Config config) throws LHConnectionError {
@@ -70,9 +84,12 @@ public class DockerTaskDeployer implements TaskDeployer {
 
     public void validate(TaskDef spec, Config config) throws LHValidationError {
         String message = null;
+        if (spec.deployMetadata == null) {
+            throw new LHValidationError("Must provide valid Docker validation!");
+        }
         try {
-            DockerTaskDeployMetadata meta = new ObjectMapper().readValue(
-                spec.deployMetadata, DockerTaskDeployMetadata.class
+            DockerTaskDeployMetadata meta = BaseSchema.fromString(
+                spec.deployMetadata, DockerTaskDeployMetadata.class, config
             );
             if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
                 message = "Must provide docker image and TaskExecutor class name!";
@@ -84,7 +101,7 @@ public class DockerTaskDeployer implements TaskDeployer {
                 );
                 validator.validate(spec, config);
             }
-        } catch (IOException exn) {
+        } catch (LHSerdeError exn) {
             exn.printStackTrace();
             message = 
                 "Failed unmarshalling task deployment metadata: " + exn.getMessage();

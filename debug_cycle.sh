@@ -4,21 +4,26 @@ set -ex
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
-kubectl scale deploy little-horse-api --replicas=0 &
-kubectl delete deploy -llittlehorse.io/wfSpecId &
-kubectl delete svc -llittlehorse.io/wfSpecId &
+./build.sh &
 
-# ${SCRIPT_DIR}/local_dev/reset.sh &
+CONTAINERS=$(docker ps -aq --filter label=io.littlehorse/active)
 
-${SCRIPT_DIR}/local_dev/docker_build.sh &
-docker-compose -f ${SCRIPT_DIR}/local_dev/docker-compose.yml down && docker-compose -f ${SCRIPT_DIR}/local_dev/docker-compose.yml up -d
+
+if [ -z $CONTAINERS ]
+then
+    echo "No containers to stop."
+else
+    docker stop $CONTAINERS &
+fi
+
 wait
 
-kubectl scale deploy little-horse-api --replicas=1
+if [ -z $CONTAINERS ]
+then
+    echo "No containers to remove."
+else
+    docker rm $CONTAINERS
+fi
 
-sleep 5
-kubectl get po
-
-sleep 3
-
-kubectl logs -f -lapp=little-horse-api
+docker-compose up -d
+docker logs -f little-horse-api

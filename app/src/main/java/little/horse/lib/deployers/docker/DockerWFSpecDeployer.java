@@ -41,6 +41,7 @@ public class DockerWFSpecDeployer implements WorkflowDeployer {
         labels.put("io.littlehorse/deployedBy", "true");
         labels.put("io.littlehorse/wfSpecId", spec.getId());
         labels.put("io.littlehorse/wfSpecName", spec.name);
+        labels.put("io.littlehorse/active", "true");
 
         try {
             CreateContainerCmd containerCmd = client.createContainerCmd(
@@ -52,7 +53,7 @@ public class DockerWFSpecDeployer implements WorkflowDeployer {
             ).withEntrypoint("java", "-jar", "/littleHorse.jar",
                 "docker-workflow-worker"
             ).withLabels(labels);
-            
+
             containerCmd.withHostConfig(
                 containerCmd.getHostConfig().withNetworkMode("host")
             );

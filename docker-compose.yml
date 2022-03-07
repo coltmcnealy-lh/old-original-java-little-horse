@@ -2,6 +2,8 @@
 version: '3'
 services:
   zookeeper:
+    labels:
+      - io.littlehorse/active=true
     image: confluentinc/cp-zookeeper:6.2.0
     container_name: zookeeper
     environment:
@@ -11,6 +13,8 @@ services:
   broker:
     image: confluentinc/cp-kafka:6.2.0
     container_name: broker
+    labels:
+      - io.littlehorse/active=true
     depends_on:
       - zookeeper
     environment:
@@ -24,9 +28,11 @@ services:
     network_mode: "host"
 
   little-horse-api:
-    build: .
-    # image: little-horse-api:latest
+    # build: .
+    image: little-horse-api:latest
     container_name: little-horse-api
+    labels:
+      - io.littlehorse/active=true
     depends_on:
       - broker
     environment:
