@@ -8,6 +8,7 @@ import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
+import little.horse.common.util.LHUtil;
 
 public class DockerWorkflowWorker {
     private DDConfig ddConfig;
@@ -40,6 +41,7 @@ public class DockerWorkflowWorker {
     }
 
     private WFSpec lookupWFSpecOrDie(String id, Config config) {
+        LHUtil.log(id);
         WFSpec wfSpec = null;
         try {
             wfSpec = LHDatabaseClient.lookupMetaNameOrId(

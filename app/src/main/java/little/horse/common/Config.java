@@ -26,6 +26,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.NullTaskDeployer;
 import little.horse.lib.deployers.TaskDeployer;
 import little.horse.lib.deployers.WorkflowDeployer;
@@ -254,6 +255,7 @@ public class Config {
         HashMap<String, String> out = new HashMap<String, String>();
         out.put(Constants.API_URL_KEY, this.getAPIUrl());
         out.put(Constants.STATE_DIR_KEY, this.stateDirectory);
+        LHUtil.log("\n\n\n\n", this.bootstrapServers, "\n\n\n\n");
         out.put(
             Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.bootstrapServers
         );

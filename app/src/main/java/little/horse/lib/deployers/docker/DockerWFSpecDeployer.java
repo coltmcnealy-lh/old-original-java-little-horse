@@ -2,12 +2,14 @@ package little.horse.lib.deployers.docker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.exception.ConflictException;
+import com.github.dockerjava.api.model.Container;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
@@ -28,12 +30,17 @@ public class DockerWFSpecDeployer implements WorkflowDeployer {
         ArrayList<String> envList = new ArrayList<>();
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, spec.name);
-        env.put(DDConstants.TASK_DEF_ID_KEY, spec.getId());
-        for (Map.Entry<String, String> envEntry: config.getBaseEnv().entrySet()) {
+        env.put(DDConstants.WF_SPEC_ID_KEY, spec.getId());
+        for (Map.Entry<String, String> envEntry: env.entrySet()) {
             envList.add(String.format(
-                "%s='%s'", envEntry.getKey(), envEntry.getValue())
+                "%s=%s", envEntry.getKey(), envEntry.getValue())
             );
         }
+
+        HashMap<String, String> labels = new HashMap<>();
+        labels.put("io.littlehorse/deployedBy", "true");
+        labels.put("io.littlehorse/wfSpecId", spec.getId());
+        labels.put("io.littlehorse/wfSpecName", spec.name);
 
         try {
             CreateContainerCmd containerCmd = client.createContainerCmd(
@@ -42,11 +49,13 @@ public class DockerWFSpecDeployer implements WorkflowDeployer {
                 envList
             ).withName(
                 containerName
-            ).withEntrypoint( "sleep", "100000" //"java", "-jar", "/littleHorse.jar",
-                // "docker-workflow-worker"
-            );
+            ).withEntrypoint("java", "-jar", "/littleHorse.jar",
+                "docker-workflow-worker"
+            ).withLabels(labels);
             
-            containerCmd.getHostConfig().withNetworkMode("host");
+            containerCmd.withHostConfig(
+                containerCmd.getHostConfig().withNetworkMode("host")
+            );
             CreateContainerResponse container = containerCmd.exec();
     
             client.startContainerCmd(containerName).exec();
@@ -62,7 +71,23 @@ public class DockerWFSpecDeployer implements WorkflowDeployer {
     }
 
     public void undeploy(WFSpec spec, Config config) {
-        
+        DDConfig ddConfig = new DDConfig(); // TODO: Inject the dependency somehow.
+
+        DockerClient client = ddConfig.getDockerClient();
+        HashMap<String, String> labels = new HashMap<>();
+        labels.put("io.littlehorse/deployedBy", "true");
+        labels.put("io.littlehorse/wfSpecId", spec.getId());
+        labels.put("io.littlehorse/wfSpecName", spec.name);
+
+        List<Container> containers = client.listContainersCmd().withLabelFilter(
+            labels
+        ).exec();
+
+        for (Container cont: containers) {
+            client.stopContainerCmd(cont.getId()).exec();
+            client.removeContainerCmd(cont.getId()).exec();
+        }
+
     }
 
     public void validate(WFSpec spec, Config config) throws LHValidationError {

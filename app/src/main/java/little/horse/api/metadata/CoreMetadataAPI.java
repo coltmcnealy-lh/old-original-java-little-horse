@@ -49,7 +49,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             app.post(T.getAPIPath(cls), this::post);
 
             // DELETE /wfSpec
-            app.delete(T.getAPIPath(cls), this::delete);
+            app.delete(T.getAPIPath("{id}", cls), this::delete);
         } else {
             WFRun.overridePostAPIEndpoints(app, config);
         }
