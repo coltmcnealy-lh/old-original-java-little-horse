@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 
-URL = 'http://localhost:30000'
+URL = 'http://localhost:5000'
 
 wf_spec = requests.get(f"{URL}/WFSpecAlias/name/{sys.argv[1]}")
 wf_spec = wf_spec.json()['result']

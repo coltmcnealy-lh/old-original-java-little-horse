@@ -7,8 +7,6 @@ import little.horse.api.runtime.WFRunTopology;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.WFSpec;
-import little.horse.common.util.LHDatabaseClient;
-import little.horse.common.util.LHUtil;
 
 public class DockerWorkflowWorker {
     private DDConfig ddConfig;
@@ -21,7 +19,7 @@ public class DockerWorkflowWorker {
 
     public void run() throws LHConnectionError {
         Topology topology = new Topology();
-        WFSpec wfSpec = lookupWFSpecOrDie(ddConfig.getWFSpecId(), config);
+        WFSpec wfSpec = ddConfig.lookupWFSpecOrDie(ddConfig.getWFSpecId(), config);
 
         WFRunTopology.addStuff(
             topology,
@@ -38,21 +36,5 @@ public class DockerWorkflowWorker {
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
         streams.start();
-    }
-
-    private WFSpec lookupWFSpecOrDie(String id, Config config) {
-        LHUtil.log(id);
-        WFSpec wfSpec = null;
-        try {
-            wfSpec = LHDatabaseClient.lookupMetaNameOrId(
-                ddConfig.getWFSpecId(), config, WFSpec.class
-            );
-        } catch (LHConnectionError exn) {
-            exn.printStackTrace();
-        }
-        if (wfSpec == null) {
-            throw new RuntimeException("Couldn't load wfSpec");
-        }
-        return wfSpec;
     }
 }

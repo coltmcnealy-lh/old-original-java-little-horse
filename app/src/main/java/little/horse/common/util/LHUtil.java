@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
@@ -156,6 +157,34 @@ public class LHUtil {
     public static Object jsonPath(String json, String path) {
         return JsonPath.parse(json).read(path);
     }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends Object> T loadClass(String className) {
+        Class<T> cls;
+        try {
+            cls = (Class<T>) Class.forName(className);
+        } catch (ClassNotFoundException exn) {
+            throw new RuntimeException(
+                "Unable to find provided classname " + className + ": "
+                + exn.getMessage(), exn
+            );
+        }
+
+        try {
+            return cls.cast(
+                cls.getDeclaredConstructor().newInstance()
+            );
+        } catch(IllegalAccessException
+                | InvocationTargetException
+                | NoSuchMethodException 
+                | InstantiationException exn) {
+            throw new RuntimeException(
+                "Unable to instantiate Object of type " + className + ": " +
+                exn.getMessage(), exn
+            );
+        }
+    }
+
 }
 
 

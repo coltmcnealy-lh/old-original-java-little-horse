@@ -11,7 +11,6 @@ import org.apache.kafka.streams.Topology;
 
 import little.horse.api.LittleHorseAPI;
 import little.horse.api.metadata.MetadataTopologyBuilder;
-import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
@@ -21,10 +20,8 @@ import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.docker.DDConfig;
+import little.horse.lib.deployers.docker.DockerTaskWorker;
 import little.horse.lib.deployers.docker.DockerWorkflowWorker;
-import little.horse.lib.worker.TaskExecutor;
-import little.horse.lib.worker.TaskWorker;
-import little.horse.lib.worker.WorkerContext;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(Config config) {
@@ -97,23 +94,13 @@ public class App {
             FrontendAPIApp.run();
         } else if (args.length > 0 && args[0].equals("docker-workflow-worker")) {
             new DockerWorkflowWorker(new DDConfig(), new Config()).run();
-        } else if (args.length == 2  && args[0].equals("task-worker")) {
 
-            LHUtil.log("about to start task executor for", args[1]);
-            TaskExecutor executor = new SimpleExecutor();
-            TaskWorker tw = new TaskWorker(new Config(), args[1], executor, 10);
-            tw.run();
+        } else if (args.length == 2  && args[0].equals("task-worker")) {
+            new DockerTaskWorker(new DDConfig(), new Config()).run();
 
         } else {
             System.out.println("TODO: run some experiment for funsies.");
         }
 
-    }
-}
-
-class SimpleExecutor implements TaskExecutor {
-    public Object executeTask(TaskScheduleRequest request, WorkerContext ctx) {
-        ctx.log("foobar hello there");
-        return "the Force is with us";
     }
 }

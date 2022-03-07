@@ -1,6 +1,5 @@
 package little.horse.common;
 
-import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,7 +26,6 @@ import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.NullTaskDeployer;
 import little.horse.lib.deployers.TaskDeployer;
 import little.horse.lib.deployers.WorkflowDeployer;
 import little.horse.lib.deployers.docker.DockerTaskDeployer;
@@ -188,35 +186,12 @@ public class Config {
     }
 
     public String getTaskDeployerClassName() {
-        return NullTaskDeployer.class.getCanonicalName();
+        return DockerTaskDeployer.class.getCanonicalName();
     }
 
     public TaskDeployer getTaskDeployer() {
         String clsnm = getTaskDeployerClassName();
-        Class<?> cls;
-
-        try {
-            cls = Class.forName(clsnm);
-        } catch (ClassNotFoundException exn) {
-            throw new RuntimeException(
-                "Unable to find provided classname " + clsnm + ": "
-                + exn.getMessage(), exn
-            );
-        }
-
-        try {
-            return TaskDeployer.class.cast(
-                cls.getDeclaredConstructor().newInstance()
-            );
-        } catch(IllegalAccessException
-                | InvocationTargetException
-                | NoSuchMethodException 
-                | InstantiationException exn) {
-            throw new RuntimeException(
-                "Unable to instantiate Object of type " + clsnm + ": " +
-                exn.getMessage(), exn
-            );
-        }
+        return LHUtil.loadClass(clsnm);
     }
     
     public String getWorkflowDeployerClassName() {
@@ -225,30 +200,7 @@ public class Config {
 
     public WorkflowDeployer getWorkflowDeployer() {
         String clsnm = getWorkflowDeployerClassName();
-        Class<?> cls;
-
-        try {
-            cls = Class.forName(clsnm);
-        } catch (ClassNotFoundException exn) {
-            throw new RuntimeException(
-                "Unable to find provided classname " + clsnm + ": "
-                + exn.getMessage(), exn
-            );
-        }
-
-        try {
-            return WorkflowDeployer.class.cast(
-                cls.getDeclaredConstructor().newInstance()
-            );
-        } catch(IllegalAccessException
-                | InvocationTargetException
-                | NoSuchMethodException 
-                | InstantiationException exn) {
-            throw new RuntimeException(
-                "Unable to instantiate Object of type " + clsnm + ": " +
-                exn.getMessage(), exn
-            );
-        }
+        return LHUtil.loadClass(clsnm);
     }
 
     public HashMap<String, String> getBaseEnv() {
