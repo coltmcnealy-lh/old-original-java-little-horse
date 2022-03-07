@@ -15,6 +15,7 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHClassLoadError;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.TaskDeployer;
 
@@ -69,13 +70,23 @@ public class DockerTaskDeployer implements TaskDeployer {
             DockerTaskDeployMetadata meta = new ObjectMapper().readValue(
                 spec.deployMetadata, DockerTaskDeployMetadata.class
             );
-            if (meta.dockerImage == null || meta.escapedCommand == null) {
-                message = "Must provide both dockerImage and escapedCommand";
+            if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
+                message = "Must provide docker image and TaskExecutor class name!";
+            }
+
+            if (meta.secondaryValidatorClassName != null) {
+                DockerSecondaryTaskValidator validator = LHUtil.loadClass(
+                    meta.secondaryValidatorClassName
+                );
+                validator.validate(spec, config);
             }
         } catch (IOException exn) {
             exn.printStackTrace();
             message = 
                 "Failed unmarshalling task deployment metadata: " + exn.getMessage();
+        } catch (LHClassLoadError exn) {
+            exn.printStackTrace();
+            message = "Could not load secondary validator class! " + exn.getMessage();
         }
 
         if (message != null) {

@@ -1,6 +1,10 @@
 package little.horse.lib.deployers.docker;
 
-public class DockerTaskDeployMetadata {
+import little.horse.common.objects.BaseSchema;
+
+public class DockerTaskDeployMetadata extends BaseSchema {
     public String dockerImage;
-    public String escapedCommand;
+    public String metadata;
+    public String secondaryValidatorClassName;
+    public String taskExecutorClassName;
 }
