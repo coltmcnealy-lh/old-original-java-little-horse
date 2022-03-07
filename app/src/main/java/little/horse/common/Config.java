@@ -8,6 +8,7 @@ import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
@@ -25,7 +26,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
-import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.docker.DockerTaskDeployer;
 import little.horse.lib.deployers.docker.DockerWFSpecDeployer;
 import okhttp3.OkHttpClient;
@@ -67,8 +67,12 @@ public class Config {
         String theAppId = System.getenv(Constants.KAFKA_APPLICATION_ID_KEY);
         this.appId = this.kafkaTopicPrefix + ((theAppId == null) ? "test" : appId);
         String theIid = System.getenv(Constants.KAFKA_APPLICATION_IID_KEY);
-        this.appInstanceId = this.kafkaTopicPrefix + ((theIid == null) ?
-            "first" : appId);
+        if (theIid == null) {
+            this.appInstanceId = RandomStringUtils.randomAlphanumeric(17).toLowerCase();
+        
+        } else {
+            this.appInstanceId = kafkaTopicPrefix + theIid;
+        }
 
         String booty = System.getenv(Constants.KAFKA_BOOTSTRAP_SERVERS_KEY);
         this.bootstrapServers = (booty == null) ? "host.docker.internal:9092" : booty;
@@ -222,7 +226,7 @@ public class Config {
                 "value.serializer",
                 "org.apache.kafka.common.serialization.BytesSerializer"
             );
-            conf.put("transactional.id", this.appId);
+            conf.put("transactional.id", this.appInstanceId);
             conf.put("enable.idempotence", "true");
 
             this.txnProducer = new KafkaProducer<String, Bytes>(conf);   
