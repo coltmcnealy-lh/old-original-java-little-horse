@@ -7,4 +7,5 @@ public class DDConstants {
 
     public static String TASK_EXECUTOR_CLASS_KEY = "LHORSE_TASK_EXECUTOR_CLASS";
     public static String TASK_EXECUTOR_THREADS_KEY = "LHORSE_TASK_EXECUTOR_THREADS";
+    public static String TASK_EXECUTOR_META_KEY = "LHORSE_TASK_EXECUTOR_META";
 }

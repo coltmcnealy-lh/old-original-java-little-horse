@@ -95,7 +95,7 @@ public class App {
         } else if (args.length > 0 && args[0].equals("docker-workflow-worker")) {
             new DockerWorkflowWorker(new DDConfig(), new Config()).run();
 
-        } else if (args.length == 2  && args[0].equals("task-worker")) {
+        } else if (args.length == 2  && args[0].equals("docker-task-worker")) {
             new DockerTaskWorker(new DDConfig(), new Config()).run();
 
         } else {

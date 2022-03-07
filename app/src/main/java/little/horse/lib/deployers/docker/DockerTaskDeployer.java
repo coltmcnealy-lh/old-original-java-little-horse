@@ -39,9 +39,12 @@ public class DockerTaskDeployer implements TaskDeployer {
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, spec.name);
         env.put(DDConstants.TASK_DEF_ID_KEY, spec.getId());
+        env.put(DDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
+        env.put(DDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
+
         for (Map.Entry<String, String> envEntry: config.getBaseEnv().entrySet()) {
             envList.add(String.format(
-                "%s='%s'", envEntry.getKey(), envEntry.getValue())
+                "%s=%s", envEntry.getKey(), envEntry.getValue())
             );
         }
 
@@ -49,10 +52,11 @@ public class DockerTaskDeployer implements TaskDeployer {
             meta.dockerImage
         ).withEnv(envList).withName(
             "lh-task-" + spec.getId()
-        ).withCmd("--foobar").exec(); // TODO: Figure out how the start command goes.
+        ).withCmd(
+            "java", "-jar", "/littleHorse.jar", "docker-task-worker"
+        ).exec();
 
         LHUtil.log("Deployed container, got id:", container.getId());
-
         client.startContainerCmd(container.getId()).exec();
     }
 

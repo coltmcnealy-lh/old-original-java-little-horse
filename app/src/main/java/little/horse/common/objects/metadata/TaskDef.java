@@ -47,6 +47,19 @@ public class TaskDef extends CoreMetadata {
         return taskDeployerClassName;
     }
 
+    private String k8sName;
+    public String getK8sName() {
+        if (k8sName == null) {
+            k8sName = LHUtil.toValidK8sName(name + "-" + getId().substring(0, 8));
+        }
+        return k8sName;
+    }
+    /**
+     * Just there for Jackson.
+     * @param foo NO TOUCHY TOUCHY!
+     */
+    public void setK8sName(String foo) {}
+
     /**
      * Should only be called by Jackson...humans, don't call this!
      * @param foo NO TOUCHY TOUCHY!
