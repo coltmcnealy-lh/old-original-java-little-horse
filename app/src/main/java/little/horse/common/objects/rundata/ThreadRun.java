@@ -303,10 +303,14 @@ public class ThreadRun extends BaseSchema {
 
         // Need the up next to be set whether or not the task fails/there is
         // a retry/it succeeds.
+        LHUtil.log("Here we are...");
         upNext = new ArrayList<Edge>();
+        LHUtil.log(task, "\n\n\n");
+        LHUtil.log(task.getNode(), "\n\n\n");
         for (Edge edge: task.getNode().getOutgoingEdges()) {
             upNext.add(edge);
         }
+        LHUtil.log("Up next: ", upNext);
 
         if (taskStatus == LHExecutionStatus.COMPLETED) {
             try {
@@ -455,6 +459,7 @@ public class ThreadRun extends BaseSchema {
                 TaskRun lastTr = taskRuns.size() > 0 ?
                     taskRuns.get(taskRuns.size() - 1) : null;
                 if (lastTr == null || lastTr.isCompleted()) {
+                    LHUtil.log("\n\n\ndoing the dancing\n\n\n", this);
                     status = LHExecutionStatus.COMPLETED;
                 }
             } else {

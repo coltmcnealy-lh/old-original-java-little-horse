@@ -66,7 +66,7 @@ public class Node extends BaseSchema {
         if (outgoingEdges == null) {
             outgoingEdges = new ArrayList<>();
             for (Edge edge: threadSpec.edges) {
-                if (edge.sourceNodeName == name) {
+                if (edge.sourceNodeName.equals(name)) {
                     outgoingEdges.add(edge);
                 }
             }
@@ -78,7 +78,7 @@ public class Node extends BaseSchema {
         if (incomingEdges == null) {
             incomingEdges = new ArrayList<>();
             for (Edge edge: threadSpec.edges) {
-                if (edge.sinkNodeName == name) {
+                if (edge.sinkNodeName.equals(name)) {
                     incomingEdges.add(edge);
                 }
             }
@@ -154,17 +154,15 @@ public class Node extends BaseSchema {
             throw new RuntimeException("Jackson didn't do its thing");
         }
 
+        // Just clear this to make sure we don't get anything polluted.
+        outgoingEdges = null;
+        incomingEdges = null;
+
         if (variableMutations == null) {
             variableMutations = new HashMap<String, VariableMutation>();
         }
         if (variables == null) {
             variables = new HashMap<String, VariableAssignment>();
-        }
-        if (outgoingEdges == null) {
-            outgoingEdges = new ArrayList<Edge>();
-        }
-        if (incomingEdges == null) {
-            incomingEdges = new ArrayList<Edge>();
         }
 
         if (baseExceptionhandler != null) {
