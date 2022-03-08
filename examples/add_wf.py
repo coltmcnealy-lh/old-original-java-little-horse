@@ -32,7 +32,7 @@ task_definition2 = {
     "deployMetadata": json.dumps({
         "dockerImage": "little-horse-api:latest",
         "metadata": json.dumps({
-            "bashCommand": ["ls -a"]
+            "bashCommand": ["ls", "-lua"]
         }),
         "secondaryValidatorClassName": "little.horse.examples.bashExecutor.BashValidator",
         "taskExecutorClassName": "little.horse.examples.bashExecutor.BashExecutor",

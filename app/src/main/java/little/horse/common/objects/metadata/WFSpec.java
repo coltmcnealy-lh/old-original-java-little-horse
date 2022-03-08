@@ -250,10 +250,12 @@ public class WFSpec extends CoreMetadata {
     }
 
     @JsonIgnore
-    public void deploy() throws LHConnectionError {
-        config.createKafkaTopic(new NewTopic(this.getEventTopic(), getPartitions(),
-            getReplicationFactor())
-        );
+    public void deploy(boolean shouldCreateTopic) throws LHConnectionError {
+        if (shouldCreateTopic) {
+            config.createKafkaTopic(new NewTopic(this.getEventTopic(), getPartitions(),
+                getReplicationFactor())
+            );
+        }
 
         getWFDeployer().deploy(this, config);
     }
@@ -275,7 +277,8 @@ public class WFSpec extends CoreMetadata {
         WFSpec oldSpec = (WFSpec) old;
         if (oldSpec == null || oldSpec.status != desiredStatus) {
             if (desiredStatus == LHDeployStatus.RUNNING) {
-                deploy();
+                boolean shouldCreateTopic = (oldSpec == null);
+                deploy(shouldCreateTopic);
             } else if (desiredStatus == LHDeployStatus.STOPPED) {
                 remove();
             }

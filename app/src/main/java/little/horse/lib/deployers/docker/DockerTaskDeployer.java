@@ -7,7 +7,6 @@ import java.util.Map;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
-import com.github.dockerjava.core.DockerClientBuilder;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
@@ -75,11 +74,11 @@ public class DockerTaskDeployer implements TaskDeployer {
     }
 
     public void undeploy(TaskDef spec, Config config) throws LHConnectionError {
-        DockerClient client = DockerClientBuilder.getInstance(
-            "tcp://host.docker.internal:2375"
-        ).build();
+        DDConfig ddconfig = new DDConfig();
+        DockerClient client = ddconfig.getDockerClient();
 
         client.killContainerCmd("lh-task-" + spec.name).exec();
+        client.removeContainerCmd("lh-task-" + spec.name).exec();
     }
 
     public void validate(TaskDef spec, Config config) throws LHValidationError {
