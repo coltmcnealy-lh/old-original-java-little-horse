@@ -82,27 +82,28 @@ public class APIStreamsContext<T extends CoreMetadata> {
         }
     }
 
-    public ArrayList<String> getAll(boolean forceLocal) throws LHConnectionError {
+    public ArrayList<String> getAllIds(boolean forceLocal) throws LHConnectionError {
         ReadOnlyKeyValueStore<String, Bytes> store = getStore(T.getIdStoreName(
             cls
         ));
 
         ArrayList<String> out = new ArrayList<>();
 
-        KeyValueIterator<String, Bytes> allIter = null;
-        allIter = store.all();
-        try {
-            while (allIter.hasNext()) {
-                KeyValue<String, Bytes> kv = allIter.next();
-                if (!kv.key.equals(Constants.LATEST_OFFSET_ROCKSDB_KEY)) {
-                    out.add(kv.key);
+        if (forceLocal) {
+            KeyValueIterator<String, Bytes> allIter = null;
+            allIter = store.all();
+            try {
+                while (allIter.hasNext()) {
+                    KeyValue<String, Bytes> kv = allIter.next();
+                    if (!kv.key.equals(Constants.LATEST_OFFSET_ROCKSDB_KEY)) {
+                        out.add(kv.key);
+                    }
                 }
+            } finally {
+                if (allIter != null) allIter.close();;
             }
-        } finally {
-            if (allIter != null) allIter.close();;
-        }
 
-        if (!forceLocal) {
+        } else {
             for (StreamsMetadata meta: streams.metadataForAllStreamsClients()) {
                 String host = meta.host();
                 int port = meta.port();

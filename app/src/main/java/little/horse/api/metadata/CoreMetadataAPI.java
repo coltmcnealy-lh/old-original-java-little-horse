@@ -258,7 +258,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         ).getOrDefault(false);
 
         try {
-            ArrayList<String> out = streamsContext.getAll(forceLocal);
+            ArrayList<String> out = streamsContext.getAllIds(forceLocal);
             ctx.json(out);
         } catch(LHConnectionError exn) {
             ctx.status(500);
