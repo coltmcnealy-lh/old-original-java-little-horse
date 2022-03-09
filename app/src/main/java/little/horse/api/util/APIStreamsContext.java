@@ -6,6 +6,9 @@
 
 package little.horse.api.util;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.kafka.common.serialization.Serdes;
@@ -14,6 +17,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.StreamsMetadata;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -76,6 +80,55 @@ public class APIStreamsContext<T extends CoreMetadata> {
                 "Yack, how did invalid json get in there?"
             );
         }
+    }
+
+    public ArrayList<String> getAll(boolean forceLocal) throws LHConnectionError {
+        ReadOnlyKeyValueStore<String, Bytes> store = getStore(T.getIdStoreName(
+            cls
+        ));
+
+        ArrayList<String> out = new ArrayList<>();
+
+        KeyValueIterator<String, Bytes> allIter = null;
+        allIter = store.all();
+        try {
+            while (allIter.hasNext()) {
+                KeyValue<String, Bytes> kv = allIter.next();
+                if (!kv.key.equals(Constants.LATEST_OFFSET_ROCKSDB_KEY)) {
+                    out.add(kv.key);
+                }
+            }
+        } finally {
+            if (allIter != null) allIter.close();;
+        }
+
+        if (!forceLocal) {
+            for (StreamsMetadata meta: streams.metadataForAllStreamsClients()) {
+                String host = meta.host();
+                int port = meta.port();
+                String url = String.format(
+                    "http://%s:%d%s?%s=true",
+                    host,
+                    port,
+                    T.getAllAPIPath(cls),
+                    Constants.FORCE_LOCAL
+                );
+                byte[] rawResponse = new LHRpcCLient(config).getResponse(url);
+                try {
+                    List<?> rawList = LHUtil.getObjectMapper(config).readValue(
+                        rawResponse, List.class
+                    );
+                    for (Object thing: rawList) {
+                        String id = String.class.cast(thing);
+                        out.add(id);
+                    }
+                } catch (IOException exn) {
+                    throw new LHConnectionError(exn, "got bad remote response");
+                }
+            }
+        }
+
+        return out;
     }
 
     public Long getOffsetIDStore(String id, boolean forceLocal, String apiPath)
@@ -220,12 +273,12 @@ public class APIStreamsContext<T extends CoreMetadata> {
         String remoteHost = hostInfo.host();
         int remotePort = hostInfo.port();
         String url = String.format(
-            "http://%s:%d%s/%s/%s",
+            "http://%s:%d%s/%s?%s=true",
             remoteHost,
             remotePort,
             apiPath,
-            Constants.FORCE_LOCAL,
-            storeKey
+            storeKey,
+            Constants.FORCE_LOCAL
         );
 
         LHRpcCLient client = new LHRpcCLient(config);

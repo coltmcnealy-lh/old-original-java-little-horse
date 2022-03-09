@@ -1,5 +1,6 @@
 package little.horse.api.metadata;
 
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -41,6 +42,9 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             T.getWaitForAPIPath("{id}", "{offset}", "{partition}", cls),
             this::waitForProcessing
         );
+
+        // GET /WFSpecAll
+        app.get(T.getAllAPIPath(cls), this::getAll);
 
         // A little bit of voodoo to allow for some special overriding stuff, eg for
         // WFRun.
@@ -246,6 +250,19 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         }
 
         ctx.json(response);
+    }
+
+    public void getAll(Context ctx) {
+        boolean forceLocal = ctx.queryParamAsClass(
+            "forceLocal", Boolean.class
+        ).getOrDefault(false);
+
+        try {
+            ArrayList<String> out = streamsContext.getAll(forceLocal);
+            ctx.json(out);
+        } catch(LHConnectionError exn) {
+            ctx.status(500);
+        }
     }
 
     /**

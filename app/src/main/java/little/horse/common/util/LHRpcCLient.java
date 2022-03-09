@@ -34,7 +34,7 @@ public class LHRpcCLient {
         }
     }
 
-    private byte[] getResponse(String url) throws LHConnectionError {
+    public byte[] getResponse(String url) throws LHConnectionError {
         OkHttpClient client = config.getHttpClient();
         Request request = new Request.Builder().url(url).build();
 

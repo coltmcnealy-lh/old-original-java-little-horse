@@ -77,6 +77,10 @@ public abstract class CoreMetadata extends BaseSchema {
         return getAPIPath(cls) + "Alias";
     }
 
+    public static<T extends CoreMetadata> String getAllAPIPath(Class<T> cls) {
+        return getAPIPath(cls) + "All";
+    }
+
     public static<T extends CoreMetadata> String getAliasPath(
         String aliasName, String aliasValue, Class<T> cls) {
         return getAliasPath(cls) + "/" + aliasName + "/" + aliasValue;
