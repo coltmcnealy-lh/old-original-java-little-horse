@@ -55,18 +55,3 @@ class Client:
         })
         response.raise_for_status()
         return response.json()
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--api-url", help="URL for api")
-
-subparsers = parser.add_subparsers()
-
-task_def_parser = subparsers.add_parser("taskDef", help="Manage TaskDef Resources")
-wf_spec_parser = subparsers.add_parser(
-    "wfSpec", help="Manage and run WFSpec Resources"
-)
-external_event_def_parser = subparsers.add_parser(
-    "externalEventDef", help="Manage ExternalEventDef Resources"
-)
-wf_run_parser = subparsers.add_parser("wfRun", help="Manage WFRun Resources")
