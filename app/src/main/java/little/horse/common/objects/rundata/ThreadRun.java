@@ -442,7 +442,7 @@ public class ThreadRun extends BaseSchema {
             case GRREATER_THAN_EQ: return Mutation.compare(lhs, rhs) >= 0;
             case EQUALS: return lhs != null && lhs.equals(rhs);
             case NOT_EQUALS: return lhs != null && !lhs.equals(rhs);
-            case IN: return Mutation.contains(lhs, rhs);
+            case IN: return Mutation.contains(rhs, lhs);
             case NOT_IN: return !Mutation.contains(lhs, rhs);
             default: return false;
         }
