@@ -698,6 +698,9 @@ public class ThreadRun extends BaseSchema {
                 tr, LHExecutionStatus.COMPLETED, result, correlSchema.event.timestamp
             );
             upNext = new ArrayList<Edge>();
+            for (Edge edge: node.getOutgoingEdges()) {
+                upNext.add(edge);
+            }
             return true; // Obviously something changed, we done did add a task.
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {
