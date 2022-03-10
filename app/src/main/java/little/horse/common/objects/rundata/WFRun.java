@@ -522,6 +522,7 @@ class WFRunApiStuff {
             wfEvent.timestamp = LHUtil.now();
             wfEvent.content = payload.toString();
             wfEvent.wfRun = wfRun;
+            wfEvent.setConfig(config);
 
             wfEvent.record();
 

@@ -31,7 +31,7 @@ for trun in wf_run['threadRuns']:
 
     up_next = trun['upNext']
     if len(up_next) > 0 and up_next[0]['sinkNodeName'] == 'wait_for_mystery_person':
-        print("\tWaiting for external event 'mystery_person_arrived'")
+        print("\tWaiting for external event 'mystery_person_arrives'")
 
     print("\tTasks:")
     for task in trun['taskRuns']:
