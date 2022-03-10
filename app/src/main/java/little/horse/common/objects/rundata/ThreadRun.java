@@ -651,6 +651,18 @@ public class ThreadRun extends BaseSchema {
             );
         }
 
+        te.variableSubstitutions = new HashMap<>();
+        for (String varName: node.variables.keySet()) {
+            try {
+                te.variableSubstitutions.put(
+                    varName,
+                    assignVariable(node.variables.get(varName))
+                );
+            } catch(VarSubOrzDash exn) {
+                exn.printStackTrace();
+            }
+        }
+
         toSchedule.add(te);
     }
 
