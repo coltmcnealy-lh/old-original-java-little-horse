@@ -42,7 +42,9 @@ public class BashValidator implements DockerSecondaryTaskValidator {
             if (m.matches()) {
                 String varName = arg.substring(2, arg.length() - 2); // hackityhack
 
-                if (!task.requiredVars.containsKey(varName)) {
+                if (task.requiredVars == null || 
+                    !task.requiredVars.containsKey(varName)
+                ) {
                     throw new LHValidationError(
                         "Bash Command requires var " + varName + " but not provided!"
                     );

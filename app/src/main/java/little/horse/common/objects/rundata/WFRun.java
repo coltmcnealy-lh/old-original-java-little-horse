@@ -352,6 +352,9 @@ class WFRunApiStuff {
             ctx.json(response);
             return;
         }
+        if (request.variables == null) {
+            request.variables = new HashMap<>();
+        }
 
         WFEvent event = new WFEvent();
         event.setConfig(config);
@@ -472,8 +475,14 @@ class WFRunApiStuff {
 
     public void postEvent(Context ctx) {
         String wfRunId = ctx.pathParam("wfRunId");
-        String externalEventDefID = ctx.pathParam("externalEventDefID");
-        Object eventContent = ctx.bodyAsClass(Object.class);
+        String externalEventDefID = ctx.pathParam("externalEventDefId");
+        Object eventContent;
+        try {
+            eventContent = ctx.bodyAsClass(Object.class);
+        } catch(Exception exn) {
+            eventContent = ctx.body();
+        }
+
         WFRun wfRun;
         ExternalEventDef evd;
 

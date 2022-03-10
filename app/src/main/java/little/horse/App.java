@@ -71,7 +71,7 @@ class FrontendAPIApp {
         }
 
         KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig(
-            config.getAppId()
+            "central-api"
         ));
         LittleHorseAPI lapi = new LittleHorseAPI(config, streams);
 

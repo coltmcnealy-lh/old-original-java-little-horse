@@ -6,5 +6,6 @@ RUN apt update && \
 COPY app/build/libs/app-all.jar /littleHorse.jar
 
 COPY examples /examples
+COPY starwars_example/tasks /starwarstasks
 
 CMD ["java", "-jar", "/littleHorse.jar"]

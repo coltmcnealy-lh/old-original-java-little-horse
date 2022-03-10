@@ -43,6 +43,7 @@ services:
       LHORSE_ADVERTISED_PROTO: "http"
       LHORSE_DEFAULT_PARTITIONS: "1"
       LHORSE_DEFAULT_REPLICAS: "1"
+      LHORSE_KAFKA_APPLICATION_ID: "lh-api"
     network_mode: "host"
     entrypoint:
       - 'java'

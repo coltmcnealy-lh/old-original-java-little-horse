@@ -64,8 +64,11 @@ public class Config {
 
         // ********* Kafka Stuff *************
 
+        String kTopicPrefix = System.getenv(Constants.KAFKA_TOPIC_PREFIX_KEY);
+        this.kafkaTopicPrefix = (kTopicPrefix == null) ? "" : kTopicPrefix;
+
         String theAppId = System.getenv(Constants.KAFKA_APPLICATION_ID_KEY);
-        this.appId = this.kafkaTopicPrefix + ((theAppId == null) ? "test" : appId);
+        this.appId = this.kafkaTopicPrefix + ((theAppId == null) ? "test" : theAppId);
         String theIid = System.getenv(Constants.KAFKA_APPLICATION_IID_KEY);
         if (theIid == null) {
             this.appInstanceId = RandomStringUtils.randomAlphanumeric(17).toLowerCase();
@@ -78,9 +81,6 @@ public class Config {
         this.bootstrapServers = (booty == null) ? "host.docker.internal:9092" : booty;
 
         // ************* Misc env var stuff **********
-
-        String kTopicPrefix = System.getenv(Constants.KAFKA_TOPIC_PREFIX_KEY);
-        this.kafkaTopicPrefix = (kTopicPrefix == null) ? "" : kTopicPrefix;
 
         String theHost = System.getenv(Constants.ADVERTISED_HOST_KEY);
         this.advertisedHost = (theHost == null) ? "localhost" : theHost;
@@ -322,7 +322,10 @@ public class Config {
 
     public Properties getStreamsConfig(String appIdSuffix) {
         Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, this.appId + appIdSuffix);
+        props.put(
+            StreamsConfig.APPLICATION_ID_CONFIG,
+            this.appId + "-" + appIdSuffix
+        );
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
