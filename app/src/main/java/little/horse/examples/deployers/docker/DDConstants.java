@@ -1,4 +1,4 @@
-package little.horse.lib.deployers.docker;
+package little.horse.examples.deployers.docker;
 
 public class DDConstants {
     public static String TASK_DEF_ID_KEY = "LHORSE_TASK_DEF_ID";

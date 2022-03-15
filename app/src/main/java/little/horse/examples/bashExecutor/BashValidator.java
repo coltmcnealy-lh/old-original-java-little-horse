@@ -8,8 +8,8 @@ import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.TaskDef;
-import little.horse.lib.deployers.docker.DockerSecondaryTaskValidator;
-import little.horse.lib.deployers.docker.DockerTaskDeployMetadata;
+import little.horse.examples.deployers.docker.DockerSecondaryTaskValidator;
+import little.horse.examples.deployers.docker.DockerTaskDeployMetadata;
 
 public class BashValidator implements DockerSecondaryTaskValidator {
     public static Pattern VARIABLE_PATTERN = Pattern.compile(

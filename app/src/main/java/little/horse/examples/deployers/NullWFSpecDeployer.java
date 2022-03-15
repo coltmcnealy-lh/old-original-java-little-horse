@@ -1,4 +1,4 @@
-package little.horse.lib.deployers;
+package little.horse.examples.deployers;
 
 import little.horse.common.Config;
 import little.horse.common.objects.metadata.WFSpec;

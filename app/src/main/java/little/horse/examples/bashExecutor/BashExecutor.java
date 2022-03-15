@@ -8,8 +8,8 @@ import little.horse.common.Config;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.docker.DDConfig;
-import little.horse.lib.deployers.docker.DDConstants;
+import little.horse.examples.deployers.docker.DDConfig;
+import little.horse.examples.deployers.docker.DDConstants;
 import little.horse.lib.worker.TaskExecutor;
 import little.horse.lib.worker.WorkerContext;
 
