@@ -1,4 +1,4 @@
-package little.horse.common.util.K8sStuff;
+package little.horse.lib.deployers.enterprise.kubernetes.specs;
 
 import java.util.ArrayList;
 import java.util.HashMap;

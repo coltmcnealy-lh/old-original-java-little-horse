@@ -9,7 +9,7 @@ import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.worker.TaskExecutor;
+import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
 
 public class DDConfig {
     private String wfSpecId;
@@ -44,7 +44,7 @@ public class DDConfig {
         return DockerClientBuilder.getInstance(this.getDockerHost()).build();
     }
 
-    public TaskExecutor getTaskExecutor() {
+    public DockerTaskExecutor getTaskExecutor() {
         return LHUtil.loadClass(taskExecutorClassName);
     }
 

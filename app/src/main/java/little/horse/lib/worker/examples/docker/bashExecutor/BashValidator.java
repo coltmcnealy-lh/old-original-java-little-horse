@@ -1,4 +1,4 @@
-package little.horse.lib.worker.examples.bashExecutor;
+package little.horse.lib.worker.examples.docker.bashExecutor;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

@@ -26,6 +26,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.examples.docker.DockerTaskDeployer;
 import little.horse.lib.deployers.examples.docker.DockerWFSpecDeployer;
 import okhttp3.OkHttpClient;
@@ -370,6 +371,17 @@ public class Config {
                 cons.close();
             }
         }
+    }
+
+    /**
+     * Thin wrapper used for dependency injection for unit testing.
+     * TODO: Hire someone msarter than me to figure out a cleaner way to do this.
+     * @param <T>
+     * @param className
+     * @return
+     */
+    public <T extends Object> T loadClass(String className) {
+        return LHUtil.loadClass(className);
     }
 
     public int getDefaultPartitions() {

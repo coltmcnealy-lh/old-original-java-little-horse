@@ -1,4 +1,4 @@
-package little.horse.lib.worker.examples.bashExecutor;
+package little.horse.lib.worker.examples.docker.bashExecutor;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
@@ -10,10 +10,10 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.examples.docker.DDConfig;
 import little.horse.lib.deployers.examples.docker.DDConstants;
-import little.horse.lib.worker.TaskExecutor;
 import little.horse.lib.worker.WorkerContext;
+import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
 
-public class BashExecutor implements TaskExecutor {
+public class BashExecutor implements DockerTaskExecutor {
     private BashTaskMetadata meta;
 
     public void init(DDConfig ddConfig, Config config) {        

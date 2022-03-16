@@ -42,6 +42,10 @@ public class DockerTaskDeployer implements TaskDeployer {
         env.put(DDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
         env.put(DDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
 
+        for (Map.Entry<String, String> envEntry: meta.env.entrySet()) {
+            env.put(envEntry.getKey(), envEntry.getValue());
+        }
+
         HashMap<String, String> labels = new HashMap<>();
         labels.put("io.littlehorse/deployedBy", "true");
         labels.put("io.littlehorse/active", "true");
@@ -60,7 +64,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         ).withEnv(envList).withName(
             "lh-task-" + spec.getId()
         ).withCmd(
-            "java", "-jar", "/littleHorse.jar", "docker-task-worker"
+            "java", DockerTaskWorker.class.getCanonicalName()
         ).withLabels(labels);
 
         ccc.withHostConfig(ccc.getHostConfig().withNetworkMode("host"));

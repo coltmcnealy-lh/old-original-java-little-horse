@@ -29,18 +29,19 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
+import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
 
 public class TaskWorker {
     private Config config;
     private TaskDef taskDef;
-    private TaskExecutor executor;
+    private DockerTaskExecutor executor;
     private ExecutorService threadPool;
     private KafkaConsumer<String, Bytes> consumer;
     private KafkaProducer<String, Bytes> txnProducer;
     private KafkaProducer<String, Bytes> producer;
 
     public TaskWorker(
-        Config config, String taskQueueName, TaskExecutor executor, int numThreads
+        Config config, String taskQueueName, DockerTaskExecutor executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
         this.taskDef = LHDatabaseClient.lookupMetaNameOrId(
