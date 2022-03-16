@@ -1,4 +1,4 @@
-package little.horse.examples.bashExecutor;
+package little.horse.lib.worker.examples.bashExecutor;
 
 import java.util.ArrayList;
 

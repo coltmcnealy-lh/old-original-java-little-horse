@@ -1,4 +1,4 @@
-package little.horse.examples.deployers.docker;
+package little.horse.lib.deployers.examples.docker;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DockerClientBuilder;

@@ -26,7 +26,7 @@ import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
 import little.horse.common.util.LHUtil;
-import little.horse.examples.deployers.WorkflowDeployer;
+import little.horse.lib.deployers.WorkflowDeployer;
 
 
 // Just scoping for the purposes of the json parser

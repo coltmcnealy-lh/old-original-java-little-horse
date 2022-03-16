@@ -1,4 +1,4 @@
-package little.horse.examples.deployers.docker;
+package little.horse.lib.deployers.examples.docker;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;

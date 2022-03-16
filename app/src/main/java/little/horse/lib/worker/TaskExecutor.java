@@ -2,7 +2,7 @@ package little.horse.lib.worker;
 
 import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.common.Config;
-import little.horse.examples.deployers.docker.DDConfig;
+import little.horse.lib.deployers.examples.docker.DDConfig;
 
 public interface TaskExecutor {
     public void init(DDConfig ddConfig, Config config);

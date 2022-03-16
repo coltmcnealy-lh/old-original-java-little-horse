@@ -1,4 +1,4 @@
-package little.horse.examples.deployers;
+package little.horse.lib.deployers;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;

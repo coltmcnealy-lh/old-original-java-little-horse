@@ -1,4 +1,4 @@
-package little.horse.examples.bashExecutor;
+package little.horse.lib.worker.examples.bashExecutor;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
@@ -8,8 +8,8 @@ import little.horse.common.Config;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
-import little.horse.examples.deployers.docker.DDConfig;
-import little.horse.examples.deployers.docker.DDConstants;
+import little.horse.lib.deployers.examples.docker.DDConfig;
+import little.horse.lib.deployers.examples.docker.DDConstants;
 import little.horse.lib.worker.TaskExecutor;
 import little.horse.lib.worker.WorkerContext;
 

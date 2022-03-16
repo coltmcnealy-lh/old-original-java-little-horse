@@ -1,4 +1,4 @@
-package little.horse.examples.deployers.docker;
+package little.horse.lib.deployers.examples.docker;
 
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;

@@ -1,4 +1,4 @@
-package little.horse.examples.deployers.docker;
+package little.horse.lib.deployers.examples.docker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +17,7 @@ import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
-import little.horse.examples.deployers.WorkflowDeployer;
+import little.horse.lib.deployers.WorkflowDeployer;
 
 public class DockerWFSpecDeployer implements WorkflowDeployer {
     public void deploy(WFSpec spec, Config config) throws LHConnectionError {
