@@ -40,11 +40,13 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
     private Deployment getK8sDeployment(
         WFSpec spec, Config config, KDConfig kdConfig
     ) throws LHConnectionError {
-        K8sWorkflowDeployMeta meta;
+        K8sWorkflowDeployMeta meta = new K8sWorkflowDeployMeta();
         try {
-            meta = BaseSchema.fromString(
-                spec.deployMetadata, K8sWorkflowDeployMeta.class, config
-            );
+            if (spec.deployMetadata != null) {
+                meta = BaseSchema.fromString(
+                    spec.deployMetadata, K8sWorkflowDeployMeta.class, config
+                );
+            }
         } catch (LHSerdeError exn) {
             throw new RuntimeException(
                 "Should be impossible--didn't we already validate this?", exn
@@ -72,7 +74,8 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         container.image = meta.dockerImage;
         container.imagePullPolicy = "IfNotPresent";
         container.command = Arrays.asList(
-            "java", DockerWorkflowWorker.class.getCanonicalName()
+            "java", "-cp", "/littleHorse.jar",
+            DockerWorkflowWorker.class.getCanonicalName()
         );
 
         HashMap<String, String> env = config.getBaseEnv();

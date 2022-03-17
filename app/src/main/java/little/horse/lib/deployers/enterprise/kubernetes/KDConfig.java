@@ -135,6 +135,11 @@ public class KDConfig {
             while ((line = error.readLine()) != null) {
                 LHUtil.log(line);
             }
+            if (process.exitValue() != 0) {
+                throw new RuntimeException(String.format(
+                    "Got nonzero exit value %d!", process.exitValue()
+                ));
+            }
         } catch(Exception exn) {
             exn.printStackTrace();
             throw new LHConnectionError(

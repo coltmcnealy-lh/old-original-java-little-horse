@@ -56,7 +56,7 @@ public class LHUtil {
     public static String fullDigestify(String str) {
         return Hashing.sha256().hashString(
             str, StandardCharsets.UTF_8
-        ).toString();
+        ).toString().substring(0, 18);
     }
 
     public static String digestify(String str) {

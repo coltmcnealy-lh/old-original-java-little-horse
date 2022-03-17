@@ -97,7 +97,8 @@ public class TaskDef extends CoreMetadata {
                 throw new RuntimeException("Oh boy, this is bad");
             }
 
-            if (!java.util.Objects.equals(oldTD.deployMetadata, deployMetadata)) {
+            LHUtil.log("\n\none day we gotta fix this\n\n");
+            if (true || !java.util.Objects.equals(oldTD.deployMetadata, deployMetadata)) {
                 deployer.undeploy(oldTD, config);
                 deployer.deploy(this, config);
             }
@@ -126,7 +127,14 @@ public class TaskDef extends CoreMetadata {
             }
         }
 
-        TaskDeployer deployer = getTaskDeployer();
+        TaskDeployer deployer;
+        try {
+            deployer = getTaskDeployer();
+        } catch(Exception exn) {
+            throw new LHValidationError(
+                "Failed loading Task Deployer Class: " + exn.getMessage()
+            );
+        }
         deployer.validate(this, config);
     }
 }

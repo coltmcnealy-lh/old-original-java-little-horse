@@ -17,6 +17,7 @@ spec:
         app: little-horse-api
         littlehorse.io/active: "true"
     spec:
+      serviceAccountName: little-horse-api
       containers:
       - name: little-horse-api
         image: little-horse-api:latest
@@ -30,11 +31,12 @@ spec:
           - name: LHORSE_KAFKA_BOOTSTRAP_SERVERS
             value: "lh-kafka-kafka-bootstrap.kafka:9092"
           - name: LHORSE_API_URL
-            value: "http://little-horse-api:5000"
+            # value: "http://host.minikube.internal:30000"
+            value: "http://little-horse-api.default:5000"
           - name: LHORSE_ADVERTISED_HOST
-            value: "little-horse-api"
+            value: "host.minikube.internal"
           - name: LHORSE_ADVERTISED_PORT
-            value: "5000"
+            value: "30000"
           - name: "LHORSE_ADVERTISED_PROTO"
             value: "http"
           - name: "LHORSE_DEFAULT_PARTITIONS"
@@ -60,6 +62,35 @@ spec:
     - name: http
       protocol: TCP
       port: 5000
-      nodePort: 30000
       targetPort: 5000
-  type: NodePort
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: little-horse-api
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: little-horse-api
+rules:
+  - apiGroups:
+    - apps
+    - ""
+    resources: ["deployments"]
+    verbs: ["get", "create", "edit", "delete", "list", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: little-horse-api
+subjects:
+  - kind: ServiceAccount
+    name: little-horse-api
+    namespace: default
+    apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: little-horse-api
+  apiGroup: ""

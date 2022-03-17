@@ -29,6 +29,8 @@ public class K8sTaskDeployer implements TaskDeployer {
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         Deployment dp = getK8sDeployment(spec, config, kdConfig);
 
+        LHUtil.log("\n\n\n\n\n\n\n\n\n\n\n\nasdfasdf\n\n\n\n\n\n\n\n\n");
+
         kdConfig.createDeployment(dp);
     }
 
@@ -40,6 +42,9 @@ public class K8sTaskDeployer implements TaskDeployer {
             meta = BaseSchema.fromString(
                 spec.deployMetadata, K8sTaskDeployMeta.class, config
             );
+            if (meta.env == null) {
+                meta.env = new HashMap<>();
+            }
         } catch (LHSerdeError exn) {
             throw new RuntimeException(
                 "Should be impossible--didn't we already validate this?", exn
@@ -55,7 +60,7 @@ public class K8sTaskDeployer implements TaskDeployer {
         dp.metadata.namespace = (meta.namespace == null) ?
             kdConfig.getDefaultK8sNamespace(): meta.namespace;
 
-        dp.metadata.name = spec.name;
+        dp.metadata.name = kdConfig.getK8sName(spec);
         dp.metadata.labels = new HashMap<String, String>();
 
         dp.metadata.labels.put("app", kdConfig.getK8sName(spec));
@@ -72,7 +77,9 @@ public class K8sTaskDeployer implements TaskDeployer {
         );
 
         HashMap<String, String> env = config.getBaseEnv();
-        env.put(Constants.KAFKA_APPLICATION_ID_KEY, "task-" + spec.name);
+        env.put(
+            Constants.KAFKA_APPLICATION_ID_KEY, "task-" + kdConfig.getK8sName(spec)
+        );
         env.put(KDConstants.TASK_DEF_ID_KEY, spec.getId());
         env.put(KDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
         env.put(KDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
@@ -134,6 +141,9 @@ public class K8sTaskDeployer implements TaskDeployer {
             );
             if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
                 message = "Must provide docker image and TaskExecutor class name!";
+            }
+            if (meta.env == null) {
+                meta.env = new HashMap<>();
             }
 
             if (meta.secondaryValidatorClassName != null) {
