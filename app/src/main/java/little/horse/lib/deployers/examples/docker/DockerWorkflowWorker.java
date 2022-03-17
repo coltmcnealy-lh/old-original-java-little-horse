@@ -37,4 +37,11 @@ public class DockerWorkflowWorker {
 
         streams.start();
     }
+
+    public static void main(String[] args) throws LHConnectionError {
+        DockerWorkflowWorker dww = new DockerWorkflowWorker(
+            new DDConfig(), new Config()
+        );
+        dww.run();
+    }
 }

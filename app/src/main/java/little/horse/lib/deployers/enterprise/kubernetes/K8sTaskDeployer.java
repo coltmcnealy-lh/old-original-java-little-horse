@@ -66,7 +66,7 @@ public class K8sTaskDeployer implements TaskDeployer {
         );
 
         HashMap<String, String> env = config.getBaseEnv();
-        env.put(Constants.KAFKA_APPLICATION_ID_KEY, spec.name);
+        env.put(Constants.KAFKA_APPLICATION_ID_KEY, "task-" + spec.name);
         env.put(KDConstants.TASK_DEF_ID_KEY, spec.getId());
         env.put(KDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
         env.put(KDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
@@ -98,6 +98,9 @@ public class K8sTaskDeployer implements TaskDeployer {
         template.spec.containers = Arrays.asList(container);
 
         dp.spec.template = template;
+
+        if (meta.replicas > 1) throw new RuntimeException("Not yet supported!");
+    
         dp.spec.replicas = 1; // TODO: Support more, which will need StatefulSet
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();

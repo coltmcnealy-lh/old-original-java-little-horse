@@ -68,6 +68,8 @@ public class WFSpec extends CoreMetadata {
         return LHUtil.loadClass(getWfDeployerClassName());
     }
 
+    public String deployMetadata;
+
     // Internal bookkeeping for validation
     @JsonIgnore
     @DigestIgnore
