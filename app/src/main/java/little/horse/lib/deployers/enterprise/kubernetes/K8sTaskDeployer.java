@@ -5,16 +5,22 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHClassLoadError;
+import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.enterprise.kubernetes.specs.*;
 import little.horse.lib.deployers.TaskDeployer;
 import little.horse.lib.deployers.enterprise.kubernetes.specs.Container;
+import little.horse.lib.deployers.examples.docker.DockerSecondaryTaskValidator;
 import little.horse.lib.deployers.examples.docker.DockerTaskWorker;
 
 public class K8sTaskDeployer implements TaskDeployer {
@@ -117,7 +123,43 @@ public class K8sTaskDeployer implements TaskDeployer {
         kdConfig.deleteK8sDeployment("io.littlehorse.taskDefId", spec.getId());
     }
 
-    public void validate(TaskDef spec, Config config) {
+    public void validate(TaskDef spec, Config config) throws LHValidationError {
+        String message = null;
+        if (spec.deployMetadata == null) {
+            throw new LHValidationError("Must provide valid Docker validation!");
+        }
+        try {
+            K8sTaskDeployMeta meta = BaseSchema.fromString(
+                spec.deployMetadata, K8sTaskDeployMeta.class, config
+            );
+            if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
+                message = "Must provide docker image and TaskExecutor class name!";
+            }
 
+            if (meta.secondaryValidatorClassName != null) {
+                DockerSecondaryTaskValidator validator = LHUtil.loadClass(
+                    meta.secondaryValidatorClassName
+                );
+                validator.validate(spec, config);
+            }
+            KDConfig kdc = LHUtil.loadClass(KDConfig.class.getCanonicalName());
+            new ObjectMapper(new YAMLFactory()).writeValueAsString(
+                getK8sDeployment(spec, config, kdc)
+            );
+        } catch (LHSerdeError exn) {
+            exn.printStackTrace();
+            message = 
+                "Failed unmarshalling task deployment metadata: " + exn.getMessage();
+        } catch (LHClassLoadError exn) {
+            exn.printStackTrace();
+            message = "Could not load secondary validator class! " + exn.getMessage();
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            message = "Got unexpected error: " + exn.getMessage();
+        }
+
+        if (message != null) {
+            throw new LHValidationError(message);
+        }
     }
 }

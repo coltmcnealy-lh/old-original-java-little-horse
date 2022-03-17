@@ -5,12 +5,17 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
 import little.horse.common.Config;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
+import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.Constants;
+import little.horse.common.util.LHClassLoadError;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.WorkflowDeployer;
 import little.horse.lib.deployers.enterprise.kubernetes.specs.Container;
@@ -109,8 +114,39 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         kdConfig.deleteK8sDeployment("io.littlehorse.wfSpecId", spec.getId());
     }
 
-    public void validate(WFSpec spec, Config config) {
+    public void validate(WFSpec spec, Config config) throws LHValidationError {
+        String message = null;
+        if (spec.deployMetadata == null) {
+            throw new LHValidationError("Must provide valid Docker validation!");
+        }
+        try {
+            K8sWorkflowDeployMeta meta = BaseSchema.fromString(
+                spec.deployMetadata, K8sWorkflowDeployMeta.class, config
+            );
+            if (meta.dockerImage == null) {
+                message = "Must provide docker image for Workflow Worker!";
+            }
 
+            KDConfig kdc = LHUtil.loadClass(KDConfig.class.getCanonicalName());
+            new ObjectMapper(new YAMLFactory()).writeValueAsString(
+                getK8sDeployment(spec, config, kdc)
+            );
+
+        } catch (LHSerdeError exn) {
+            exn.printStackTrace();
+            message = 
+                "Failed unmarshalling task deployment metadata: " + exn.getMessage();
+        } catch (LHClassLoadError exn) {
+            exn.printStackTrace();
+            message = "Could not load secondary validator class! " + exn.getMessage();
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            message = "Got unexpected error: " + exn.getMessage();
+        }
+
+        if (message != null) {
+            throw new LHValidationError(message);
+        }
     }
    
 }
