@@ -358,7 +358,9 @@ class WFRunApiStuff {
 
         WFEvent event = new WFEvent();
         event.setConfig(config);
-        String guid = LHUtil.generateGuid();
+        String guid = (request.wfRunId == null) ?
+            LHUtil.generateGuid():request.wfRunId;
+
         event.wfRunId = guid;
         event.content = request.toString();
         event.type = WFEventType.WF_RUN_STARTED;
