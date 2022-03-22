@@ -62,6 +62,9 @@ public class WFSpec extends CoreMetadata {
         }
         return wfDeployerClassName;
     }
+    public void setWfDeployerClassName(String name) {
+        this.wfDeployerClassName = name;
+    }
 
     @JsonIgnore
     public WorkflowDeployer getWFDeployer() {

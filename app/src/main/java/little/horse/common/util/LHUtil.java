@@ -164,7 +164,7 @@ public class LHUtil {
         try {
             cls = (Class<T>) Class.forName(className);
         } catch (ClassNotFoundException exn) {
-            throw new RuntimeException(
+            throw new LHClassLoadError(
                 "Unable to find provided classname " + className + ": "
                 + exn.getMessage(), exn
             );
@@ -178,7 +178,7 @@ public class LHUtil {
                 | InvocationTargetException
                 | NoSuchMethodException 
                 | InstantiationException exn) {
-            throw new RuntimeException(
+            throw new LHClassLoadError(
                 "Unable to instantiate Object of type " + className + ": " +
                 exn.getMessage(), exn
             );
