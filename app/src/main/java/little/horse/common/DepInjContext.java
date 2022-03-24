@@ -43,11 +43,22 @@ public class DepInjContext {
 
     private OkHttpClient httpClient;
 
-    private String stateDirectory;
-    private String apiURL;
-    private String advertisedHost;
-    private int advertisedPort;
-    private String advertisedProtocol;
+
+    public DepInjContext() {
+        this.initialize(getDefaultsFromEnv());
+    }
+
+    public DepInjContext(Properties overrides) {
+        Properties newProps = new Properties(getDefaultsFromEnv());
+
+        for (String key: overrides.stringPropertyNames()) {
+            newProps.setProperty(key, overrides.getProperty(key));
+        }
+
+        initialize(newProps);
+    }
+
+    // Kafka stuff
 
     /**
      * The application ID for this LittleHorse process (i.e. Container/Pod/etc).
@@ -59,195 +70,9 @@ public class DepInjContext {
     public String getAppId() {
         return getOrSetDefault(
             Constants.KAFKA_APPLICATION_ID_KEY,
-            "unset-app-id-or-group-id-badbadbadbadbad"
+            "unset-app-id-badbadbad"
         );
     }
-
-    public String getAppInstanceId() {
-        String defVal = getKafkaTopicPrefix();
-        defVal += RandomStringUtils.randomAlphanumeric(10).toLowerCase();
-        defVal += "-unset-instance-id-badbadbad";
-
-        return getOrSetDefault(
-            Constants.KAFKA_APPLICATION_IID_KEY,
-            defVal
-        );
-    }
-
-    public DepInjContext() {
-        this.initialize(getDefaultsFromEnv());
-    }
-    
-    public DepInjContext(Properties overrides) {
-        Properties newProps = new Properties(getDefaultsFromEnv());
-
-        for (String key: overrides.stringPropertyNames()) {
-            newProps.setProperty(key, overrides.getProperty(key));
-        }
-
-        initialize(newProps);
-    }
-
-    private void initialize(Properties props) {
-        this.properties = props;
-    }
-
-    private Properties getDefaultsFromEnv() {
-        Properties props = new Properties();
-
-        for (Map.Entry<String, String> entry: System.getenv().entrySet()) {
-            if (entry.getKey().startsWith("LHORSE")) {
-                props.setProperty(entry.getKey(), entry.getValue());
-            }
-        }
-
-        return props;
-    }
-
-    public DepInjContext oldConstructor() {
-        // TODO: Make this more readable
-
-        // ********* Kafka Stuff *************
-
-        String kTopicPrefix = System.getenv(Constants.KAFKA_TOPIC_PREFIX_KEY);
-        this.kafkaTopicPrefix = (kTopicPrefix == null) ? "" : kTopicPrefix;
-
-        String theIid = System.getenv(Constants.KAFKA_APPLICATION_IID_KEY);
-        if (theIid == null) {
-            this.appInstanceId = RandomStringUtils.randomAlphanumeric(17).toLowerCase();
-        } else {
-            this.appInstanceId = kafkaTopicPrefix + theIid;
-        }
-
-        // ************* Misc env var stuff **********
-
-        String theHost = System.getenv(Constants.ADVERTISED_HOST_KEY);
-        this.advertisedHost = (theHost == null) ? "localhost" : theHost;
-
-        String theProto = System.getenv(Constants.ADVERTISED_PROTOCOL_KEY);
-        this.advertisedProtocol= (theProto == null) ? "http" : theProto;
-
-        String thePort = System.getenv(Constants.ADVERTISED_PORT_KEY);
-        this.advertisedPort = thePort == null ? 80 : Integer.valueOf(thePort);
-
-        String sdir = System.getenv(Constants.STATE_DIR_KEY);
-        this.stateDirectory = (sdir == null) ? "/tmp/kafkaState" : sdir;
-
-        String tempApiURL = System.getenv(Constants.API_URL_KEY);
-        this.apiURL = (tempApiURL == null) ? "http://host.docker.internal:30000" : tempApiURL;
-
-        this.httpClient = new OkHttpClient();
-
-        Properties akProperties = new Properties();
-        akProperties.put(
-            AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
-            this.getBootstrapServers()
-        );
-        this.kafkaAdmin = Admin.create(akProperties);
-
-        return this;
-    }
-
-    public HostInfo getHostInfo() {
-        return new HostInfo(advertisedHost, advertisedPort);
-    }
-
-    public void createKafkaTopic(NewTopic topic) {
-        CreateTopicsResult result = kafkaAdmin.createTopics(
-            Collections.singleton(topic)
-        );
-        KafkaFuture<Void> future = result.values().get(topic.name());
-        try {
-            future.get();
-        } catch (Exception exn) {
-            exn.printStackTrace();
-            // throw new RuntimeException("Failed to create kafka topic");
-        }
-    }
-
-    public String getWfWorkerImage() {
-        return getOrSetDefault(
-            Constants.DEFAULT_WF_WORKER_IMAGE_KEY,
-            "little-horse-api:latest"
-        );
-    }
-
-    public String getAPIUrlFor(String extension) {
-        String out = this.getAPIUrl();
-        if (!extension.startsWith("/")) {
-            out += "/";
-        }
-        out += extension;
-        return out;
-    }
-
-    public String getAPIUrl() {
-        return this.apiURL;
-    }
-
-    public String getDefaultTaskDeployerClassName() {
-        return String.class.cast(properties.getOrDefault(
-            Constants.DEFAULT_TASK_DEPLOYER_KEY,
-            DockerTaskDeployer.class.getCanonicalName()
-        ));
-    }
-
-    public String getDefaultWFDeployerClassName() {
-        return String.class.cast(properties.getOrDefault(
-            Constants.DEFAULT_WF_DEPLOYER_KEY,
-            DockerWorkflowDeployer.class.getCanonicalName()
-        ));
-    }
-
-    public HashMap<String, String> getBaseEnv() {
-        HashMap<String, String> out = new HashMap<String, String>();
-        out.put(Constants.API_URL_KEY, this.getAPIUrl());
-        out.put(Constants.STATE_DIR_KEY, this.stateDirectory);
-
-        out.put(
-            Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.getBootstrapServers()
-        );
-        out.put(
-            Constants.KAFKA_TOPIC_PREFIX_KEY, this.kafkaTopicPrefix
-        );
-        return out;
-    }
-
-    public String getKafkaTopicPrefix() {
-        return String.class.cast(properties.getOrDefault(
-            Constants.KAFKA_TOPIC_PREFIX_KEY,
-            ""
-        ));
-    }
-
-    public int getDefaultReplicas() {
-        return Integer.valueOf(String.class.cast(properties.getOrDefault(
-            Constants.DEFAULT_REPLICAS_KEY, "1"
-        )));
-    }
-
-    public KafkaProducer<String, Bytes> getTxnProducer() {
-        if (this.txnProducer == null) {
-            Properties conf = new Properties();
-            conf.put("bootstrap.servers", this.getBootstrapServers());
-            conf.put(
-                "key.serializer",
-                "org.apache.kafka.common.serialization.StringSerializer"
-            );
-            conf.put(
-                "value.serializer",
-                "org.apache.kafka.common.serialization.BytesSerializer"
-            );
-            conf.put("transactional.id", this.appInstanceId);
-            conf.put("enable.idempotence", "true");
-
-            this.txnProducer = new KafkaProducer<String, Bytes>(conf);   
-            this.txnProducer.initTransactions(); 
-        }
-
-        return this.txnProducer;
-    }
-
     public KafkaProducer<String, Bytes> getProducer() {
         if (this.producer == null) {
             Properties conf = new Properties();
@@ -289,7 +114,7 @@ public class DepInjContext {
 
         Properties conf = new Properties();
         conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.getAppId());
-        conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.appInstanceId);
+        conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.getAppInstanceId());
         conf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
         conf.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
         conf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
@@ -326,25 +151,50 @@ public class DepInjContext {
         return this.getProducer().send(record, callback);
     }
 
-    public String getAdvertisedUrl() {
-        return String.format(
-            "%s://%s:%d",
-            advertisedProtocol,
-            advertisedHost,
-            advertisedPort
+    public String getAppInstanceId() {
+        String defVal = getKafkaTopicPrefix();
+        defVal += RandomStringUtils.randomAlphanumeric(10).toLowerCase();
+        defVal += "-unset-instance-id-badbadbad";
+
+        return getOrSetDefault(
+            Constants.KAFKA_APPLICATION_IID_KEY,
+            defVal
+        );
+    }
+    public String getKafkaTopicPrefix() {
+        return String.class.cast(properties.getOrDefault(
+            Constants.KAFKA_TOPIC_PREFIX_KEY,
+            ""
+        ));
+    }
+
+    public String getStateDirectory() {
+        return getOrSetDefault(
+            Constants.STATE_DIR_KEY,
+            "/tmp/kafkaState"
         );
     }
 
-    public OkHttpClient getHttpClient() {
-        return this.httpClient;
-    }
+    public KafkaProducer<String, Bytes> getTxnProducer() {
+        if (this.txnProducer == null) {
+            Properties conf = new Properties();
+            conf.put("bootstrap.servers", this.getBootstrapServers());
+            conf.put(
+                "key.serializer",
+                "org.apache.kafka.common.serialization.StringSerializer"
+            );
+            conf.put(
+                "value.serializer",
+                "org.apache.kafka.common.serialization.BytesSerializer"
+            );
+            conf.put("transactional.id", this.getAppInstanceId());
+            conf.put("enable.idempotence", "true");
 
-    public Duration getTaskPollDuration() {
-        return Duration.ofMillis(Integer.valueOf(String.class.cast(
-            properties.getOrDefault(
-                Constants.DEFAULT_TASK_WORKER_POLL_MILLIS_KEY, "10"
-            )
-        )));
+            this.txnProducer = new KafkaProducer<String, Bytes>(conf);   
+            this.txnProducer.initTransactions(); 
+        }
+
+        return this.txnProducer;
     }
 
     public Properties getStreamsConfig(String appIdSuffix) {
@@ -356,7 +206,7 @@ public class DepInjContext {
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
-        props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
+        props.put(StreamsConfig.STATE_DIR_CONFIG, this.getStateDirectory());
         props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 4000);
         props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, "exactly_once");
         props.put(
@@ -382,6 +232,123 @@ public class DepInjContext {
         return props;
     }
 
+    public void createKafkaTopic(NewTopic topic) {
+        CreateTopicsResult result = kafkaAdmin.createTopics(
+            Collections.singleton(topic)
+        );
+        KafkaFuture<Void> future = result.values().get(topic.name());
+        try {
+            future.get();
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            // throw new RuntimeException("Failed to create kafka topic");
+        }
+    }
+
+    // Worker Configuration
+    public String getWfWorkerImage() {
+        return getOrSetDefault(
+            Constants.DEFAULT_WF_WORKER_IMAGE_KEY,
+            "little-horse-api:latest"
+        );
+    }
+
+    public String getAPIUrlFor(String extension) {
+        String out = this.getAPIUrl();
+        if (!extension.startsWith("/")) {
+            out += "/";
+        }
+        out += extension;
+        return out;
+    }
+
+    public String getAPIUrl() {
+        return getOrSetDefault(
+            Constants.API_URL_KEY,
+            "http://localhost:5000"
+        );
+    }
+
+    public int getDefaultReplicas() {
+        return Integer.valueOf(String.class.cast(properties.getOrDefault(
+            Constants.DEFAULT_REPLICAS_KEY, "1"
+        )));
+    }
+
+    public String getDefaultTaskDeployerClassName() {
+        return String.class.cast(properties.getOrDefault(
+            Constants.DEFAULT_TASK_DEPLOYER_KEY,
+            DockerTaskDeployer.class.getCanonicalName()
+        ));
+    }
+
+    public String getDefaultWFDeployerClassName() {
+        return String.class.cast(properties.getOrDefault(
+            Constants.DEFAULT_WF_DEPLOYER_KEY,
+            DockerWorkflowDeployer.class.getCanonicalName()
+        ));
+    }
+
+    public HashMap<String, String> getBaseEnv() {
+        HashMap<String, String> out = new HashMap<String, String>();
+        out.put(Constants.API_URL_KEY, this.getAPIUrl());
+        out.put(Constants.STATE_DIR_KEY, this.getStateDirectory());
+
+        out.put(
+            Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.getBootstrapServers()
+        );
+        out.put(
+            Constants.KAFKA_TOPIC_PREFIX_KEY, this.getKafkaTopicPrefix()
+        );
+        return out;
+    }
+
+    // Info about the Advertised Host for this process
+
+    public HostInfo getHostInfo() {
+        return new HostInfo(getAdvertisedHost(), getAdvertisedPort());
+    }
+
+    public String getAdvertisedProto() {
+        return getOrSetDefault(
+            Constants.ADVERTISED_PROTOCOL_KEY, "http"
+        );
+    }
+
+    public String getAdvertisedUrl() {
+        return String.format(
+            "%s://%s:%d",
+            getAdvertisedProto(),
+            this.getAdvertisedHost(),
+            getAdvertisedPort()
+        );
+    }
+
+    public String getAdvertisedHost() {
+        return getOrSetDefault(
+            Constants.ADVERTISED_HOST_KEY, "localhost"
+        );
+    }
+
+    public int getAdvertisedPort() {
+        return Integer.valueOf(getOrSetDefault(
+            Constants.ADVERTISED_PORT_KEY, "80"
+        ));
+    }
+
+    // HTTP Client
+    public OkHttpClient getHttpClient() {
+        return this.httpClient;
+    }
+
+    public Duration getTaskPollDuration() {
+        return Duration.ofMillis(Integer.valueOf(String.class.cast(
+            properties.getOrDefault(
+                Constants.DEFAULT_TASK_WORKER_POLL_MILLIS_KEY, "10"
+            )
+        )));
+    }
+
     /**
      * Cleans up this object (i.e. closes any kafka producers or consumers, etc).
      * Should only be called at the end of lifecycle; suggested for use in a try/finally
@@ -399,13 +366,7 @@ public class DepInjContext {
         }
     }
 
-    /**
-     * Thin wrapper used for dependency injection for unit testing.
-     * TODO: Hire someone msarter than me to figure out a cleaner way to do this.
-     * @param <T>
-     * @param className
-     * @return
-     */
+    // Thin wrapper used for depency injection
     public <T extends Object> T loadClass(String className) {
         return LHUtil.loadClass(className);
     }
@@ -424,7 +385,7 @@ public class DepInjContext {
         );
     }
 
-    // Utility methods
+    // Private Implementation Utility methods
     private String getOrSetDefault(String key, String defaultVal) {
         String result = String.class.cast(properties.get(key));
 
@@ -434,5 +395,30 @@ public class DepInjContext {
         } else {
             return result;
         }
+    }
+
+    private Properties getDefaultsFromEnv() {
+        Properties props = new Properties();
+
+        for (Map.Entry<String, String> entry: System.getenv().entrySet()) {
+            if (entry.getKey().startsWith("LHORSE")) {
+                props.setProperty(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return props;
+    }
+
+    private void initialize(Properties props) {
+        this.properties = props;
+
+        this.httpClient = new OkHttpClient();
+
+        Properties akProperties = new Properties();
+        akProperties.put(
+            AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
+            this.getBootstrapServers()
+        );
+        this.kafkaAdmin = Admin.create(akProperties);
     }
 }
