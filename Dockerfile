@@ -10,6 +10,6 @@ RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -
 COPY app/build/libs/app-all.jar /littleHorse.jar
 
 COPY examples /examples
-COPY starwars_example/tasks /starwarstasks
+COPY starwars_docker/tasks /starwarstasks
 
 CMD ["java", "-cp", "/littleHorse.jar", "little.horse.App"]

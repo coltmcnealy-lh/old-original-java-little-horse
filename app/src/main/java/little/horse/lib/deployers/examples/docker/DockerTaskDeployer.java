@@ -64,7 +64,8 @@ public class DockerTaskDeployer implements TaskDeployer {
         ).withEnv(envList).withName(
             "lh-task-" + spec.getId()
         ).withCmd(
-            "java", DockerTaskWorker.class.getCanonicalName()
+            "java", "-cp", "/littleHorse.jar",
+            DockerTaskWorker.class.getCanonicalName()
         ).withLabels(labels);
 
         ccc.withHostConfig(ccc.getHostConfig().withNetworkMode("host"));
@@ -96,6 +97,10 @@ public class DockerTaskDeployer implements TaskDeployer {
             );
             if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
                 message = "Must provide docker image and TaskExecutor class name!";
+            }
+
+            if (meta.env == null) {
+                meta.env = new HashMap<>();
             }
 
             if (meta.secondaryValidatorClassName != null) {

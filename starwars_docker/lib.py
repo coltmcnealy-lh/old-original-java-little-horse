@@ -11,7 +11,8 @@ def form_task(name, bash_command, required_vars=None):
             }),
             "secondaryValidatorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashValidator",
             "taskExecutorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor",
-        })
+        }),
+        "taskDeployerClassName": "little.horse.lib.deployers.examples.docker.DockerTaskDeployer"
     }
 
     if required_vars is not None:
