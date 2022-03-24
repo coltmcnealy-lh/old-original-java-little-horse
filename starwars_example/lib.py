@@ -9,8 +9,8 @@ def form_task(name, bash_command, required_vars=None):
             "metadata": json.dumps({
                 "bashCommand": ['python3'] + bash_command
             }),
-            "secondaryValidatorClassName": "little.horse.lib.worker.examples.bashExecutor.BashValidator",
-            "taskExecutorClassName": "little.horse.lib.worker.examples.bashExecutor.BashExecutor",
+            "secondaryValidatorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashValidator",
+            "taskExecutorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor",
         })
     }
 

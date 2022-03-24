@@ -104,6 +104,7 @@ public class DockerTaskDeployer implements TaskDeployer {
                 );
                 validator.validate(spec, config);
             }
+            spec.deployMetadata = meta.toString();
         } catch (LHSerdeError exn) {
             exn.printStackTrace();
             message = 

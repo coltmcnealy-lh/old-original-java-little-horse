@@ -22,6 +22,7 @@ import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.examples.docker.DDConfig;
 import little.horse.lib.deployers.examples.docker.DockerTaskWorker;
 import little.horse.lib.deployers.examples.docker.DockerWorkflowWorker;
+import little.horse.lib.worker.examples.docker.bashExecutor.BashValidator;
 
 class FrontendAPIApp {
     private static void createKafkaTopics(DepInjContext config) {
@@ -104,6 +105,7 @@ public class App {
 
         } else {
             System.out.println("TODO: run some experiment for funsies.");
+            System.out.println(BashValidator.class.getCanonicalName());
         }
 
     }

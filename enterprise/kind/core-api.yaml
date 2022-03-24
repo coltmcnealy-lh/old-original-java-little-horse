@@ -94,7 +94,7 @@ spec:
               fieldRef:
                 fieldPath: status.podIP
           - name: LHORSE_ADVERTISED_PORT
-            value: "30000"
+            value: "5000"
           - name: "LHORSE_ADVERTISED_PROTO"
             value: "http"
           - name: "LHORSE_DEFAULT_PARTITIONS"
@@ -102,6 +102,10 @@ spec:
           - name: "LHORSE_DEFAULT_REPLICAS"
             value: "1"
           - name: "LHORSE_KAFKA_APPLICATION_ID"
-            value: "lh-api"
+            value: "lh-core-api"
+          - name: "LHORSE_KAFKA_APPLICATION_IID"
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podName
         ports:
         - containerPort: 5000
