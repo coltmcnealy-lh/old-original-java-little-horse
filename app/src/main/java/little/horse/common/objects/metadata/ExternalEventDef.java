@@ -2,7 +2,7 @@ package little.horse.common.objects.metadata;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 
 // As of now, we don't have any fancy logic here, so it's literally just a CRUD api.
 public class ExternalEventDef extends CoreMetadata {
@@ -14,7 +14,7 @@ public class ExternalEventDef extends CoreMetadata {
         // Nothing to do I believe.
     }
 
-    public void validate(Config config) {
+    public void validate(DepInjContext config) {
         // Nothing to do yet.
     }
 }

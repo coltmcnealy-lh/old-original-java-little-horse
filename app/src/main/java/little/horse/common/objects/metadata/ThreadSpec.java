@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -43,7 +43,7 @@ public class ThreadSpec extends BaseSchema {
     @JsonManagedReference
     public HashMap<String, Node> nodes;
 
-    public void validate(Config config, WFSpec parent)
+    public void validate(DepInjContext config, WFSpec parent)
     throws LHValidationError, LHConnectionError {
         setConfig(config);
 

@@ -4,15 +4,15 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import little.horse.api.runtime.WFRunTopology;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.WFSpec;
 
 public class DockerWorkflowWorker {
     private DDConfig ddConfig;
-    private Config config;
+    private DepInjContext config;
 
-    public DockerWorkflowWorker(DDConfig ddConfig, Config config) {
+    public DockerWorkflowWorker(DDConfig ddConfig, DepInjContext config) {
         this.ddConfig = ddConfig;
         this.config = config;
     }
@@ -40,7 +40,7 @@ public class DockerWorkflowWorker {
 
     public static void main(String[] args) throws LHConnectionError {
         DockerWorkflowWorker dww = new DockerWorkflowWorker(
-            new DDConfig(), new Config()
+            new DDConfig(), new DepInjContext()
         );
         dww.run();
     }

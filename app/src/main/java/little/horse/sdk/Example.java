@@ -1,6 +1,6 @@
 package little.horse.sdk;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.sdk.local.LocalThreadContext;
 import little.horse.sdk.sdk.SpecBuilderThreadContext;
 

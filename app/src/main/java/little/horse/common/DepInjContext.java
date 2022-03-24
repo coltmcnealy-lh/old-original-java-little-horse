@@ -1,9 +1,9 @@
 package little.horse.common;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
@@ -32,35 +32,79 @@ import little.horse.lib.deployers.examples.docker.DockerWorkflowDeployer;
 import okhttp3.OkHttpClient;
 
 
-public class Config {
+public class DepInjContext {
+    private Properties properties;
+
     private KafkaProducer<String, Bytes> txnProducer;
     private KafkaProducer<String, Bytes> producer;
-    
     private HashMap<String, KafkaConsumer<String, Bytes>> consumers;
 
-    private String appId;
-    private String appInstanceId;
-    public String bootstrapServers;
-    private String kafkaTopicPrefix;
+    private Admin kafkaAdmin;
+
+    private OkHttpClient httpClient;
+
     private String stateDirectory;
     private String apiURL;
-    private OkHttpClient httpClient;
-    private int defaultReplicas;
-    private Admin kafkaAdmin;
-    private int defaultPartitions;
-    private String wfWorkerImage;
-    // private String wfSpecGuid;
-    // private String wfNodeName;
-    // private String threadSpecName;
     private String advertisedHost;
     private int advertisedPort;
     private String advertisedProtocol;
 
+    /**
+     * The application ID for this LittleHorse process (i.e. Container/Pod/etc).
+     * For example, logical groups such as the Core API, the Workflow Workers for a
+     * specific WFSpec, or the Task Workers for a specific TaskDef should all share
+     * the same Application ID.
+     * @return the Kafka Application ID (aka Consumer Group ID) for this LH Process.
+     */
     public String getAppId() {
-        return this.appId;
+        return getOrSetDefault(
+            Constants.KAFKA_APPLICATION_ID_KEY,
+            "unset-app-id-or-group-id-badbadbadbadbad"
+        );
     }
 
-    public Config() {
+    public String getAppInstanceId() {
+        String defVal = getKafkaTopicPrefix();
+        defVal += RandomStringUtils.randomAlphanumeric(10).toLowerCase();
+        defVal += "-unset-instance-id-badbadbad";
+
+        return getOrSetDefault(
+            Constants.KAFKA_APPLICATION_IID_KEY,
+            defVal
+        );
+    }
+
+    public DepInjContext() {
+        this.initialize(getDefaultsFromEnv());
+    }
+    
+    public DepInjContext(Properties overrides) {
+        Properties newProps = new Properties(getDefaultsFromEnv());
+
+        for (String key: overrides.stringPropertyNames()) {
+            newProps.setProperty(key, overrides.getProperty(key));
+        }
+
+        initialize(newProps);
+    }
+
+    private void initialize(Properties props) {
+        this.properties = props;
+    }
+
+    private Properties getDefaultsFromEnv() {
+        Properties props = new Properties();
+
+        for (Map.Entry<String, String> entry: System.getenv().entrySet()) {
+            if (entry.getKey().startsWith("LHORSE")) {
+                props.setProperty(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return props;
+    }
+
+    public DepInjContext oldConstructor() {
         // TODO: Make this more readable
 
         // ********* Kafka Stuff *************
@@ -68,18 +112,12 @@ public class Config {
         String kTopicPrefix = System.getenv(Constants.KAFKA_TOPIC_PREFIX_KEY);
         this.kafkaTopicPrefix = (kTopicPrefix == null) ? "" : kTopicPrefix;
 
-        String theAppId = System.getenv(Constants.KAFKA_APPLICATION_ID_KEY);
-        this.appId = this.kafkaTopicPrefix + ((theAppId == null) ? "test" : theAppId);
         String theIid = System.getenv(Constants.KAFKA_APPLICATION_IID_KEY);
         if (theIid == null) {
             this.appInstanceId = RandomStringUtils.randomAlphanumeric(17).toLowerCase();
-        
         } else {
             this.appInstanceId = kafkaTopicPrefix + theIid;
         }
-
-        String booty = System.getenv(Constants.KAFKA_BOOTSTRAP_SERVERS_KEY);
-        this.bootstrapServers = (booty == null) ? "host.docker.internal:9092" : booty;
 
         // ************* Misc env var stuff **********
 
@@ -98,38 +136,16 @@ public class Config {
         String tempApiURL = System.getenv(Constants.API_URL_KEY);
         this.apiURL = (tempApiURL == null) ? "http://host.docker.internal:30000" : tempApiURL;
 
-        String tempReplicas = System.getenv(Constants.DEFAULT_REPLICAS_KEY);
-        try {
-            defaultReplicas = Integer.valueOf(tempReplicas);
-        } catch (Exception exn) {
-            System.err.println(exn.getMessage());
-            defaultReplicas = 1;
-        }
-
         this.httpClient = new OkHttpClient();
 
         Properties akProperties = new Properties();
         akProperties.put(
             AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
-            this.bootstrapServers
+            this.getBootstrapServers()
         );
         this.kafkaAdmin = Admin.create(akProperties);
 
-        String tempParts = System.getenv(Constants.DEFAULT_PARTITIONS_KEY);
-        try {
-            defaultPartitions = Integer.valueOf(tempParts);
-        } catch (Exception exn) {
-            defaultPartitions = 1;
-        }
-
-        String tempCollectorImage = System.getenv(Constants.DEFAULT_WF_WORKER_IMAGE_KEY);
-        this.wfWorkerImage = (
-            tempCollectorImage == null
-        ) ? "little-horse-api:latest" : tempCollectorImage;
-
-        // this.wfSpecGuid = System.getenv(Constants.WF_SPEC_ID_KEY);
-        // this.wfNodeName = System.getenv(Constants.NODE_NAME_KEY);
-        // this.threadSpecName = System.getenv(Constants.THREAD_SPEC_NAME_KEY);
+        return this;
     }
 
     public HostInfo getHostInfo() {
@@ -150,20 +166,10 @@ public class Config {
     }
 
     public String getWfWorkerImage() {
-        return this.wfWorkerImage;
-    }
-
-    public ArrayList<String> getCollectorCommand() {
-        ArrayList<String> out = new ArrayList<String>();
-        out.add("java");
-        out.add("-jar");
-        out.add("/littleHorse.jar");
-        out.add("collector");
-        return out;
-    }
-
-    public OkHttpClient getHttpClient() {
-        return this.httpClient;
+        return getOrSetDefault(
+            Constants.DEFAULT_WF_WORKER_IMAGE_KEY,
+            "little-horse-api:latest"
+        );
     }
 
     public String getAPIUrlFor(String extension) {
@@ -180,17 +186,17 @@ public class Config {
     }
 
     public String getDefaultTaskDeployerClassName() {
-        return System.getenv().getOrDefault(
+        return String.class.cast(properties.getOrDefault(
             Constants.DEFAULT_TASK_DEPLOYER_KEY,
             DockerTaskDeployer.class.getCanonicalName()
-        );
+        ));
     }
 
     public String getDefaultWFDeployerClassName() {
-        return System.getenv().getOrDefault(
+        return String.class.cast(properties.getOrDefault(
             Constants.DEFAULT_WF_DEPLOYER_KEY,
             DockerWorkflowDeployer.class.getCanonicalName()
-        );
+        ));
     }
 
     public HashMap<String, String> getBaseEnv() {
@@ -199,7 +205,7 @@ public class Config {
         out.put(Constants.STATE_DIR_KEY, this.stateDirectory);
 
         out.put(
-            Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.bootstrapServers
+            Constants.KAFKA_BOOTSTRAP_SERVERS_KEY, this.getBootstrapServers()
         );
         out.put(
             Constants.KAFKA_TOPIC_PREFIX_KEY, this.kafkaTopicPrefix
@@ -208,17 +214,22 @@ public class Config {
     }
 
     public String getKafkaTopicPrefix() {
-        return kafkaTopicPrefix;
+        return String.class.cast(properties.getOrDefault(
+            Constants.KAFKA_TOPIC_PREFIX_KEY,
+            ""
+        ));
     }
 
     public int getDefaultReplicas() {
-        return this.defaultReplicas;
+        return Integer.valueOf(String.class.cast(properties.getOrDefault(
+            Constants.DEFAULT_REPLICAS_KEY, "1"
+        )));
     }
 
     public KafkaProducer<String, Bytes> getTxnProducer() {
         if (this.txnProducer == null) {
             Properties conf = new Properties();
-            conf.put("bootstrap.servers", this.bootstrapServers);
+            conf.put("bootstrap.servers", this.getBootstrapServers());
             conf.put(
                 "key.serializer",
                 "org.apache.kafka.common.serialization.StringSerializer"
@@ -240,7 +251,7 @@ public class Config {
     public KafkaProducer<String, Bytes> getProducer() {
         if (this.producer == null) {
             Properties conf = new Properties();
-            conf.put("bootstrap.servers", this.bootstrapServers);
+            conf.put("bootstrap.servers", this.getBootstrapServers());
             conf.put(
                 "key.serializer",
                 "org.apache.kafka.common.serialization.StringSerializer"
@@ -277,9 +288,9 @@ public class Config {
         }
 
         Properties conf = new Properties();
-        conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.appId);
+        conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.getAppId());
         conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.appInstanceId);
-        conf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        conf.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
         conf.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
         conf.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         conf.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
@@ -296,6 +307,13 @@ public class Config {
         cons.subscribe(Collections.singleton(topic));
         consumers.put(topic, cons);
         return cons;
+    }
+
+    public String getBootstrapServers() {
+        return getOrSetDefault(
+            Constants.KAFKA_BOOTSTRAP_SERVERS_KEY,
+            "localhost:9092"
+        );
     }
 
     public Future<RecordMetadata> send(ProducerRecord<String, Bytes> record) {
@@ -317,17 +335,25 @@ public class Config {
         );
     }
 
+    public OkHttpClient getHttpClient() {
+        return this.httpClient;
+    }
+
     public Duration getTaskPollDuration() {
-        return Duration.ofMillis(10);
+        return Duration.ofMillis(Integer.valueOf(String.class.cast(
+            properties.getOrDefault(
+                Constants.DEFAULT_TASK_WORKER_POLL_MILLIS_KEY, "10"
+            )
+        )));
     }
 
     public Properties getStreamsConfig(String appIdSuffix) {
         Properties props = new Properties();
         props.put(
             StreamsConfig.APPLICATION_ID_CONFIG,
-            this.appId + "-" + appIdSuffix
+            this.getAppId() + "-" + appIdSuffix
         );
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.stateDirectory);
@@ -385,41 +411,28 @@ public class Config {
     }
 
     public int getDefaultPartitions() {
-        return this.defaultPartitions;
-    }
-
-    // /**
-    //  * Gets the WFSpecGuid from Environment
-    //  * @return the wfSpecGuid for this 
-    //  */
-    // public String getWfSpecId() {
-    //     return this.wfSpecGuid;
-    // }
-
-    // public String getNodeName() {
-    //     return this.wfNodeName;
-    // }
-
-    // public String getThreadSpecName() {
-    //     return this.threadSpecName;
-    // }
-
-    public String getWFRunTopic() {
-        return this.getKafkaTopicPrefix() + "wfRunEventLog";
+        return Integer.valueOf(getOrSetDefault(Constants.DEFAULT_PARTITIONS_KEY, "1"));
     }
 
     public String getWFRunTopicPrefix() {
         return this.getKafkaTopicPrefix() + "wfEvents__";
     }
 
-    public String getWFRunTopic(String wfRunGuid) {
-        return this.getWFRunTopicPrefix() + "-" + wfRunGuid;
-    }
-
     public Pattern getAllWFRunTopicsPattern() {
         return Pattern.compile(
             this.getWFRunTopicPrefix() + ".*"
         );
-        // return Pattern.compile("my-wf_59a65ff8-d7f3-49d2-b744-e5a2e829bb82");
+    }
+
+    // Utility methods
+    private String getOrSetDefault(String key, String defaultVal) {
+        String result = String.class.cast(properties.get(key));
+
+        if (result == null) {
+            properties.setProperty(key, defaultVal);
+            return defaultVal;
+        } else {
+            return result;
+        }
     }
 }

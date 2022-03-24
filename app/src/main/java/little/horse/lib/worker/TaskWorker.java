@@ -16,7 +16,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
 
 import little.horse.api.runtime.TaskScheduleRequest;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.events.TaskRunEndedEvent;
 import little.horse.common.events.TaskRunEvent;
 import little.horse.common.events.TaskRunResult;
@@ -32,7 +32,7 @@ import little.horse.common.util.LHUtil;
 import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
 
 public class TaskWorker {
-    private Config config;
+    private DepInjContext config;
     private TaskDef taskDef;
     private DockerTaskExecutor executor;
     private ExecutorService threadPool;
@@ -41,7 +41,7 @@ public class TaskWorker {
     private KafkaProducer<String, Bytes> producer;
 
     public TaskWorker(
-        Config config, String taskQueueName, DockerTaskExecutor executor, int numThreads
+        DepInjContext config, String taskQueueName, DockerTaskExecutor executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
         this.taskDef = LHDatabaseClient.lookupMetaNameOrId(

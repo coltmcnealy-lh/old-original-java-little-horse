@@ -1,14 +1,14 @@
 package little.horse.lib.worker;
 
 import little.horse.api.runtime.TaskScheduleRequest;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.util.LHUtil;
 
 public class WorkerContext {
     private TaskScheduleRequest tsr;
     private String stderr;
 
-    public WorkerContext(Config config, TaskScheduleRequest tsr) {
+    public WorkerContext(DepInjContext config, TaskScheduleRequest tsr) {
         this.tsr = tsr;
     }
 

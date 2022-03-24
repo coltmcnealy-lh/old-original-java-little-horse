@@ -6,7 +6,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
@@ -16,10 +16,10 @@ import little.horse.common.util.LHUtil;
 public class BaseAliasProcessor<T extends CoreMetadata>
 implements Processor<String, AliasEvent, Void, Void> {
     private KeyValueStore<String, Bytes> kvStore;
-    private Config config;
+    private DepInjContext config;
     private Class<T> cls;
 
-    public BaseAliasProcessor(Class<T> cls, Config config) {
+    public BaseAliasProcessor(Class<T> cls, DepInjContext config) {
         this.cls = cls;
         this.config = config;
     }

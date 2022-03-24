@@ -11,7 +11,7 @@ import org.apache.kafka.streams.Topology;
 
 import little.horse.api.LittleHorseAPI;
 import little.horse.api.metadata.MetadataTopologyBuilder;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDef;
@@ -24,7 +24,7 @@ import little.horse.lib.deployers.examples.docker.DockerTaskWorker;
 import little.horse.lib.deployers.examples.docker.DockerWorkflowWorker;
 
 class FrontendAPIApp {
-    private static void createKafkaTopics(Config config) {
+    private static void createKafkaTopics(DepInjContext config) {
         int partitions = config.getDefaultPartitions();
         short replicationFactor = (short) config.getDefaultReplicas();
 
@@ -57,8 +57,8 @@ class FrontendAPIApp {
      * 3. Sets up a listener for new WFSpecs that deploys them to kubernetes (if necessary).
      */
     public static void run() {
-        Config config = null;
-        config = new Config();
+        DepInjContext config = null;
+        config = new DepInjContext();
 
         LHUtil.log("Creating kafka topics");
         FrontendAPIApp.createKafkaTopics(config);
@@ -93,14 +93,14 @@ public class App {
             System.out.println("running the app");
             FrontendAPIApp.run();
         } else if (args.length > 0 && args[0].equals("docker-workflow-worker")) {
-            new DockerWorkflowWorker(new DDConfig(), new Config()).run();
+            new DockerWorkflowWorker(new DDConfig(), new DepInjContext()).run();
 
         } else if (args.length > 0  && args[0].equals("docker-task-worker")) {
             try {
                 Thread.sleep(3000);
             } catch(InterruptedException exn) {}
 
-            new DockerTaskWorker(new DDConfig(), new Config()).run();
+            new DockerTaskWorker(new DDConfig(), new DepInjContext()).run();
 
         } else {
             System.out.println("TODO: run some experiment for funsies.");

@@ -8,7 +8,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -21,7 +21,7 @@ import little.horse.lib.deployers.TaskDeployer;
 
 
 public class DockerTaskDeployer implements TaskDeployer {
-    public void deploy(TaskDef spec, Config config) throws LHConnectionError {
+    public void deploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
         LHUtil.log("Ok got here");
         DDConfig ddConfig = new DDConfig();
         DockerClient client = ddConfig.getDockerClient();
@@ -77,7 +77,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         LHUtil.log("Started container!");
     }
 
-    public void undeploy(TaskDef spec, Config config) throws LHConnectionError {
+    public void undeploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
         DDConfig ddconfig = new DDConfig();
         DockerClient client = ddconfig.getDockerClient();
 
@@ -85,7 +85,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         client.removeContainerCmd("lh-task-" + spec.name).exec();
     }
 
-    public void validate(TaskDef spec, Config config) throws LHValidationError {
+    public void validate(TaskDef spec, DepInjContext config) throws LHValidationError {
         String message = null;
         if (spec.deployMetadata == null) {
             throw new LHValidationError("Must provide valid Docker validation!");

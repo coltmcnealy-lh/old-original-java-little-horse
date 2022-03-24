@@ -3,7 +3,7 @@ package little.horse.lib.worker.examples.docker.bashExecutor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -16,7 +16,7 @@ public class BashValidator implements DockerSecondaryTaskValidator {
         "<<(.*?)>>"
     );
 
-    public void validate(TaskDef task, Config config) throws LHValidationError {
+    public void validate(TaskDef task, DepInjContext config) throws LHValidationError {
         DockerTaskDeployMetadata taskMeta;
         BashTaskMetadata bashMeta;
         try {

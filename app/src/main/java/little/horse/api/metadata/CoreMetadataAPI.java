@@ -9,7 +9,7 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
 import little.horse.api.util.APIStreamsContext;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -20,12 +20,12 @@ import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHRpcResponse;
 
 public class CoreMetadataAPI<T extends CoreMetadata> {
-    private Config config;
+    private DepInjContext config;
     private Class<T> cls;
     private APIStreamsContext<T> streamsContext;
 
     public CoreMetadataAPI(
-        Config config, Class<T> cls, APIStreamsContext<T> context, Javalin app
+        DepInjContext config, Class<T> cls, APIStreamsContext<T> context, Javalin app
     ) {
         this.config = config;
         this.cls = cls;

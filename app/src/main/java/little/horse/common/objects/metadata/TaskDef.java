@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.kafka.clients.admin.NewTopic;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHDatabaseClient;
@@ -112,7 +112,7 @@ public class TaskDef extends CoreMetadata {
 
     }
 
-    public void validate(Config config) throws LHValidationError, LHConnectionError {
+    public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
         this.config = config;
 
         // ALl we gotta do is make sure the TaskDef exists.

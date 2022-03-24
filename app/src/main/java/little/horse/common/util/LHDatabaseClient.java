@@ -1,6 +1,6 @@
 package little.horse.common.util;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
 
@@ -18,7 +18,7 @@ import little.horse.common.objects.metadata.CoreMetadata;
 public class LHDatabaseClient {
 
     public static<T extends CoreMetadata> T lookupMetaNameOrId(
-        String idOrName, Config config, Class<T> cls
+        String idOrName, DepInjContext config, Class<T> cls
     ) throws LHConnectionError {
 
         LHRpcCLient client = new LHRpcCLient(config);
@@ -37,7 +37,7 @@ public class LHDatabaseClient {
     }
 
     public static<T extends CoreMetadata> T lookupMeta(
-        String id, Config config, Class<T> cls
+        String id, DepInjContext config, Class<T> cls
     ) throws LHConnectionError {
 
         LHRpcCLient client = new LHRpcCLient(config);

@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.WFEventID;
@@ -302,7 +302,7 @@ public class WFRun extends CoreMetadata {
     // Override the next two methods for the sake of compatibility with CoreMetadata,
     // even though this isn't truly CoreMetadata.
     @Override
-    public void validate(Config config) {}
+    public void validate(DepInjContext config) {}
 
     @Override
     public void processChange(CoreMetadata old) {}
@@ -312,7 +312,7 @@ public class WFRun extends CoreMetadata {
 
     public static WFRunApiStuff apiStuff;
 
-    public static void overridePostAPIEndpoints(Javalin app, Config config) {
+    public static void overridePostAPIEndpoints(Javalin app, DepInjContext config) {
         apiStuff = new WFRunApiStuff(config);
 
         app.post("/WFRun", apiStuff::postRun);
@@ -330,9 +330,9 @@ public class WFRun extends CoreMetadata {
 }
 
 class WFRunApiStuff {
-    private Config config;
+    private DepInjContext config;
 
-    public WFRunApiStuff(Config config) {
+    public WFRunApiStuff(DepInjContext config) {
         this.config = config;
     }
 

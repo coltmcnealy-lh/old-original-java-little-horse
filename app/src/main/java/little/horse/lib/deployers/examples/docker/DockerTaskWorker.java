@@ -1,6 +1,6 @@
 package little.horse.lib.deployers.examples.docker;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.LHUtil;
@@ -11,7 +11,7 @@ public class DockerTaskWorker {
     private TaskWorker worker;
     private DockerTaskExecutor executor;
 
-    public DockerTaskWorker(DDConfig ddConfig, Config config) {
+    public DockerTaskWorker(DDConfig ddConfig, DepInjContext config) {
         this.executor = ddConfig.getTaskExecutor();
         this.executor.init(ddConfig, config);
         TaskDef taskDef = ddConfig.lookupTaskDefOrDie(config);
@@ -30,7 +30,7 @@ public class DockerTaskWorker {
 
     public static void main(String[] args) {
         LHUtil.log("Running Docker Task Worker!");
-        Config config = new Config();
+        DepInjContext config = new DepInjContext();
         DDConfig ddConfig = new DDConfig();
         DockerTaskWorker dtw = new DockerTaskWorker(ddConfig, config);
         dtw.run();

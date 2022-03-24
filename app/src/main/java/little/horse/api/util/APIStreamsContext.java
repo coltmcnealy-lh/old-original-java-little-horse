@@ -27,7 +27,7 @@ import little.horse.api.OffsetInfoCollection;
 import little.horse.api.metadata.AliasEntryCollection;
 import little.horse.api.metadata.AliasIdentifier;
 import little.horse.api.metadata.CoreMetadataEntry;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
@@ -41,9 +41,9 @@ public class APIStreamsContext<T extends CoreMetadata> {
     private KafkaStreams streams;
     private HostInfo thisHost;
     private Class<T> cls;
-    private Config config;
+    private DepInjContext config;
 
-    public APIStreamsContext(KafkaStreams streams, Class<T> cls, Config config) {
+    public APIStreamsContext(KafkaStreams streams, Class<T> cls, DepInjContext config) {
         this.streams = streams;
         this.thisHost = config.getHostInfo();
         this.cls = cls;

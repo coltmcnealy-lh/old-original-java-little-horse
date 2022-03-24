@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 
 import little.horse.api.runtime.TaskScheduleRequest;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
@@ -16,7 +16,7 @@ import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
 public class BashExecutor implements DockerTaskExecutor {
     private BashTaskMetadata meta;
 
-    public void init(DDConfig ddConfig, Config config) {        
+    public void init(DDConfig ddConfig, DepInjContext config) {        
         try {
             meta = BaseSchema.fromString(
                 System.getenv(DDConstants.TASK_EXECUTOR_META_KEY),

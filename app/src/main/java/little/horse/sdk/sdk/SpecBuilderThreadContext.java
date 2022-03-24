@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.objects.metadata.Edge;
 import little.horse.common.objects.metadata.Node;
 import little.horse.common.objects.metadata.NodeType;
@@ -36,9 +36,9 @@ public class SpecBuilderThreadContext implements LHThreadContext {
     private ThreadSpec entrypoint;
     private String lastNodeName;
     private ArrayList<TaskDef> taskDefs;
-    private Config config;
+    private DepInjContext config;
 
-    public SpecBuilderThreadContext(Config config, String name) {
+    public SpecBuilderThreadContext(DepInjContext config, String name) {
         this.spec = new WFSpec();
         this.spec.threadSpecs = new HashMap<>();
         this.spec.entrypointThreadName = "entrypoint";

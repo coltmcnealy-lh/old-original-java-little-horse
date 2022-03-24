@@ -23,7 +23,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.lang3.StringUtils;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
 
@@ -33,7 +33,7 @@ public class LHUtil {
         return UUID.randomUUID().toString();
     }
 
-    public static ObjectMapper getObjectMapper(Config cfg) {
+    public static ObjectMapper getObjectMapper(DepInjContext cfg) {
         return new MapperInitializer(cfg).getMapper();
     }
 
@@ -103,7 +103,7 @@ public class LHUtil {
      * @param obj the thing to unsplat
      * @return the unsplatted object
      */
-    public static HashMap<String, Object> unsplat(Object obj, Config cfg) {
+    public static HashMap<String, Object> unsplat(Object obj, DepInjContext cfg) {
         HashMap<String, Object> out;
         try {
             LHUtil.log("obj:", obj.toString());
@@ -136,7 +136,7 @@ public class LHUtil {
         return out.toString();
     }
 
-    public static String jsonify(Object thing, Config cfg) {
+    public static String jsonify(Object thing, DepInjContext cfg) {
         try {
             return getObjectMapper(cfg).writeValueAsString(thing);
         } catch(JsonProcessingException exn) {
@@ -145,7 +145,7 @@ public class LHUtil {
         }
     }
 
-    public static Object jsonifyIfPossible(String data, Config cfg) {
+    public static Object jsonifyIfPossible(String data, DepInjContext cfg) {
         try {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
@@ -196,12 +196,12 @@ class MapperInitializer {
         return mapper;
     }
 
-    public MapperInitializer(Config cfg) {
+    public MapperInitializer(DepInjContext cfg) {
         this.mapper = new ObjectMapper();
 
         InjectableValues inject = new InjectableValues.Std().addValue(
             BaseSchema.class, cfg
-        ).addValue(Config.class, cfg);
+        ).addValue(DepInjContext.class, cfg);
 
         mapper.setInjectableValues(inject);
         SimpleModule module = new SimpleModule();

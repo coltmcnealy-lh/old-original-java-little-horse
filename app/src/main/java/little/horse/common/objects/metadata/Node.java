@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -148,7 +148,7 @@ public class Node extends BaseSchema {
     }
 
     @Override
-    public void validate(Config config) throws LHValidationError, LHConnectionError {
+    public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
         setConfig(config);
         if (threadSpec == null) {
             throw new RuntimeException("Jackson didn't do its thing");
@@ -191,7 +191,7 @@ public class Node extends BaseSchema {
         }
     }
 
-    private void validateTaskNode(Config config)
+    private void validateTaskNode(DepInjContext config)
     throws LHValidationError, LHConnectionError {
         String taskDefKey = (taskDefId == null) ? taskDefName : taskDefId;
         if (taskDefKey == null) {
@@ -216,7 +216,7 @@ public class Node extends BaseSchema {
         taskDefName = taskDef.name;
     }
 
-    private void validateExternalEventNode(Config config)
+    private void validateExternalEventNode(DepInjContext config)
     throws LHValidationError, LHConnectionError {
         String eedKey = (externalEventDefId == null) ?
             externalEventDefName : externalEventDefId;
@@ -241,7 +241,7 @@ public class Node extends BaseSchema {
         externalEventDefId = externalEventDef.getId();
     }
 
-    private void validateSpawnThreadNode(Config config)
+    private void validateSpawnThreadNode(DepInjContext config)
     throws LHValidationError {
         String tname = threadSpawnThreadSpecName;
         if (tname == null) {
@@ -260,7 +260,7 @@ public class Node extends BaseSchema {
         }
     }
 
-    private void validateWaitForThreadNode(Config config)
+    private void validateWaitForThreadNode(DepInjContext config)
     throws LHValidationError {
         Node sourceNode = threadSpec.nodes.get(threadWaitSourceNodeName);
 

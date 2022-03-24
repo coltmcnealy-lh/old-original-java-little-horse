@@ -113,5 +113,5 @@ try:
     print("Created starwars WFSpec")
 
 except Exception as exn:
-    print(response.content.decode())
+    print(response.content.decode()) # type: ignore
     raise exn

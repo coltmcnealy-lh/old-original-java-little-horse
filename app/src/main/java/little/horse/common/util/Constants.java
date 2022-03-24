@@ -23,6 +23,9 @@ public class Constants {
     public static String DEFAULT_TASK_DEPLOYER_KEY = "LHORSE_DEFAULT_TASK_DEPLOYER";
     public static String DEFAULT_WF_DEPLOYER_KEY = "LHORSE_DEFAULT_WF_DEPLOYER";
 
+    public static String DEFAULT_TASK_WORKER_POLL_MILLIS_KEY =
+        "LHORSE_DEFAULT_TASK_WORKER_POLL_MILLIS";
+
     // TODO: make this a reserved word.
     public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";
 

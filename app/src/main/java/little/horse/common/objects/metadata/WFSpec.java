@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFRunRequest;
@@ -291,7 +291,7 @@ public class WFSpec extends CoreMetadata {
     }
 
     @Override
-    public void validate(Config config) throws LHValidationError, LHConnectionError {
+    public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
         setConfig(config);
         if (status == null) status = LHDeployStatus.STOPPED;
         if (desiredStatus == null) desiredStatus = LHDeployStatus.RUNNING;

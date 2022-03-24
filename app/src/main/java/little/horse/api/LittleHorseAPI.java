@@ -9,7 +9,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import io.javalin.Javalin;
 import little.horse.api.metadata.CoreMetadataAPI;
 import little.horse.api.util.APIStreamsContext;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
@@ -19,7 +19,7 @@ import little.horse.common.objects.rundata.WFRun;
 
 public class LittleHorseAPI {
     private Javalin app; 
-    private Config config;
+    private DepInjContext config;
     private Set<CoreMetadataAPI<? extends CoreMetadata>> apis;
 
     private KafkaStreams streams;
@@ -35,7 +35,7 @@ public class LittleHorseAPI {
         );
     }
 
-    public LittleHorseAPI(Config config, KafkaStreams streams) {
+    public LittleHorseAPI(DepInjContext config, KafkaStreams streams) {
         this.config = config;
         this.streams = streams;
         this.apis = new HashSet<>();

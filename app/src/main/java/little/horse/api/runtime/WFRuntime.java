@@ -7,7 +7,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
@@ -25,7 +25,7 @@ public class WFRuntime
     private WFSpec wfSpec;
     private ProcessorContext<String, CoordinatorOutput> context;
 
-    public WFRuntime(Config config, WFSpec wfSpec) {
+    public WFRuntime(DepInjContext config, WFSpec wfSpec) {
         this.wfSpec = wfSpec;
     }
 

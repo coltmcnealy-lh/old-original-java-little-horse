@@ -15,7 +15,7 @@ import org.apache.kafka.common.utils.Bytes;
 
 import io.javalin.Javalin;
 import little.horse.api.metadata.AliasIdentifier;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -28,7 +28,7 @@ public abstract class CoreMetadata extends BaseSchema {
 
     @JsonIgnore
     public static boolean onlyUseDefaultAPIforGET = false;
-    public static void overridePostAPIEndpoints(Javalin app, Config config) {}
+    public static void overridePostAPIEndpoints(Javalin app, DepInjContext config) {}
 
     @DigestIgnore
     public Long lastUpdatedOffset;
@@ -43,14 +43,14 @@ public abstract class CoreMetadata extends BaseSchema {
 
     @JsonIgnore
     public static <T extends CoreMetadata> String getIdKafkaTopic(
-        Config config, Class<T> cls
+        DepInjContext config, Class<T> cls
     ) {
         return config.getKafkaTopicPrefix() + "__" + T.getLHTypeName(cls);
     }
 
     @JsonIgnore
     public static<T extends CoreMetadata> String getAliasKafkaTopic(
-        Config config, Class<T> cls
+        DepInjContext config, Class<T> cls
     ) {
         return getIdKafkaTopic(config, cls) + "__aliases";
     }
@@ -141,14 +141,14 @@ public abstract class CoreMetadata extends BaseSchema {
 
     @JsonIgnore
     public static<T extends CoreMetadata> Future<RecordMetadata> sendNullRecord(
-        String id, Config config, Class<T> cls
+        String id, DepInjContext config, Class<T> cls
     ) {
         ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
             getIdKafkaTopic(config, cls), id, null);
         return config.send(record);
     }
 
-    public abstract void validate(Config config)
+    public abstract void validate(DepInjContext config)
     throws LHValidationError, LHConnectionError;
 
     public Set<AliasIdentifier> getAliases() {

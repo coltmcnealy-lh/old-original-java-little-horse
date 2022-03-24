@@ -14,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -23,9 +23,9 @@ import little.horse.common.util.LHUtil;
 
 public class BaseSchema {
     @JacksonInject
-    protected Config config;
+    protected DepInjContext config;
 
-    public BaseSchema(Config config) {
+    public BaseSchema(DepInjContext config) {
         this.config = config;
     }
     // Use sparingly.
@@ -117,7 +117,7 @@ public class BaseSchema {
     }
 
     public static <T extends BaseSchema> T fromString(
-        String src, Class<T> valueType, Config config
+        String src, Class<T> valueType, DepInjContext config
     ) throws LHSerdeError {
         return BaseSchema.fromBytes(
             src.getBytes(StandardCharsets.UTF_8), valueType, config
@@ -125,7 +125,7 @@ public class BaseSchema {
     }
 
     public static <T extends BaseSchema> T fromBytes(
-        byte[] src, Class<T> valueType, Config config
+        byte[] src, Class<T> valueType, DepInjContext config
     ) throws LHSerdeError {
         T result;
         try {
@@ -152,14 +152,14 @@ public class BaseSchema {
         }
     }
 
-    public void validate(Config config) throws LHValidationError, LHConnectionError {
+    public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
         setConfig(config);
         // Nothing to do in general case; should be overriden.
     }
 
     @JsonIgnore
     @SuppressWarnings("unchecked")
-    final public void setConfig(Config config) {
+    final public void setConfig(DepInjContext config) {
         // Needed to avoid infinite recursion. So 
         if (this.config != null) return;
         this.config = config;

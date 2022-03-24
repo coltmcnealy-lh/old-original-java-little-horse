@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: little-horse-api
+  labels:
+    app: little-horse-api
+    littlehorse.io/active: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: little-horse-api
+  labels:
+    app: little-horse-api
+    littlehorse.io/active: "true"
+rules:
+  - apiGroups:
+    - apps
+    - ""
+    resources: ["deployments"]
+    verbs: ["get", "create", "edit", "delete", "list", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: little-horse-api
+  labels:
+    app: little-horse-api
+    littlehorse.io/active: "true"
+subjects:
+  - kind: ServiceAccount
+    name: little-horse-api
+    namespace: default
+    apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: little-horse-api
+  apiGroup: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: little-horse-api
+  namespace: default
+  labels:
+    littlehorse.io/active: "true"
+spec:
+  selector:
+    app: little-horse-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: little-horse-api
+  namespace: default
+  labels:
+    app: little-horse-api
+    io.littlehorse/active: "true"
+spec:
+  serviceName: little-horse-api
+  replicas: 1
+  selector:
+    matchLabels:
+      app: little-horse-api
+  template:
+    metadata:
+      labels:
+        app: little-horse-api
+        littlehorse.io/active: "true"
+    spec:
+      serviceAccountName: little-horse-api
+      containers:
+      - name: little-horse-api
+        image: little-horse-api:latest
+        imagePullPolicy: IfNotPresent
+        command:
+          - 'java'
+          - '-jar'
+          - '/littleHorse.jar'
+          - 'api'
+        env:
+          - name: LHORSE_KAFKA_BOOTSTRAP_SERVERS
+            value: "lh-kafka-kafka-bootstrap.kafka:9092"
+          - name: LHORSE_API_URL
+            value: "http://little-horse-api.default:5000"
+          - name: LHORSE_ADVERTISED_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: LHORSE_ADVERTISED_PORT
+            value: "30000"
+          - name: "LHORSE_ADVERTISED_PROTO"
+            value: "http"
+          - name: "LHORSE_DEFAULT_PARTITIONS"
+            value: "1"
+          - name: "LHORSE_DEFAULT_REPLICAS"
+            value: "1"
+          - name: "LHORSE_KAFKA_APPLICATION_ID"
+            value: "lh-api"
+        ports:
+        - containerPort: 5000

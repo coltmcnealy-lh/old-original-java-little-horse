@@ -8,7 +8,7 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -30,7 +30,7 @@ import little.horse.lib.deployers.examples.docker.DockerWorkflowWorker;
 
 public class K8sWorkflowDeployer implements WorkflowDeployer {
 
-    public void deploy(WFSpec spec, Config config) throws LHConnectionError {
+    public void deploy(WFSpec spec, DepInjContext config) throws LHConnectionError {
         KDConfig kdConfig = LHUtil.loadClass(KDConfig.class.getCanonicalName());
         Deployment dp = getK8sDeployment(spec, config, kdConfig);
 
@@ -38,7 +38,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
     }
 
     private Deployment getK8sDeployment(
-        WFSpec spec, Config config, KDConfig kdConfig
+        WFSpec spec, DepInjContext config, KDConfig kdConfig
     ) throws LHConnectionError {
         K8sWorkflowDeployMeta meta = new K8sWorkflowDeployMeta();
         try {
@@ -112,12 +112,12 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         return dp;
     }
 
-    public void undeploy(WFSpec spec, Config config) throws LHConnectionError{
+    public void undeploy(WFSpec spec, DepInjContext config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         kdConfig.deleteK8sDeployment("io.littlehorse.wfSpecId", spec.getId());
     }
 
-    public void validate(WFSpec spec, Config config) throws LHValidationError {
+    public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {
         String message = null;
         if (spec.deployMetadata == null) {
             throw new LHValidationError("Must provide valid Docker validation!");

@@ -7,7 +7,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.util.serdes.LHSerdes;
 
@@ -15,7 +15,7 @@ import little.horse.common.util.serdes.LHSerdes;
 public class MetadataTopologyBuilder {
 
     public static<T extends CoreMetadata> void addStuff(
-        Topology topology, Config config, Class<T> cls
+        Topology topology, DepInjContext config, Class<T> cls
     ) {
         LHSerdes<T> serde = new LHSerdes<>(cls, config);
         LHSerdes<CoreMetadataEntry> dataSerde = new LHSerdes<>(

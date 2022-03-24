@@ -3,7 +3,7 @@ package little.horse.common.util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import little.horse.api.ResponseStatus;
-import little.horse.common.Config;
+import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 
@@ -14,7 +14,7 @@ public class LHRpcResponse<T extends BaseSchema> {
     public T result;
 
     public static<T extends BaseSchema> LHRpcResponse<T> fromResponse(
-        byte[] response, Config config, Class<T> cls
+        byte[] response, DepInjContext config, Class<T> cls
     ) throws LHSerdeError {
 
         RawResult raw = BaseSchema.fromBytes(
