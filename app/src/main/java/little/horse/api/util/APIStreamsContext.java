@@ -147,7 +147,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
     public AliasEntryCollection getTFromAlias(
         String aliasKey, String aliasValue, boolean forceLocal
     ) throws LHConnectionError {
-        String apiPath = T.getAliasPath(aliasKey, aliasValue, cls);
+        String apiPath = T.getAliasSetPath(aliasKey, aliasValue, cls);
         AliasIdentifier entryID = new AliasIdentifier(aliasKey, aliasValue);
 
         Bytes aliasEntryCollectionBytes = queryStoreBytes(
@@ -156,6 +156,10 @@ public class APIStreamsContext<T extends CoreMetadata> {
 
         try {
             if (aliasEntryCollectionBytes == null) return null;
+
+            LHUtil.log("***\n\n****", aliasKey, aliasValue, entryID.getStoreKey());
+            LHUtil.log(new String(aliasEntryCollectionBytes.get()));
+            LHUtil.log("\n\n\n\n", T.getAliasStoreName(cls), apiPath);
 
             return BaseSchema.fromBytes(
                 aliasEntryCollectionBytes.get(), AliasEntryCollection.class, config

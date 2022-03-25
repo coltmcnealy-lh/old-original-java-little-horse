@@ -46,7 +46,10 @@ public class LHRpcCLient {
             } else {
                 throw new LHConnectionError(
                     null,
-                    String.format("Got a %s response from API: %s", resp.code(), body)
+                    String.format(
+                        "Got a %s response from API: %s", resp.code(),
+                        new String(body)
+                    )
                 );
             }
         } catch(IOException exn) {

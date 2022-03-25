@@ -46,6 +46,11 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
         // GET /WFSpecAll
         app.get(T.getAllAPIPath(cls), this::getAll);
 
+        app.get(
+            T.getAliasSetPath("{aliasKey}", "{aliasValue}", cls),
+            this::getAliasCollection
+        );
+
         // A little bit of voodoo to allow for some special overriding stuff, eg for
         // WFRun.
         if (!cls.equals(WFRun.class)) {
@@ -206,6 +211,51 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                     response.status = ResponseStatus.OBJECT_NOT_FOUND;
                     response.message = "obj deleted and idx will follow soon.";
                 }
+            }
+
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            response.message =
+                "Had an internal retriable connection error: " + exn.getMessage();
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            ctx.status(500);
+
+        }
+
+        ctx.json(response);
+    }
+
+    public void getAliasCollection(Context ctx) {
+        String aliasKey = ctx.pathParam("aliasKey");
+        String aliasValue = ctx.pathParam("aliasValue");
+
+        boolean forceLocal = ctx.queryParamAsClass(
+            "forceLocal", Boolean.class
+        ).getOrDefault(false);        
+
+        LHRpcResponse<AliasEntryCollection> response = new LHRpcResponse<>();
+
+        try {
+            AliasEntryCollection collection = streamsContext.getTFromAlias(
+                aliasKey, aliasValue, forceLocal
+            );
+
+            if (collection == null) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+                response.message = "No objects found matching search criteria.";
+                response.result = new AliasEntryCollection();
+                response.result.entries = new ArrayList<>();
+
+            } else {
+                if (collection.entries.size() == 0) {
+                    throw new RuntimeException(
+                        "This shouldn't be possible, see BaseAliasProcessor.java"
+                    );
+                }
+
+                response.result = collection;
+                response.status = ResponseStatus.OK;
+                response.objectId = null;
             }
 
         } catch (LHConnectionError exn) {
