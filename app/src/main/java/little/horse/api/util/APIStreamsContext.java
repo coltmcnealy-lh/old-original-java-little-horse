@@ -315,8 +315,11 @@ public class APIStreamsContext<T extends CoreMetadata> {
                 return queryRemote(storeKey, storeName, host, apiPath);
             } catch(LHConnectionError exn) {
                 // Just swallow it and throw later.
+                System.out.println("Failed on host\n\n\n\n" + host + "\n\n\n"); 
+                exn.printStackTrace();
             }
         }
+        LHUtil.log("\n\n\n", metadata.standbyHosts(), "\n\n\n");
         throw new LHConnectionError(
             null,
             "Neither active nor standby hosts returned valid response."
