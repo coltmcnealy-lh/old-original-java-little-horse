@@ -197,11 +197,14 @@ public class DepInjContext {
         return this.txnProducer;
     }
 
-    public Properties getStreamsConfig(String appIdSuffix) {
+    public Properties getStreamsConfig() {
         Properties props = new Properties();
         props.put(
             StreamsConfig.APPLICATION_ID_CONFIG,
-            this.getAppId() + "-" + appIdSuffix
+            this.getAppId()
+        );
+        props.put(
+            ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.getAppInstanceId()
         );
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);

@@ -316,7 +316,6 @@ public class WFRun extends CoreMetadata {
         apiStuff = new WFRunApiStuff(config);
 
         app.post("/WFRun", apiStuff::postRun);
-        LHUtil.log("asdfasdfasdf");
         app.post(
             "/externalEvent/{externalEventDefId}/{wfRunId}", apiStuff::postEvent
         );

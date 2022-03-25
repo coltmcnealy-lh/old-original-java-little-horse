@@ -10,8 +10,8 @@ public class LHDeserializer<T extends BaseSchema> implements Deserializer<T> {
     private Class<T> cls;
     private DepInjContext config;
 
-    public LHDeserializer(Class<T> asdf, DepInjContext config) {
-        this.cls = asdf;
+    public LHDeserializer(Class<T> cls, DepInjContext config) {
+        this.cls = cls;
         this.config = config;
     }
 

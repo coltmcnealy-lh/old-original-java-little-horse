@@ -28,9 +28,6 @@ public class K8sTaskDeployer implements TaskDeployer {
     public void deploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         Deployment dp = getK8sDeployment(spec, config, kdConfig);
-
-        LHUtil.log("\n\n\n\n\n\n\n\n\n\n\n\nasdfasdf\n\n\n\n\n\n\n\n\n");
-
         kdConfig.createDeployment(dp);
     }
 

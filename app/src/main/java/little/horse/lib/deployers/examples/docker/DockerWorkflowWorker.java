@@ -29,9 +29,9 @@ public class DockerWorkflowWorker {
 
         System.out.println(topology.describe().toString());
 
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig(
-            config.getAppId()
-        ));
+        KafkaStreams streams = new KafkaStreams(
+            topology, config.getStreamsConfig()
+        );
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 

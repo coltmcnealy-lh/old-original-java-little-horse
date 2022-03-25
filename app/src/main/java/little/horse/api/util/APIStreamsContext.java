@@ -259,6 +259,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
                 );
 
             } catch (LHConnectionError exn) {
+                exn.printStackTrace();
                 LHUtil.logError(
                     "Trying to read from stale replica: ", exn.getMessage()
                 );
@@ -274,20 +275,23 @@ public class APIStreamsContext<T extends CoreMetadata> {
         String remoteHost = hostInfo.host();
         int remotePort = hostInfo.port();
         String url = String.format(
-            "http://%s:%d%s/%s?%s=true",
+            "http://%s:%d%s?%s=true",
             remoteHost,
             remotePort,
             apiPath,
-            storeKey,
             Constants.FORCE_LOCAL
         );
+
+        LHUtil.log("\n\n\n\n", url, "\n\n\n\n");
 
         LHRpcCLient client = new LHRpcCLient(config);
         LHRpcResponse<T> response = client.getResponse(url, cls);
 
         switch (response.status) {
             case OK:
-                return new Bytes(response.result.toBytes());
+                CoreMetadataEntry entry = new CoreMetadataEntry();
+                entry.content = response.result.toString();
+                return new Bytes(entry.toBytes());
             case OBJECT_NOT_FOUND:
                 return null;
             case INTERNAL_ERROR:

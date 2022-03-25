@@ -12,8 +12,8 @@ public class LHSerdes<T extends BaseSchema> implements Serde<T> {
     private Class<T> cls;
     private DepInjContext config;
     
-    public LHSerdes(Class<T> asdf, DepInjContext config) {
-        this.cls = asdf;
+    public LHSerdes(Class<T> cls, DepInjContext config) {
+        this.cls = cls;
         this.config = config;
     }
 

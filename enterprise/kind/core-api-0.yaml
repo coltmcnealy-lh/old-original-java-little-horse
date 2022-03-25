@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: little-horse-api
+  labels:
+    app: little-horse-api
+    littlehorse.io/active: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: little-horse-api
+  labels:
+    app: little-horse-api
+    littlehorse.io/active: "true"
+rules:
+  - apiGroups:
+    - apps
+    - ""
+    resources: ["deployments"]
+    verbs: ["get", "create", "edit", "delete", "list", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: little-horse-api
+  labels:
+    app: little-horse-api
+    littlehorse.io/active: "true"
+subjects:
+  - kind: ServiceAccount
+    name: little-horse-api
+    namespace: default
+    apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: little-horse-api
+  apiGroup: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: little-horse-api
+  namespace: default
+  labels:
+    littlehorse.io/active: "true"
+spec:
+  selector:
+    app: little-horse-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP

@@ -32,9 +32,9 @@ spec:
   zookeeper:
     replicas: 1
     storage:
-      type: persistent-claim
+      type: ephemeral
       size: 10Gi
-      deleteClaim: false
+      deleteClaim: true
   entityOperator:
     topicOperator: {}
     userOperator: {}

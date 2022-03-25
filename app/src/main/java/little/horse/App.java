@@ -71,9 +71,7 @@ class FrontendAPIApp {
             MetadataTopologyBuilder.addStuff(topology, config, cls);
         }
 
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig(
-            "central-api"
-        ));
+        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
         LittleHorseAPI lapi = new LittleHorseAPI(config, streams);
 
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
