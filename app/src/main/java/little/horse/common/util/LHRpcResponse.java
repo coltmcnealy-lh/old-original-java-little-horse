@@ -17,8 +17,8 @@ public class LHRpcResponse<T extends BaseSchema> {
         byte[] response, DepInjContext config, Class<T> cls
     ) throws LHSerdeError {
 
-        RawResult raw = BaseSchema.fromBytes(
-            response, RawResult.class, config
+        LHRpcTempRawResponse raw = BaseSchema.fromBytes(
+            response, LHRpcTempRawResponse.class, config
         );
 
         LHRpcResponse<T> out = new LHRpcResponse<>();
@@ -41,9 +41,6 @@ public class LHRpcResponse<T extends BaseSchema> {
     }
 }
 
-class RawResult extends BaseSchema {
-    public String message;
-    public String objectId;
-    public ResponseStatus status;
+class LHRpcTempRawResponse extends LHRpcRawResponse {
     public Object result;
 }

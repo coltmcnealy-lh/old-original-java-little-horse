@@ -34,7 +34,7 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHRpcCLient;
-import little.horse.common.util.LHRpcResponse;
+import little.horse.common.util.LHRpcRawResponse;
 import little.horse.common.util.LHUtil;
 
 public class APIStreamsContext<T extends CoreMetadata> {
@@ -74,6 +74,10 @@ public class APIStreamsContext<T extends CoreMetadata> {
             return entry == null ? null : BaseSchema.fromString(
                 entry.content, cls, config
             );
+            // return objBytes == null ?
+            //     null : BaseSchema.fromBytes(
+            //         objBytes.get(), CoreMetadataEntry.class, config
+            //     );
 
         } catch (LHSerdeError exn) {
             throw new RuntimeException(
@@ -259,7 +263,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
 
             try {
                 return queryRemote(
-                    storeKey, storeName, metadata.activeHost(), apiPath
+                    storeKey, storeName, metadata.activeHost()
                 );
 
             } catch (LHConnectionError exn) {
@@ -274,28 +278,25 @@ public class APIStreamsContext<T extends CoreMetadata> {
     }
 
     private Bytes queryRemote(
-        String storeKey, String storeName, HostInfo hostInfo, String apiPath
+        String storeKey, String storeName, HostInfo hostInfo
     ) throws LHConnectionError {
         String remoteHost = hostInfo.host();
         int remotePort = hostInfo.port();
         String url = String.format(
-            "http://%s:%d%s?%s=true",
+            "http://%s:%d/storeBytes/%s/%s",
             remoteHost,
             remotePort,
-            apiPath,
-            Constants.FORCE_LOCAL
+            storeName,
+            storeKey
         );
-
-        LHUtil.log("\n\n\n\n", url, "\n\n\n\n");
-
         LHRpcCLient client = new LHRpcCLient(config);
-        LHRpcResponse<T> response = client.getResponse(url, cls);
+        LHRpcRawResponse response = client.getRawResponse(url);
 
         switch (response.status) {
             case OK:
-                CoreMetadataEntry entry = new CoreMetadataEntry();
-                entry.content = response.result.toString();
-                return new Bytes(entry.toBytes());
+                byte [] out = response.result == null ?
+                    null: response.result.getBytes();
+                return new Bytes(out);
             case OBJECT_NOT_FOUND:
                 return null;
             case INTERNAL_ERROR:
@@ -320,7 +321,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
         for (HostInfo host: standbys) {
             if (host.equals(metadata.activeHost())) continue; // already tried.
             try {
-                return queryRemote(storeKey, storeName, host, apiPath);
+                return queryRemote(storeKey, storeName, host);
             } catch(LHConnectionError exn) {
                 // Just swallow it and throw later.
                 System.out.println("Failed on host\n\n\n\n" + host + "\n\n\n"); 

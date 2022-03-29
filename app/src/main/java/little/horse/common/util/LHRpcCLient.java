@@ -5,7 +5,7 @@ import java.io.IOException;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.BaseSchema;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -17,7 +17,7 @@ public class LHRpcCLient {
         this.config = config;
     }
 
-    public<T extends CoreMetadata> LHRpcResponse<T> getResponse(
+    public<T extends BaseSchema> LHRpcResponse<T> getResponse(
         String url, Class<T> cls
     ) throws LHConnectionError {
         byte[] response = getResponse(url);
@@ -62,6 +62,17 @@ public class LHRpcCLient {
                     exn.getClass().getName(), url, exn.getMessage()
                 )
             );
+        }
+    }
+
+    public LHRpcRawResponse getRawResponse(String url) throws LHConnectionError {
+        byte[] out = getResponse(url);
+
+        try {
+            return BaseSchema.fromBytes(out, LHRpcRawResponse.class, config);
+        } catch (LHSerdeError exn) {
+            exn.printStackTrace();
+            throw new LHConnectionError(exn, "Got bad response");
         }
     }
 }

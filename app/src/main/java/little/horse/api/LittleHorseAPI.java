@@ -4,9 +4,14 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.Javalin;
+import io.javalin.http.Context;
 import little.horse.api.metadata.CoreMetadataAPI;
 import little.horse.api.util.APIStreamsContext;
 import little.horse.common.DepInjContext;
@@ -15,6 +20,7 @@ import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
+import little.horse.common.util.LHRpcRawResponse;
  
 
 public class LittleHorseAPI {
@@ -35,6 +41,24 @@ public class LittleHorseAPI {
         );
     }
 
+    private void getBytesFromStore(Context ctx) {
+        String storeName = ctx.pathParam("storeName");
+        String storeKey = ctx.pathParam("storeKey");
+
+        LHRpcRawResponse rawResponse = new LHRpcRawResponse();
+        ReadOnlyKeyValueStore<String, Bytes> store = streams.store(
+            StoreQueryParameters.fromNameAndType(
+                storeName,
+                QueryableStoreTypes.keyValueStore()
+            )
+        );
+        Bytes result = store.get(storeKey);
+        rawResponse.result = result == null ? null : new String(result.get());
+        rawResponse.status = result == null ?
+            ResponseStatus.OBJECT_NOT_FOUND : ResponseStatus.OK;
+        ctx.json(rawResponse);
+    }
+
     public LittleHorseAPI(DepInjContext config, KafkaStreams streams) {
         this.config = config;
         this.streams = streams;
@@ -50,6 +74,8 @@ public class LittleHorseAPI {
         )) {
             addApi(cls);
         }
+
+        this.app.get("/storeBytes/{storeName}/{storeKey}", this::getBytesFromStore);
     }
 
     public void cleanup() {

@@ -203,7 +203,9 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                     collection.entries.size() - 1
                 );
 
-                response.result = streamsContext.getTFromId(entry.objectId, forceLocal);
+                response.result = streamsContext.getTFromId(
+                    entry.objectId, forceLocal
+                );
                 if (response.result != null) {
                     response.status = ResponseStatus.OK;
                     response.objectId = response.result.getId();
@@ -327,5 +329,11 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
      */
     private T getFromId(String id, boolean forceLocal) throws LHConnectionError {
         return streamsContext.getTFromId(id, forceLocal);
+        // try {
+        //     return entry == null ?
+        //         null : BaseSchema.fromString(entry.content, cls, config);
+        // } catch (LHSerdeError exn) {
+        //     throw new LHConnectionError(exn, "Got bad response!");
+        // }
     }
 }
