@@ -47,8 +47,9 @@ services:
     network_mode: "host"
     entrypoint:
       - 'java'
-      - '-jar'
+      - '-cp'
       - '/littleHorse.jar'
+      - 'little.horse.App'
     command:
       - "api"
     volumes:

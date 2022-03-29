@@ -1,9 +1,11 @@
 #!/bin/bash
 
+set -ex
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 ${SCRIPT_DIR}/../../build.sh
 
-kind create cluster --name littlehorse --config kind-config.yaml
+kind create cluster --name littlehorse --config ${SCRIPT_DIR}/kind-config.yaml
 
 kubectl apply -f ${SCRIPT_DIR}/kafka-ns.yaml
 kubectl apply -f ${SCRIPT_DIR}/strimzi-crd.yaml

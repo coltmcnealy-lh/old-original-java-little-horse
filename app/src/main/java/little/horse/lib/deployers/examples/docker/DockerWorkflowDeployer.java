@@ -50,8 +50,8 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
                 envList
             ).withName(
                 containerName
-            ).withEntrypoint("java", "-jar", "/littleHorse.jar",
-                "docker-workflow-worker"
+            ).withEntrypoint("java", "-cp", "/littleHorse.jar",
+                DockerWorkflowWorker.class.getCanonicalName()
             ).withLabels(labels);
 
             containerCmd.withHostConfig(

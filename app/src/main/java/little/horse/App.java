@@ -91,15 +91,6 @@ public class App {
         if (args.length > 0 && args[0].equals("api")) {
             System.out.println("running the app");
             FrontendAPIApp.run();
-        } else if (args.length > 0 && args[0].equals("docker-workflow-worker")) {
-            new DockerWorkflowWorker(new DDConfig(), new DepInjContext()).run();
-
-        } else if (args.length > 0  && args[0].equals("docker-task-worker")) {
-            try {
-                Thread.sleep(3000);
-            } catch(InterruptedException exn) {}
-
-            new DockerTaskWorker(new DDConfig(), new DepInjContext()).run();
 
         } else {
             System.out.println("TODO: run some experiment for funsies.");

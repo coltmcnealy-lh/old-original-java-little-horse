@@ -19,4 +19,4 @@ RUN cd /little-horse-build && gradle fatJar
 
 FROM openjdk:18-slim AS container
 COPY --from=builder /little-horse-build/app/build/libs/app-all.jar /littleHorse.jar
-ENTRYPOINT ["java", "-jar", "/littleHorse.jar"]
+CMD ["java", "-cp", "/littleHorse.jar", "little.horse.App"]
