@@ -49,6 +49,15 @@ spec:
             value: "1"
           - name: "LHORSE_KAFKA_APPLICATION_ID"
             value: "lh-core-api"
+          
+          # Deployer Stuff
+          - name: "LHORSE_DEFAULT_WF_DEPLOYER"
+            value: "little.horse.lib.deployers.enterprise.kubernetes.K8sWorkflowDeployer"
+          - name: "LHORSE_DEFAULT_TASK_DEPLOYER"
+            value: "little.horse.lib.deployers.enterprise.kubernetes.K8sTaskDeployer"
+          - name: "LHORSE_DOCKER_TASK_EXECUTOR_CLASS"
+            value: "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
+          
           - name: "LHORSE_KUBERNETES_NAMESPACE"
             valueFrom:
               fieldRef:

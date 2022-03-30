@@ -57,5 +57,4 @@ services:
     command:
       - "api"
     volumes:
-      # enable it to deploy shit
       - /var/run/docker.sock:/var/run/docker.sock
