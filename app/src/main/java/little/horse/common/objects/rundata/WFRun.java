@@ -261,11 +261,6 @@ public class WFRun extends CoreMetadata {
             thread.updateStatus();
         }
 
-        // // lmfao but this do be necessary tho
-        // for (int i = threadRuns.size() - 1; i >= 0; i--) {
-        //     threadRuns.get(i).updateStatus();
-        // }
-
         boolean allTerminated = true;
         boolean allCompleted = true;
 

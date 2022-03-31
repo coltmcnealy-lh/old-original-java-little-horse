@@ -63,7 +63,7 @@ public class ThreadRun extends BaseSchema {
     public ArrayList<Integer> childThreadIDs;
     public ArrayList<Integer> activeInterruptThreadIDs;
     public ArrayList<Integer> handledInterruptThreadIDs;
-    public Integer exceptionHandlerThread = null;
+    // public Integer exceptionHandlerThread = null;
     public ArrayList<Integer> completedExeptionHandlerThreads;
 
     public String errorMessage;
@@ -389,21 +389,24 @@ public class ThreadRun extends BaseSchema {
         tr.failureMessage = msg;
         tr.failureReason = reason;
 
-        ThreadRun handler = wfRun.createThreadClientAdds(
-            handlerSpecName,
-            // In the future we may pass info to the handler thread.
-            new HashMap<String, Object>(),
-            this
+        addAndStartInterruptThread(
+            handlerSpecName, new HashMap<String, Object>(), true
         );
-        wfRun.threadRuns.add(handler);
-        exceptionHandlerThread = handler.id;
+        // ThreadRun handler = wfRun.createThreadClientAdds(
+        //     handlerSpecName,
+        //     // In the future we may pass info to the handler thread.
+        //     new HashMap<String, Object>(),
+        //     this
+        // );
+        // wfRun.threadRuns.add(handler);
+        // exceptionHandlerThread = handler.id;
 
-        // Important to do this after creating the exception handler thread
-        // so that we don't propagate HALTED/ING status to it.
-        halt(
-            WFHaltReasonEnum.HANDLING_EXCEPTION,
-            "Handling exception on failed task " + tr.nodeName
-        );
+        // // Important to do this after creating the exception handler thread
+        // // so that we don't propagate HALTED/ING status to it.
+        // halt(
+        //     WFHaltReasonEnum.HANDLING_EXCEPTION,
+        //     "Handling exception on failed task " + tr.nodeName
+        // );
     }
 
     @JsonIgnore
@@ -475,6 +478,8 @@ public class ThreadRun extends BaseSchema {
             // Check if interrupt handlers are done now (:
             for (int i = activeInterruptThreadIDs.size() - 1; i >= 0; i--) {
                 int tid = activeInterruptThreadIDs.get(i);
+
+                // WTF? Why is this here? Isn't that impossible?
                 if (tid >= wfRun.threadRuns.size()) continue;
 
                 ThreadRun intHandler = wfRun.threadRuns.get(tid);
@@ -489,23 +494,25 @@ public class ThreadRun extends BaseSchema {
                 removeHaltReason(WFHaltReasonEnum.INTERRUPT);
             }
 
-            // Check if we just fixed an exception handler
-            if (exceptionHandlerThread != null) {
-                ThreadRun handler = wfRun.threadRuns.get(
-                    exceptionHandlerThread
-                );
+            // Can comment out this stuff because we are no longer treating
+            // exceptions differently than interrupts
+            // // Check if we just fixed an exception handler
+            // if (exceptionHandlerThread != null) {
+            //     ThreadRun handler = wfRun.threadRuns.get(
+            //         exceptionHandlerThread
+            //     );
 
-                if (handler.isCompleted()) {
-                    removeHaltReason(WFHaltReasonEnum.HANDLING_EXCEPTION);
-                } else if (handler.isFailed()) {
-                    // we're failed.
-                    halt(WFHaltReasonEnum.FAILED,
-                        "Exception handler on thread " + handler.id + " failed!"
-                    );
-                } else {
-                    LHUtil.log("waiting for exception handler to finish");
-                }
-            }
+            //     if (handler.isCompleted()) {
+            //         removeHaltReason(WFHaltReasonEnum.HANDLING_EXCEPTION);
+            //     } else if (handler.isFailed()) {
+            //         // we're failed.
+            //         halt(WFHaltReasonEnum.FAILED,
+            //             "Exception handler on thread " + handler.id + " failed!"
+            //         );
+            //     } else {
+            //         LHUtil.log("waiting for exception handler to finish");
+            //     }
+            // }
         } else if (status == LHExecutionStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
             if (taskRuns.size() == 0 || taskRuns.get(
@@ -903,11 +910,11 @@ public class ThreadRun extends BaseSchema {
             if (kid.isInterruptThread && reason == WFHaltReasonEnum.INTERRUPT) {
                 continue;
             }
-            if (exceptionHandlerThread != null && kid.id == exceptionHandlerThread &&
-                reason == WFHaltReasonEnum.HANDLING_EXCEPTION
-            ) {
-                continue;
-            }
+            // if (exceptionHandlerThread != null && kid.id == exceptionHandlerThread &&
+            //     reason == WFHaltReasonEnum.HANDLING_EXCEPTION
+            // ) {
+            //     continue;
+            // }
             kid.halt(WFHaltReasonEnum.PARENT_STOPPED, "Parent thread was halted.");
         }
     }
@@ -943,16 +950,25 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     public void handleInterrupt(ExternalEventPayload payload) throws
     LHConnectionError {
-
         HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
         InterruptDef idef = idefs.get(payload.externalEventDefName);
         String tspecname = idef.handlerThreadName;
+        addAndStartInterruptThread(
+            tspecname,
+            LHUtil.unsplat(payload.content, config),
+            false
+        );
+    }
 
+    @JsonIgnore
+    private void addAndStartInterruptThread(
+        String tspecName, Map<String, Object> inputs, boolean isException
+    ) throws LHConnectionError {
         // crucial to create the thread BEFORE calling halt(), as the call to halt()
         // adds a WFHaltReason which we dont wanna propagate to the interrupt thread.
         ThreadRun trun = wfRun.createThreadClientAdds(
-            tspecname,
-            LHUtil.unsplat(payload.content, config),
+            tspecName,
+            inputs,
             this
         );
         trun.isInterruptThread = true;
@@ -960,7 +976,10 @@ public class ThreadRun extends BaseSchema {
 
         activeInterruptThreadIDs.add(trun.id);
         // Now we call halt.
-        halt(WFHaltReasonEnum.INTERRUPT, "Halted for interrupt");
+        halt(
+            WFHaltReasonEnum.INTERRUPT,
+            isException ? "Halted to handle Exception": "Halted for interrupt"
+        );
     }
 
     @JsonIgnore

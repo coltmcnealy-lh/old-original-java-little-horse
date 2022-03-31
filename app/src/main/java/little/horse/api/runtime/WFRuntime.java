@@ -40,6 +40,7 @@ public class WFRuntime
         try {
             processHelper(record);
         } catch(Exception exn) {
+            // TODO: Something less dumb
             exn.printStackTrace();
         }
     }
@@ -54,25 +55,39 @@ public class WFRuntime
         if (wfRun == null) {
             if (event.type == WFEventType.WF_RUN_STARTED) {
                 wfRun = wfSpec.newRun(record.key(), record.value());
-                wfRun.setWFSpec(wfSpec);
             } else {
+                // This really shouldn't happen.
                 LHUtil.logError("Couldnt find wfRun for event", event);
                 return;
             }
         } else {
-            wfRun.setWFSpec(wfSpec);
             wfRun.incorporateEvent(event);
         }
-
+        wfRun.setWFSpec(wfSpec);
         wfRun.updateStatuses(event);
+
+        /*
+         * The three important methods here are:
+         * wfRun.incorporateEvent()
+         *  -> either wfRun.handleExternalEvent() or thread.incporateEvent(event)
+         *  -> May move status to STOPPING, HALTING, or RUNNING if appropriate.
+         *
+         * wfRun.updateStatuses(event)
+         *  -> Calls updateStatus on all threadRuns
+         *  -> Sets wfRun status appropriately
+         * 
+         * thread.advance(event, toSchedule)
+         *  -> schedules new tasks if necessary, checks if external events have come
+         *     in, and the like.
+         */
 
         boolean shouldAdvance = true;
         ArrayList<TaskScheduleRequest> toSchedule = new ArrayList<>();
 
         while (shouldAdvance) {
-            // This call here seems redundant but it's actually not...if I don't put it here
-            // then the parent thread never notices if the exception handler thread has
-            // finished.
+            // This call here seems redundant but it's actually not...if I don't put
+            // it here then the parent thread never notices if the exception
+            // handler thread has finished.
             wfRun.updateStatuses(event);
             boolean didAdvance = false;
             for (int i = 0; i < wfRun.threadRuns.size(); i++) {

@@ -12,6 +12,6 @@ public enum WFHaltReasonEnum {
     PARENT_INTERRUPTED,
     FAILED,
     INTERRUPT,
-    HANDLING_EXCEPTION,
+    // HANDLING_EXCEPTION,
     MANUAL_STOP;    
 }
