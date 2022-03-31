@@ -10,5 +10,5 @@ if __name__ == '__main__':
     with open(sys.argv[1], 'r') as f:
         data = json.loads(f.read())
 
-    response = requests.post(f"{URL}/WFSpec", json=data)
+    response = requests.post(f"{URL}/TaskDef", json=data)
     print(response.json())

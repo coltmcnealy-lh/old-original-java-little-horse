@@ -1,0 +1,70 @@
+{
+  "name": "starwars",
+  "entrypointThreadName": "entrypointThread",
+  "threadSpecs": {
+    "entrypointThread": {
+      "entrypointNodeName": "walk_into_room",
+      "variableDefs": {
+        "mystery_person_type": {
+          "type": "STRING"
+        },
+        "greeting": {
+          "type": "STRING"
+        }
+      },
+      "nodes": {
+        "walk_into_room": {
+          "nodeType": "TASK",
+          "taskDefName": "walk_into_room"
+        },
+        "wait_for_mystery_person": {
+          "nodeType": "EXTERNAL_EVENT",
+          "externalEventDefName": "mystery_person_arrives",
+          "variableMutations": {
+            "mystery_person_type": {
+              "copyDirectlyFromNodeOutput": true,
+              "operation": "ASSIGN"
+            }
+          }
+        },
+        "greet_force_user": {
+          "nodeType": "TASK",
+          "taskDefName": "greet_person",
+          "variableMutations": {
+            "greeting": {
+              "operation": "ASSIGN",
+              "copyDirectlyFromNodeOutput": true
+            }
+          },
+          "variables": {
+            "person_type": {
+              "wfRunVariableName": "mystery_person_type"
+            }
+          }
+        }
+      },
+      "edges": [
+        {
+          "sourceNodeName": "walk_into_room",
+          "sinkNodeName": "wait_for_mystery_person"
+        },
+        {
+          "sourceNodeName": "wait_for_mystery_person",
+          "sinkNodeName": "greet_force_user",
+          "condition": {
+            "leftSide": {
+              "wfRunVariableName": "mystery_person_type"
+            },
+            "comparator": "IN",
+            "rightSide": {
+              "literalValue": [
+                "jedi",
+                "sith"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

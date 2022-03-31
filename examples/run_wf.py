@@ -7,9 +7,14 @@ import os
 
 URL = "http://localhost:5000"
 
+
 wf_run_schema = {
-    "wfSpecId": "starwars"
+    "wfSpecId": sys.argv[1]
 }
+
+if len(sys.argv) > 2:
+    data = json.loads(sys.argv[2])
+    wf_run_schema['variables'] = data
 
 run_wf_response = requests.post(f'{URL}/WFRun', json=wf_run_schema)
 run_wf_response.raise_for_status()

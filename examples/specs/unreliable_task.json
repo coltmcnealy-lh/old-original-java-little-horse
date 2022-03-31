@@ -1,0 +1,9 @@
+{
+  "name": "unreliable",
+  "deployMetadata": "{\"dockerImage\": \"little-horse-api:latest\", \"metadata\": \"{\\\"bashCommand\\\": [\\\"python3\\\", \\\"/starwarstasks/unreliable.py\\\"]}\", \"secondaryValidatorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashValidator\", \"taskExecutorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor\"}",
+  "requiredVars": {
+    "person_type": {
+      "type": "INT"
+    }
+  }
+}
