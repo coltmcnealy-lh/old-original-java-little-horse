@@ -35,9 +35,9 @@ The LittleHorse programming model is designed to be as analogous as possible to 
 The core workflow engine manages the scheduling of `TaskRun`'s according to a `WFSpec` (we'll get to that in a minute). How does the scheduling of a `TaskRun` work?
 
 * Every `Node` of type `TASK` has a reference to a `TaskDef`, or Task Definition.
-* Every `TaskDef` refers to a `TaskQueue` object, which is uniquely identified by its `name` field. (The `TaskDef` also has an optional `taskType` parameter, which may be used by workflow worker clients.)
-* When a `TaskRun` is to be scheduled, LittleHorse pushes a `TaskScheduleRequest` to the appropriate `TaskQueue`. The event contains information about any variables needed to run the task, the `taskType`, correlated `WFRun` and `WFSpec` info, and other potentially useful metadata.
-* A Task Worker reads the `TaskScheduleRequest` from the `TaskQueue` and commits the offset (and optionally sends a `TaskStartedEvent` marking the `TaskRun` as started). When the task is completed, the Task Worker notifies LittleHorse via a `TaskRunEndedEvent`.
+  * Every `TaskDef`  is uniquely identified by its `name` field, and has an associated Kafka topic with the same name.
+* When a `TaskRun` is to be scheduled, LittleHorse pushes a `TaskScheduleRequest` to the appropriate Kafka Topic.. The event contains information about any variables needed to run the task, the `taskType`, correlated `WFRun` and `WFSpec` info, and other potentially useful metadata.
+* A Task Worker reads the `TaskScheduleRequest` from the `TaskDef`'s Kafka Topic and commits the offset (and optionally sends a `TaskStartedEvent` marking the `TaskRun` as started). When the task is completed, the Task Worker notifies LittleHorse via a `TaskRunEndedEvent`.
 
 A `TaskRun` may be in any of the following states:
 * `SCHEDULED`
