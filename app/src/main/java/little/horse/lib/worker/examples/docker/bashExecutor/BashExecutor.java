@@ -50,7 +50,13 @@ public class BashExecutor implements DockerTaskExecutor {
         proc.getOutputStream().close();
         proc.waitFor();
 
-        context.log(LHUtil.inputStreamToString(proc.getErrorStream()));
-        return LHUtil.inputStreamToString(proc.getInputStream());
+        if (proc.exitValue() == 0) {
+            context.log(LHUtil.inputStreamToString(proc.getErrorStream()));
+            return LHUtil.inputStreamToString(proc.getInputStream());
+        } else {
+            throw new RuntimeException("Task Execution failed: " +
+                LHUtil.inputStreamToString(proc.getErrorStream())
+            );
+        }
     }
 }

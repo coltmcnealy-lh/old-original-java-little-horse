@@ -1,6 +1,7 @@
 import json
 from pprint import pprint as pp
 import sys
+import time
 import requests
 
 
@@ -12,11 +13,11 @@ TYPES = {
     "wf": "WFSpec"
 }
 
-if __name__ == '__main__':
-    with open(sys.argv[1], 'r') as f:
+def add_thing(filename):
+    with open(filename, 'r') as f:
         data = json.loads(f.read())
 
-    filename = sys.argv[1].split('.')[-2]
+    filename = filename.split('.')[-2]
     type_name = None
     for t in TYPES.keys():
         if filename.endswith(t):
@@ -28,3 +29,9 @@ if __name__ == '__main__':
 
     response = requests.post(f"{URL}/{type_name}", json=data)
     print(response.json())
+
+
+if __name__ == '__main__':
+    for fname in sys.argv[1:]:
+        add_thing(fname)
+        time.sleep(0.1)

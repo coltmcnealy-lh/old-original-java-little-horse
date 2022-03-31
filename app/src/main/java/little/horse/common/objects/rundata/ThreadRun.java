@@ -64,7 +64,6 @@ public class ThreadRun extends BaseSchema {
     public ArrayList<Integer> activeInterruptThreadIDs;
     public ArrayList<Integer> handledInterruptThreadIDs;
     // public Integer exceptionHandlerThread = null;
-    public ArrayList<Integer> completedExeptionHandlerThreads;
 
     public String errorMessage;
 

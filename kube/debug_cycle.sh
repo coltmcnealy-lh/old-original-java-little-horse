@@ -20,7 +20,7 @@ else
 fi
 ' &
 
-./build.sh &
+../build.sh &
 
 wait
 

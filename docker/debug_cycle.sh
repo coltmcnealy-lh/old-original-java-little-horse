@@ -4,7 +4,7 @@ set -ex
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
-./build.sh &
+../build.sh &
 
 CONTAINERS=$(docker ps -aq --filter label=io.littlehorse/active)
 
