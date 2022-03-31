@@ -267,6 +267,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     private void handleTaskStarted(TaskRunEvent trEvent) {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
+        LHUtil.log("\\n\n\n\n\n\n", tr, "\n****\n\n\n****\n\n*asdfasdf", trEvent, "\n\n\n\n\n");
         TaskRunStartedEvent event = trEvent.startedEvent;
 
         tr.status = LHExecutionStatus.RUNNING;
@@ -460,8 +461,7 @@ public class ThreadRun extends BaseSchema {
             if (upNext == null || upNext.size() == 0) {
                 TaskRun lastTr = taskRuns.size() > 0 ?
                     taskRuns.get(taskRuns.size() - 1) : null;
-                if (lastTr == null || lastTr.isCompleted()) {
-                    LHUtil.log("\n\n\ndoing the dancing\n\n\n", this);
+                if (lastTr == null || lastTr.isTerminated()) {
                     status = LHExecutionStatus.COMPLETED;
                 }
             } else {
@@ -520,6 +520,7 @@ public class ThreadRun extends BaseSchema {
                 status = LHExecutionStatus.HALTED;
             }
         }
+
     }
 
     public boolean isLocked(String variableName, int threadID) {

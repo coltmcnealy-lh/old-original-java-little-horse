@@ -133,8 +133,6 @@ public class WFRun extends CoreMetadata {
         trun.wfRun = this;
         trun.variableLocks = new HashMap<String, Integer>();
 
-        trun.completedExeptionHandlerThreads = new ArrayList<Integer>();
-
         trun.haltReasons = new HashSet<>();
 
         if (parent != null) {

@@ -1,5 +1,5 @@
 import random
 
-assert random.random() > 0.5
+assert False
 
 print("Woohoo it worked!")

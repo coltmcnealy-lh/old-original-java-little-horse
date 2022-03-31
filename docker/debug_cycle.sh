@@ -2,12 +2,9 @@
 set -ex
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd $SCRIPT_DIR
-
-../build.sh &
+cd $SCRIPT_DIR/..
 
 CONTAINERS=$(docker ps -aq --filter label=io.littlehorse/active)
-
 
 if [ -z $CONTAINERS ]
 then
@@ -15,6 +12,9 @@ then
 else
     docker stop $CONTAINERS &
 fi
+
+./build.sh
+
 
 wait
 
@@ -25,5 +25,6 @@ else
     docker rm $CONTAINERS
 fi
 
+cd $SCRIPT_DIR
 docker-compose up -d
 docker logs -f little-horse-api

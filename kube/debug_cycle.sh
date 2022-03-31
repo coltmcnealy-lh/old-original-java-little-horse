@@ -2,7 +2,7 @@
 set -ex
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd $SCRIPT_DIR
+cd $SCRIPT_DIR/..
 
 kubectl scale statefulset little-horse-api --replicas=0 --namespace default &
 # Next line is redundant but trust me it speeds it up
@@ -20,7 +20,7 @@ else
 fi
 ' &
 
-../build.sh &
+./build.sh &
 
 wait
 
