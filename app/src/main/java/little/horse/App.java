@@ -3,96 +3,9 @@
  */
 package little.horse;
 
-import java.util.Arrays;
-
-import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.Topology;
-
-import little.horse.api.LittleHorseAPI;
-import little.horse.api.metadata.MetadataTopologyBuilder;
-import little.horse.common.DepInjContext;
-import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.metadata.CoreMetadata;
-import little.horse.common.objects.metadata.ExternalEventDef;
-import little.horse.common.objects.metadata.TaskDef;
-import little.horse.common.objects.metadata.WFSpec;
-import little.horse.common.objects.rundata.WFRun;
-import little.horse.common.util.LHUtil;
-import little.horse.lib.worker.examples.docker.bashExecutor.BashValidator;
-
-class FrontendAPIApp {
-    private static void createKafkaTopics(DepInjContext config) {
-        int partitions = config.getDefaultPartitions();
-        short replicationFactor = (short) config.getDefaultReplicas();
-
-        for (Class<? extends CoreMetadata> cls: Arrays.asList(
-            WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
-        )) {
-            LHUtil.log("About to create topics for ", cls.getName());
-            config.createKafkaTopic(
-                new NewTopic(
-                    CoreMetadata.getIdKafkaTopic(config, cls),
-                    partitions,
-                    replicationFactor
-                )
-            );
-
-            config.createKafkaTopic(
-                new NewTopic(
-                    CoreMetadata.getAliasKafkaTopic(config, cls),
-                    partitions,
-                    replicationFactor
-                )
-            );
-        }
-    }
-
-    /**
-     * Does three things:
-     * 1. Sets up a KafkaStreams topology for processing WFSpec, TaskDef, and WFRun updates.
-     * 2. Sets up a LittleHorseAPI to respond to metadata control requests.
-     * 3. Sets up a listener for new WFSpecs that deploys them to kubernetes (if necessary).
-     */
-    public static void run() {
-        DepInjContext config = null;
-        config = new DepInjContext();
-
-        LHUtil.log("Creating kafka topics");
-        FrontendAPIApp.createKafkaTopics(config);
-        Topology topology = new Topology();
-
-        for (Class<? extends CoreMetadata> cls: Arrays.asList(
-            WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
-        )) {
-            MetadataTopologyBuilder.addStuff(topology, config, cls);
-        }
-
-        KafkaStreams streams = new KafkaStreams(topology, config.getStreamsConfig());
-        LittleHorseAPI lapi = new LittleHorseAPI(config, streams);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(lapi::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Closing streams!");
-            streams.close();
-        }));
-
-        streams.start();
-        lapi.run();
-    }
-}
-
 public class App {
-    public static void main(String[] args) throws LHConnectionError {
-        if (args.length > 0 && args[0].equals("api")) {
-            System.out.println("running the app");
-            FrontendAPIApp.run();
-
-        } else {
-            System.out.println("TODO: run some experiment for funsies.");
-            System.out.println(BashValidator.class.getCanonicalName());
-        }
-
+    public static void main(String[] args) {
+        System.out.println("TODO: run some experiment for funsies.");
+        System.out.println("This class does nothing, all the logic is elsewhere.");
     }
 }

@@ -53,7 +53,7 @@ services:
       - 'java'
       - '-cp'
       - '/littleHorse.jar'
-      - 'little.horse.App'
+      - 'little.horse.api.LittleHorseAPI'
     command:
       - "api"
     volumes:

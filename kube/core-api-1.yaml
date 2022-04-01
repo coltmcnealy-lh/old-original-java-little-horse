@@ -28,8 +28,7 @@ spec:
           - 'java'
           - '-cp'
           - '/littleHorse.jar'
-          - 'little.horse.App'
-          - 'api'
+          - 'little.horse.api.LittleHorseAPI'
         env:
           - name: LHORSE_KAFKA_BOOTSTRAP_SERVERS
             value: "lh-kafka-kafka-bootstrap.kafka:9092"
