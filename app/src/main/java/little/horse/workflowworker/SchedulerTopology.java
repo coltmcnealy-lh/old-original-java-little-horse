@@ -18,7 +18,7 @@ import little.horse.common.util.LHUtil;
 import little.horse.common.util.serdes.LHSerdes;
 
 
-public class WFRunTopology {
+public class SchedulerTopology {
 
     public static void addStuff(
         Topology topology, DepInjContext config, WFSpec wfSpec
@@ -67,7 +67,7 @@ public class WFRunTopology {
         );
         topology.addProcessor(
             runtimeProcessor,
-            () -> {return new WFRuntime(config, wfSpec);},
+            () -> {return new SchedulerProcessor(config, wfSpec);},
             topoSource
         );
 
@@ -94,7 +94,7 @@ public class WFRunTopology {
 
             topology.addProcessor(
                 procName,
-                () -> {return new TaskQueueFilterProcessor(tq);},
+                () -> {return new SchedulerFanoutProcessor(tq);},
                 runtimeProcessor
             );
 
@@ -111,7 +111,9 @@ public class WFRunTopology {
         // Now, forward the WFRun's on to another topic for processing by the API.
         String wfRunSink = "wfRun Sink Processor";
         topology.addProcessor(
-            wfRunSink, () -> {return new WFRunSinkProcessor();}, runtimeProcessor
+            wfRunSink, () -> {
+                return new SchedulerWFRunSinkProcessor();
+            }, runtimeProcessor
         );
 
         topology.addSink(

@@ -6,8 +6,8 @@ import org.apache.kafka.streams.processor.api.Record;
 
 import little.horse.common.objects.rundata.WFRun;
 
-public class WFRunSinkProcessor implements Processor<
-    String, CoordinatorOutput, String, WFRun
+public class SchedulerWFRunSinkProcessor implements Processor<
+    String, SchedulerOutput, String, WFRun
 > {
     private ProcessorContext<String, WFRun> context;
 
@@ -17,8 +17,8 @@ public class WFRunSinkProcessor implements Processor<
     }
 
     @Override
-    public void process(final Record<String, CoordinatorOutput> record) {
-        CoordinatorOutput o = record.value();
+    public void process(final Record<String, SchedulerOutput> record) {
+        SchedulerOutput o = record.value();
 
         if (o != null && o.wfRun != null) {
             context.forward(new Record<String, WFRun>(

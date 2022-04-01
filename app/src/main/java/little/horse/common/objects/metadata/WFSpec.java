@@ -53,7 +53,9 @@ public class WFSpec extends CoreMetadata {
     private String k8sName;
     public String namespace;
     @JsonIgnore // see getter()
-    private String kafkaTopic;
+    private String eventTopic;
+    @JsonIgnore // see Getter
+    private String timerTopic;
 
     private String wfDeployerClassName;
     public String getWfDeployerClassName() {
@@ -255,11 +257,15 @@ public class WFSpec extends CoreMetadata {
     }
 
     @JsonIgnore
-    public void deploy(boolean shouldCreateTopic) throws LHConnectionError {
-        if (shouldCreateTopic) {
+    public void deploy(boolean shouldCreateTopics) throws LHConnectionError {
+        if (shouldCreateTopics) {
             config.createKafkaTopic(new NewTopic(this.getEventTopic(), getPartitions(),
                 getReplicationFactor())
             );
+
+            config.createKafkaTopic(new NewTopic(
+                this.getTimerTopic(),getPartitions(), getReplicationFactor()
+            ));
         }
 
         getWFDeployer().deploy(this, config);
@@ -341,13 +347,23 @@ public class WFSpec extends CoreMetadata {
     }
 
     public String getEventTopic() {
-        if (kafkaTopic == null) {
-            kafkaTopic = config.getWFRunTopicPrefix() + name + "-"
+        if (eventTopic == null) {
+            eventTopic = config.getWFRunEventTopicPrefix() + name + "-"
                 + getId().substring(0, 8);
         }
-        return kafkaTopic;
+        return eventTopic;
     }
+
+    public String getTimerTopic() {
+        if (timerTopic == null) {
+            timerTopic = config.getWFRunTimerTopicPrefix() + name + "-"
+                + getId().substring(0, 8);
+        }
+        return timerTopic;
+    }
+
     public void setEventTopic(String foo) {} // just jackson again
+    public void setTimerTopic(String foo) {} // just jackson again
 
     public String getK8sName() {
         if (k8sName == null) {

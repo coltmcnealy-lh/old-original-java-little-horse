@@ -18,24 +18,22 @@ public class WorkflowWorker {
     }
 
     public void run() throws LHConnectionError {
-        Topology topology = new Topology();
+        Topology scheduler = new Topology();
         WFSpec wfSpec = ddConfig.lookupWFSpecOrDie(config);
 
-        WFRunTopology.addStuff(
-            topology,
+        SchedulerTopology.addStuff(
+            scheduler,
             config,
             wfSpec
         );
 
-        System.out.println(topology.describe().toString());
-
-        KafkaStreams streams = new KafkaStreams(
-            topology, config.getStreamsConfig()
+        KafkaStreams schedulerStreams = new KafkaStreams(
+            scheduler, config.getStreamsConfig()
         );
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(schedulerStreams::close));
 
-        streams.start();
+        schedulerStreams.start();
     }
 
     public static void main(String[] args) throws LHConnectionError {

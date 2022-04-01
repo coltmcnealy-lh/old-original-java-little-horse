@@ -18,19 +18,19 @@ import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 
 
-public class WFRuntime
-    implements Processor<String, WFEvent, String, CoordinatorOutput>
+public class SchedulerProcessor
+    implements Processor<String, WFEvent, String, SchedulerOutput>
 {
     private KeyValueStore<String, WFRun> wfRunStore;
     private WFSpec wfSpec;
-    private ProcessorContext<String, CoordinatorOutput> context;
+    private ProcessorContext<String, SchedulerOutput> context;
 
-    public WFRuntime(DepInjContext config, WFSpec wfSpec) {
+    public SchedulerProcessor(DepInjContext config, WFSpec wfSpec) {
         this.wfSpec = wfSpec;
     }
 
     @Override
-    public void init(final ProcessorContext<String, CoordinatorOutput> context) {
+    public void init(final ProcessorContext<String, SchedulerOutput> context) {
         wfRunStore = context.getStateStore(Constants.WF_RUN_STORE_NAME);
         this.context = context;
     }
@@ -100,16 +100,16 @@ public class WFRuntime
         }
 
         for (TaskScheduleRequest tsr: toSchedule) {
-            CoordinatorOutput co = new CoordinatorOutput();
+            SchedulerOutput co = new SchedulerOutput();
             co.request = tsr;
-            context.forward(new Record<String, CoordinatorOutput>(
+            context.forward(new Record<String, SchedulerOutput>(
                 wfRun.getId(), co, record.timestamp()
             ));
         }
 
-        CoordinatorOutput co = new CoordinatorOutput();
+        SchedulerOutput co = new SchedulerOutput();
         co.wfRun = wfRun;
-        context.forward(new Record<String, CoordinatorOutput>(
+        context.forward(new Record<String, SchedulerOutput>(
             wfRun.getId(), co, record.timestamp()
         ));
 

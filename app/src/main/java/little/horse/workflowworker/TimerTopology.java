@@ -33,7 +33,8 @@ public class TimerTopology {
 
         This is slightly wasteful: the data is stored in the WF Worker's RocksDB, the
         output topic, then the API's state store, then the API's state store's
-        changelog topic (since we don't have the optimization yet).
+        changelog topic (since we don't have the ability to optimize like kSQL does 
+        by using the same topic as the changelog for both stores).
 
         However, it brings a few benefits:
         1. if we queried the WF Workers directly, we would be adding another network
@@ -66,7 +67,7 @@ public class TimerTopology {
         );
         topology.addProcessor(
             runtimeProcessor,
-            () -> {return new WFRuntime(config, wfSpec);},
+            () -> {return new SchedulerProcessor(config, wfSpec);},
             topoSource
         );
 
@@ -93,7 +94,7 @@ public class TimerTopology {
 
             topology.addProcessor(
                 procName,
-                () -> {return new TaskQueueFilterProcessor(tq);},
+                () -> {return new SchedulerFanoutProcessor(tq);},
                 runtimeProcessor
             );
 
@@ -110,7 +111,7 @@ public class TimerTopology {
         // Now, forward the WFRun's on to another topic for processing by the API.
         String wfRunSink = "wfRun Sink Processor";
         topology.addProcessor(
-            wfRunSink, () -> {return new WFRunSinkProcessor();}, runtimeProcessor
+            wfRunSink, () -> {return new SchedulerWFRunSinkProcessor();}, runtimeProcessor
         );
 
         topology.addSink(

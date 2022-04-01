@@ -378,13 +378,17 @@ public class DepInjContext {
         return Integer.valueOf(getOrSetDefault(Constants.DEFAULT_PARTITIONS_KEY, "1"));
     }
 
-    public String getWFRunTopicPrefix() {
+    public String getWFRunEventTopicPrefix() {
         return this.getKafkaTopicPrefix() + "wfEvents__";
+    }
+
+    public String getWFRunTimerTopicPrefix() {
+        return this.getKafkaTopicPrefix() + "timers__";
     }
 
     public Pattern getAllWFRunTopicsPattern() {
         return Pattern.compile(
-            this.getWFRunTopicPrefix() + ".*"
+            this.getWFRunEventTopicPrefix() + ".*"
         );
     }
 

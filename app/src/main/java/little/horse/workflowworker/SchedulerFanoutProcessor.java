@@ -6,13 +6,13 @@ import org.apache.kafka.streams.processor.api.Record;
 
 import little.horse.common.objects.metadata.TaskDef;
 
-public class TaskQueueFilterProcessor implements Processor<
-    String, CoordinatorOutput, String, TaskScheduleRequest
+public class SchedulerFanoutProcessor implements Processor<
+    String, SchedulerOutput, String, TaskScheduleRequest
 > {
     private TaskDef tq;
     private ProcessorContext<String, TaskScheduleRequest> context;
 
-    public TaskQueueFilterProcessor(TaskDef tq) {
+    public SchedulerFanoutProcessor(TaskDef tq) {
         this.tq = tq;
     }
 
@@ -22,8 +22,8 @@ public class TaskQueueFilterProcessor implements Processor<
     }
 
     @Override
-    public void process(final Record<String, CoordinatorOutput> record) {
-        CoordinatorOutput o = record.value();
+    public void process(final Record<String, SchedulerOutput> record) {
+        SchedulerOutput o = record.value();
 
         if (o == null || o.request == null) {
             return;
