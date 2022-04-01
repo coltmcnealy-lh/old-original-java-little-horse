@@ -18,6 +18,7 @@ import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.WorkflowDeployer;
+import little.horse.workflowworker.WorkflowWorker;
 
 public class DockerWorkflowDeployer implements WorkflowDeployer {
     public void deploy(WFSpec spec, DepInjContext config) throws LHConnectionError {
@@ -51,7 +52,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
             ).withName(
                 containerName
             ).withEntrypoint("java", "-cp", "/littleHorse.jar",
-                DockerWorkflowWorker.class.getCanonicalName()
+                WorkflowWorker.class.getCanonicalName()
             ).withLabels(labels);
 
             containerCmd.withHostConfig(

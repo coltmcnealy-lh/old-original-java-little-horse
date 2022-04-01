@@ -3,7 +3,6 @@ package little.horse.lib.worker.examples.docker.bashExecutor;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 
-import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
@@ -12,6 +11,7 @@ import little.horse.lib.deployers.examples.docker.DDConfig;
 import little.horse.lib.deployers.examples.docker.DDConstants;
 import little.horse.lib.worker.WorkerContext;
 import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.workflowworker.TaskScheduleRequest;
 
 public class BashExecutor implements DockerTaskExecutor {
     private BashTaskMetadata meta;

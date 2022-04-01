@@ -17,6 +17,7 @@ import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
 import little.horse.common.objects.metadata.Node;
+import little.horse.common.util.Constants;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 import little.horse.common.util.json.JsonMapKey;
@@ -53,6 +54,8 @@ public class Node extends BaseSchema {
     public TaskDef taskDef;
     public String taskDefName;
     public String taskDefId;
+
+    public SleepTypeEnum sleepType;
 
     // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
     public String exceptionToThrow;
@@ -188,6 +191,8 @@ public class Node extends BaseSchema {
             validateSpawnThreadNode(config);
         } else if (nodeType == NodeType.WAIT_FOR_THREAD) {
             validateWaitForThreadNode(config);
+        } else if (nodeType == NodeType.SLEEP) {
+            validateSleepNode(config);
         }
     }
 
@@ -283,5 +288,19 @@ public class Node extends BaseSchema {
         // graph of nodes/edges on the ThreadSpec.
 
         threadWaitSourceNodeName = sourceNode.name;
+    }
+
+    private void validateSleepNode(DepInjContext config) throws LHValidationError {
+        // Need to check that the variables specify how long to sleep.
+        VariableAssignment assn = variables.get(Constants.SLEEP_VALUE);
+
+        if (assn == null) {
+            throw new LHValidationError(
+                "Didn't provide " + Constants.SLEEP_VALUE + " var for sleep node!"
+            );
+        }
+
+        // TODO: Once we have some sort of JSONSchema validation, make sure that we
+        // are getting the correct type.
     }
 }

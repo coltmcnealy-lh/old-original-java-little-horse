@@ -1,6 +1,7 @@
-package little.horse.api.runtime;
+package little.horse.workflowworker;
 
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
@@ -16,8 +17,7 @@ import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 import little.horse.common.util.serdes.LHSerdes;
 
-
-public class WFRunTopology {
+public class TimerTopology {
 
     public static void addStuff(
         Topology topology, DepInjContext config, WFSpec wfSpec
@@ -135,6 +135,14 @@ public class WFRunTopology {
                 runSerde
             );
         topology.addStateStore(wfRunStoreBuilder, runtimeProcessor);
+
+        StoreBuilder<KeyValueStore<Long, Bytes>> timerStoreBuilder =
+            Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore(Constants.TIMER_STORE_NAME),
+                Serdes.Long(),
+                Serdes.Bytes()
+            );
+        topology.addStateStore(timerStoreBuilder, runtimeProcessor);
 
         // cleanup.
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

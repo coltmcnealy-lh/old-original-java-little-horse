@@ -1,4 +1,4 @@
-package little.horse.lib.deployers.enterprise.kubernetes;
+package little.horse.lib.deployers.examples.kubernetes;
 
 import java.util.HashMap;
 

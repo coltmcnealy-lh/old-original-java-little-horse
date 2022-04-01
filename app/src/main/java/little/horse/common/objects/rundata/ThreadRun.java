@@ -13,7 +13,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
@@ -39,6 +38,7 @@ import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFRunVariableTypeEnum;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHUtil;
+import little.horse.workflowworker.TaskScheduleRequest;
 
 
 @JsonIdentityInfo(

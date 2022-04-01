@@ -1,4 +1,4 @@
-package little.horse.api.runtime;
+package little.horse.workflowworker;
 
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;

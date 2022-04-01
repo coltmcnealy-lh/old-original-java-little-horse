@@ -1,5 +1,6 @@
 package little.horse.common.util;
 
+import java.time.Duration;
 import java.util.regex.Pattern;
 
 public class Constants {
@@ -28,6 +29,10 @@ public class Constants {
 
     // TODO: make this a reserved word.
     public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";
+    public static String LATEST_TS_ROCKSDB_KEY = "latest-timestamp";
+    public static String LAST_PROCESSED_TS_ROCKSDB_KEY = "last-processed-timestamp";
+    public static String TIMER_STORE_NAME = "timerStore";
+    public static Duration PUNCTUATOR_INERVAL = Duration.ofSeconds(1);
 
     public static int EXPOSED_PORT = 5000;
 
@@ -37,4 +42,5 @@ public class Constants {
     public static String WF_RUN_STORE_NAME = "wfRunStore";
 
     public static String FORCE_LOCAL = "forceLocal";
+    public static String SLEEP_VALUE = "sleepValue";
 }

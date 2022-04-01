@@ -1,4 +1,4 @@
-package little.horse.lib.deployers.enterprise.kubernetes;
+package little.horse.lib.deployers.examples.kubernetes;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -15,7 +15,7 @@ import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.Deployment;
+import little.horse.lib.deployers.examples.kubernetes.specs.Deployment;
 import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
 
 

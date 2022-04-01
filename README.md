@@ -63,6 +63,6 @@ The repository has the following components:
     * `WFRun.java` and `ThreadRun.java` have the real potatoes of the actual state transition logic for what happens when an event (i.e. Task Completed) is processed.
 * Deployer Interfaces
     * `WorkflowDeployer.java` is the interface for deploying a workflow.
-        * `DockerWorkflowDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `DockerWorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
+        * `DockerWorkflowDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
     * `TaskDeployer.java` is the interface for deploying tasks.
-        * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `DockerWorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
+        * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.

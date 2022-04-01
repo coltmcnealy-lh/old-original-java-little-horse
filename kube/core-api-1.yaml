@@ -52,9 +52,9 @@ spec:
           
           # Deployer Stuff
           - name: "LHORSE_DEFAULT_WF_DEPLOYER"
-            value: "little.horse.lib.deployers.enterprise.kubernetes.K8sWorkflowDeployer"
+            value: "little.horse.lib.deployers.examples.kubernetes.K8sWorkflowDeployer"
           - name: "LHORSE_DEFAULT_TASK_DEPLOYER"
-            value: "little.horse.lib.deployers.enterprise.kubernetes.K8sTaskDeployer"
+            value: "little.horse.lib.deployers.examples.kubernetes.K8sTaskDeployer"
           - name: "LHORSE_DOCKER_TASK_EXECUTOR_CLASS"
             value: "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
           

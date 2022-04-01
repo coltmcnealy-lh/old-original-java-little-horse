@@ -1,4 +1,4 @@
-package little.horse.lib.deployers.enterprise.kubernetes;
+package little.horse.lib.deployers.examples.kubernetes;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,45 +13,40 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHClassLoadError;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.WorkflowDeployer;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.Container;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.Deployment;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.DeploymentMetadata;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.DeploymentSpec;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.EnvEntry;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.PodSpec;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.Selector;
-import little.horse.lib.deployers.enterprise.kubernetes.specs.Template;
-import little.horse.lib.deployers.examples.docker.DockerWorkflowWorker;
+import little.horse.lib.deployers.TaskDeployer;
+import little.horse.lib.deployers.examples.docker.DockerSecondaryTaskValidator;
+import little.horse.lib.deployers.examples.docker.DockerTaskWorker;
+import little.horse.lib.deployers.examples.kubernetes.specs.*;
 
-public class K8sWorkflowDeployer implements WorkflowDeployer {
+public class K8sTaskDeployer implements TaskDeployer {
 
-    public void deploy(WFSpec spec, DepInjContext config) throws LHConnectionError {
-        KDConfig kdConfig = LHUtil.loadClass(KDConfig.class.getCanonicalName());
+    public void deploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
+        KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         Deployment dp = getK8sDeployment(spec, config, kdConfig);
-
         kdConfig.createDeployment(dp);
     }
 
     private Deployment getK8sDeployment(
-        WFSpec spec, DepInjContext config, KDConfig kdConfig
-    ) throws LHConnectionError {
-        K8sWorkflowDeployMeta meta = new K8sWorkflowDeployMeta();
+        TaskDef spec, DepInjContext config, KDConfig kdConfig
+    ) {
+        K8sTaskDeployMeta meta;
         try {
-            if (spec.deployMetadata != null) {
-                meta = BaseSchema.fromString(
-                    spec.deployMetadata, K8sWorkflowDeployMeta.class, config
-                );
+            meta = BaseSchema.fromString(
+                spec.deployMetadata, K8sTaskDeployMeta.class, config
+            );
+            if (meta.env == null) {
+                meta.env = new HashMap<>();
             }
         } catch (LHSerdeError exn) {
             throw new RuntimeException(
                 "Should be impossible--didn't we already validate this?", exn
             );
         }
+
         Deployment dp = new Deployment();
         dp.metadata = new DeploymentMetadata();
         dp.spec = new DeploymentSpec();
@@ -61,13 +56,13 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         dp.metadata.namespace = (meta.namespace == null) ?
             kdConfig.getDefaultK8sNamespace(): meta.namespace;
 
-        dp.metadata.name = spec.name;
+        dp.metadata.name = kdConfig.getK8sName(spec);
         dp.metadata.labels = new HashMap<String, String>();
 
         dp.metadata.labels.put("app", kdConfig.getK8sName(spec));
         dp.metadata.labels.put("io.littlehorse/deployedBy", "true");
         dp.metadata.labels.put("io.littlehorse/active", "true");
-        dp.metadata.labels.put("io.littlehorse/wfSpecId", spec.getId());
+        dp.metadata.labels.put("io.littlehorse/taskDefId", spec.getId());
 
         Container container = new Container();
         container.name = kdConfig.getK8sName(spec);
@@ -75,66 +70,89 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         container.imagePullPolicy = "IfNotPresent";
         container.command = Arrays.asList(
             "java", "-cp", "/littleHorse.jar",
-            DockerWorkflowWorker.class.getCanonicalName()
+            DockerTaskWorker.class.getCanonicalName()
         );
 
         HashMap<String, String> env = config.getBaseEnv();
-        env.put(Constants.KAFKA_APPLICATION_ID_KEY, "wf-" + spec.name);
-        env.put(KDConstants.WF_SPEC_ID_KEY, spec.getId());
+        env.put(
+            Constants.KAFKA_APPLICATION_ID_KEY, "task-" + kdConfig.getK8sName(spec)
+        );
+        env.put(KDConstants.TASK_DEF_ID_KEY, spec.getId());
+        env.put(KDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
+        env.put(KDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
+
+        for (Map.Entry<String, String> envEntry: meta.env.entrySet()) {
+            env.put(envEntry.getKey(), envEntry.getValue());
+        }
         container.env = new ArrayList<EnvEntry>();
+
         for (Map.Entry<String, String> envEntry: env.entrySet()) {
             container.env.add(new EnvEntry(
                 envEntry.getKey(), envEntry.getValue()
             ));
         }
 
-        HashMap<String, String> labels = new HashMap<>();
-        labels.put("io.littlehorse/deployedBy", "true");
-        labels.put("io.littlehorse/wfSpecId", spec.getId());
-        labels.put("io.littlehorse/wfSpecName", spec.name);
-        labels.put("io.littlehorse/active", "true");
-
         Template template = new Template();
         template.metadata = new DeploymentMetadata();
-        template.metadata.labels = labels;
         template.metadata.name = kdConfig.getK8sName(spec);
+        template.metadata.labels = new HashMap<String, String>();
         template.metadata.namespace = (meta.namespace == null) ?
             kdConfig.getDefaultK8sNamespace(): meta.namespace;
-        
+
+        template.metadata.labels.put("app", kdConfig.getK8sName(spec));
+        template.metadata.labels.put("io.littlehorse/deployedBy", "true");
+        template.metadata.labels.put("io.littlehorse/active", "true");
+        template.metadata.labels.put("io.littlehorse/taskDefId", spec.getId());
+
         template.spec = new PodSpec();
         template.spec.containers = Arrays.asList(container);
 
         dp.spec.template = template;
+
+        if (meta.replicas > 1) throw new RuntimeException("Not yet supported!");
+    
         dp.spec.replicas = 1; // TODO: Support more, which will need StatefulSet
         dp.spec.selector = new Selector();
-        dp.spec.selector.matchLabels = labels;        
+        dp.spec.selector.matchLabels = new HashMap<String, String>();
+        dp.spec.selector.matchLabels.put("app", kdConfig.getK8sName(spec));
+        dp.spec.selector.matchLabels.put("io.littlehorse/deployedBy", "true");
+        dp.spec.selector.matchLabels.put("io.littlehorse/active", "true");
+        dp.spec.selector.matchLabels.put("io.littlehorse/taskDefId", spec.getId());
 
         return dp;
     }
 
-    public void undeploy(WFSpec spec, DepInjContext config) throws LHConnectionError{
+    public void undeploy(TaskDef spec, DepInjContext config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
-        kdConfig.deleteK8sDeployment("io.littlehorse.wfSpecId", spec.getId());
+        kdConfig.deleteK8sDeployment("io.littlehorse.taskDefId", spec.getId());
     }
 
-    public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {
+    public void validate(TaskDef spec, DepInjContext config) throws LHValidationError {
         String message = null;
         if (spec.deployMetadata == null) {
             throw new LHValidationError("Must provide valid Docker validation!");
         }
         try {
-            K8sWorkflowDeployMeta meta = BaseSchema.fromString(
-                spec.deployMetadata, K8sWorkflowDeployMeta.class, config
+            K8sTaskDeployMeta meta = BaseSchema.fromString(
+                spec.deployMetadata, K8sTaskDeployMeta.class, config
             );
-            if (meta.dockerImage == null) {
-                message = "Must provide docker image for Workflow Worker!";
+            if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
+                message = "Must provide docker image and TaskExecutor class name!";
+            }
+            if (meta.env == null) {
+                meta.env = new HashMap<>();
             }
 
+            if (meta.secondaryValidatorClassName != null) {
+                DockerSecondaryTaskValidator validator = LHUtil.loadClass(
+                    meta.secondaryValidatorClassName
+                );
+                validator.validate(spec, config);
+            }
             KDConfig kdc = LHUtil.loadClass(KDConfig.class.getCanonicalName());
             new ObjectMapper(new YAMLFactory()).writeValueAsString(
                 getK8sDeployment(spec, config, kdc)
             );
-
         } catch (LHSerdeError exn) {
             exn.printStackTrace();
             message = 
@@ -151,5 +169,4 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
             throw new LHValidationError(message);
         }
     }
-   
 }

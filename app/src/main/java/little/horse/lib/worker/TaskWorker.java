@@ -15,7 +15,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
 
-import little.horse.api.runtime.TaskScheduleRequest;
 import little.horse.common.DepInjContext;
 import little.horse.common.events.TaskRunEndedEvent;
 import little.horse.common.events.TaskRunEvent;
@@ -30,6 +29,7 @@ import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.workflowworker.TaskScheduleRequest;
 
 public class TaskWorker {
     private DepInjContext config;
