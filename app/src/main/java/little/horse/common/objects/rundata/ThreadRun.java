@@ -306,10 +306,7 @@ public class ThreadRun extends BaseSchema {
 
         // Need the up next to be set whether or not the task fails/there is
         // a retry/it succeeds.
-        LHUtil.log("Here we are...");
         upNext = new ArrayList<Edge>();
-        LHUtil.log(task, "\n\n\n");
-        LHUtil.log(task.getNode(), "\n\n\n");
         for (Edge edge: task.getNode().getOutgoingEdges()) {
             addEdgeToUpNext(edge);
         }
@@ -803,7 +800,10 @@ public class ThreadRun extends BaseSchema {
             calendar.add(Calendar.SECOND, node.sleepSeconds);
             timer.maturationTimestamp = calendar.getTimeInMillis();
 
+            LHUtil.log(timers);
             timers.add(timer);
+            upNext = new ArrayList<>();
+            return true;
         }
         throw new RuntimeException("invalid node type: " + node.nodeType);
     }

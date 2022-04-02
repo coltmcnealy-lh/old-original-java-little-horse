@@ -8,6 +8,7 @@ import java.util.Locale;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.Cancellable;
+import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -48,6 +49,12 @@ public class SchedulerProcessor
         wfRunStore = context.getStateStore(Constants.WF_RUN_STORE_NAME);
         timerStore = context.getStateStore(Constants.TIMER_STORE_NAME);
         this.context = context;
+
+        punctuator = context.schedule(
+            Constants.PUNCTUATOR_INERVAL,
+            PunctuationType.WALL_CLOCK_TIME,
+            this::punctuate
+        );
     }
 
     @Override

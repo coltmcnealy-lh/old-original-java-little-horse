@@ -139,10 +139,10 @@ public class SchedulerTopology {
             );
         topology.addStateStore(wfRunStoreBuilder, runtimeProcessor);
 
-        StoreBuilder<KeyValueStore<Long, Bytes>> timerStoreBuilder =
+        StoreBuilder<KeyValueStore<String, Bytes>> timerStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(Constants.TIMER_STORE_NAME),
-                Serdes.Long(),
+                Serdes.String(),
                 Serdes.Bytes()
             );
         topology.addStateStore(timerStoreBuilder, runtimeProcessor);

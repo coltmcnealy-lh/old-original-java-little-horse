@@ -297,9 +297,9 @@ public class Node extends BaseSchema {
         VariableAssignment assn = variables.get(Constants.SLEEP_VALUE);
 
         if (assn == null) {
-            throw new LHValidationError(
-                "Didn't provide " + Constants.SLEEP_VALUE + " var for sleep node!"
-            );
+            // throw new LHValidationError(
+            //     "Didn't provide " + Constants.SLEEP_VALUE + " var for sleep node!"
+            // );
         }
 
         // TODO: Once we have some sort of JSONSchema validation, make sure that we
