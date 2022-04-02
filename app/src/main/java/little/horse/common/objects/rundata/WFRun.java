@@ -181,8 +181,8 @@ public class WFRun extends CoreMetadata {
             // This is an interrupt. Find the appropriate thread and interrupt it.
             // There's two options: the thread number is set, or it's not set.
             // If the thread number is set, then just interrupt that thread.
-            if (event.threadID != -1) {
-                threadRuns.get(event.threadID).handleInterrupt(payload);
+            if (event.threadRunId != -1) {
+                threadRuns.get(event.threadRunId).handleInterrupt(payload);
             } else {
                 // if there's no thread number set, interrupt all threads that
                 // listen to this interrupt.
@@ -194,7 +194,7 @@ public class WFRun extends CoreMetadata {
             ExternalEventCorrel correl = new ExternalEventCorrel();
             correl.event = payload;
             correl.arrivalTime = event.timestamp;
-            correl.assignedThreadID = event.threadID;
+            correl.assignedThreadID = event.threadRunId;
 
             if (correlatedEvents == null) {
                 correlatedEvents = new HashMap<>();
@@ -224,17 +224,17 @@ public class WFRun extends CoreMetadata {
         }
 
         if (event.type == WFEventType.TASK_EVENT) {
-            ThreadRun thread = threadRuns.get(event.threadID);
+            ThreadRun thread = threadRuns.get(event.threadRunId);
             thread.incorporateEvent(event);
         }
 
         if (event.type == WFEventType.WF_RUN_STOP_REQUEST) {
-            if (event.threadID == 0 && status == LHExecutionStatus.RUNNING) {
+            if (event.threadRunId == 0 && status == LHExecutionStatus.RUNNING) {
                 status = LHExecutionStatus.HALTING;
             }
-            int threadID = event.threadID >= 0 ? event.threadID : 0;
+            int threadID = event.threadRunId >= 0 ? event.threadRunId : 0;
             if (threadID < threadRuns.size()) {
-                threadRuns.get(event.threadID).halt(
+                threadRuns.get(event.threadRunId).halt(
                     WFHaltReasonEnum.MANUAL_STOP,
                     "Manual halt of this thread requested by system admin."
                 );
@@ -242,15 +242,34 @@ public class WFRun extends CoreMetadata {
         }
 
         if (event.type == WFEventType.WF_RUN_RESUME_REQUEST) {
-            if (event.threadID == 0 && status != LHExecutionStatus.COMPLETED) {
+            if (event.threadRunId == 0 && status != LHExecutionStatus.COMPLETED) {
                 status = LHExecutionStatus.RUNNING;
             }
-            if (event.threadID < threadRuns.size()) {
-                threadRuns.get(event.threadID).removeHaltReason(
+            if (event.threadRunId < threadRuns.size()) {
+                threadRuns.get(event.threadRunId).removeHaltReason(
                     WFHaltReasonEnum.MANUAL_STOP
                 );
             }
         }
+
+        if (event.type == WFEventType.TIMER_EVENT) {
+            handleTimerEvent(event);
+        }
+    }
+
+    private void handleTimerEvent(WFEvent event) throws LHConnectionError {
+        WFRunTimer timer;
+        try {
+            timer = BaseSchema.fromString(
+                event.content, WFRunTimer.class, config
+            );
+        } catch (LHSerdeError exn) {
+            exn.printStackTrace();
+            throw new RuntimeException("this is impossible");
+        }
+
+        ThreadRun thread = threadRuns.get(timer.threadRunId);
+        thread.handleTimer(timer);
     }
 
     @JsonIgnore
@@ -408,7 +427,7 @@ class WFRunApiStuff {
             event.wfRun = wfRun;
             event.wfRunId = wfRunGuid;
             event.type = WFEventType.WF_RUN_STOP_REQUEST;    
-            event.threadID = tid;
+            event.threadRunId = tid;
             event.wfSpecId = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
@@ -448,7 +467,7 @@ class WFRunApiStuff {
             event.wfRun = wfRun;
             event.wfRunId = wfRunGuid;
             event.type = WFEventType.WF_RUN_RESUME_REQUEST;    
-            event.threadID = tid;
+            event.threadRunId = tid;
             event.wfSpecId = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();

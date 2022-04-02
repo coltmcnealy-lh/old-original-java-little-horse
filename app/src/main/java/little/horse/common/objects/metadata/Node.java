@@ -30,6 +30,8 @@ public class Node extends BaseSchema {
     @JsonMapKey
     public String name;
 
+    public int sleepSeconds;
+
     public NodeType nodeType;
 
     private ArrayList<Edge> outgoingEdges;

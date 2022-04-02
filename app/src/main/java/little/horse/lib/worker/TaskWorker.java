@@ -132,7 +132,7 @@ public class TaskWorker {
         event.wfSpecName = schedReq.wfSpecName;
         event.type = WFEventType.TASK_EVENT;
         event.timestamp = tre.timestamp;
-        event.threadID = schedReq.threadRunNumber;
+        event.threadRunId = schedReq.threadRunNumber;
 
         ProducerRecord<String, Bytes> prodRecord = new ProducerRecord<String, Bytes>(
             schedReq.kafkaTopic, schedReq.wfRunId, new Bytes(event.toBytes())
@@ -186,7 +186,7 @@ public class TaskWorker {
 
         WFEvent completedEvent = new WFEvent();
         completedEvent.wfRunId = schedReq.wfRunId;
-        completedEvent.threadID = schedReq.threadRunNumber;
+        completedEvent.threadRunId = schedReq.threadRunNumber;
         completedEvent.timestamp = tre2.timestamp;
         completedEvent.wfSpecId = schedReq.wfSpecId;
         completedEvent.wfSpecName = schedReq.wfSpecName;

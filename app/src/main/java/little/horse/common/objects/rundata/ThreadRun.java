@@ -1,10 +1,12 @@
 package little.horse.common.objects.rundata;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -37,6 +39,7 @@ import little.horse.common.objects.metadata.VariableMutation;
 import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFRunVariableTypeEnum;
 import little.horse.common.objects.metadata.WFSpec;
+
 import little.horse.common.util.LHUtil;
 import little.horse.workflowworker.TaskScheduleRequest;
 
@@ -279,7 +282,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     public WFEvent newWFEvent(WFEventType type, BaseSchema content) {
         WFEvent out = wfRun.newWFEvent(type, content);
-        out.threadID = id;
+        out.threadRunId = id;
         return out;
     }
 
@@ -308,7 +311,7 @@ public class ThreadRun extends BaseSchema {
         LHUtil.log(task, "\n\n\n");
         LHUtil.log(task.getNode(), "\n\n\n");
         for (Edge edge: task.getNode().getOutgoingEdges()) {
-            upNext.add(edge);
+            addEdgeToUpNext(edge);
         }
         LHUtil.log("Up next: ", upNext);
 
@@ -579,8 +582,11 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public boolean advance(WFEvent event, ArrayList<TaskScheduleRequest> toSchedule)
-    throws LHConnectionError {
+    public boolean advance(
+        WFEvent event,
+        List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
+    ) throws LHConnectionError {
         if (status != LHExecutionStatus.RUNNING || upNext.size() == 0) {
             return false;
         }
@@ -633,12 +639,13 @@ public class ThreadRun extends BaseSchema {
             return false;
         }
 
-        return activateNode(activatedNode, event, toSchedule);
+        return activateNode(activatedNode, event, toSchedule, timers);
     }
 
     @JsonIgnore
     private void scheduleTask(
-        TaskRun tr, Node node, ArrayList<TaskScheduleRequest> toSchedule
+        TaskRun tr, Node node, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
     ) throws LHConnectionError {
         TaskScheduleRequest te = new TaskScheduleRequest();
         te.setConfig(config);
@@ -675,14 +682,15 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     private boolean activateNode(
-        Node node, WFEvent event, ArrayList<TaskScheduleRequest> toSchedule
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
     ) throws LHConnectionError {
         if (node.nodeType == NodeType.TASK) {
             upNext = new ArrayList<Edge>();
             TaskRun tr = createNewTaskRun(node);
             taskRuns.add(tr);
 
-            scheduleTask(tr, node, toSchedule);
+            scheduleTask(tr, node, toSchedule, timers);
             return true;
 
         } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
@@ -718,7 +726,7 @@ public class ThreadRun extends BaseSchema {
             );
             upNext = new ArrayList<Edge>();
             for (Edge edge: node.getOutgoingEdges()) {
-                upNext.add(edge);
+                addEdgeToUpNext(edge);
             }
             return true; // Obviously something changed, we done did add a task.
 
@@ -774,6 +782,28 @@ public class ThreadRun extends BaseSchema {
             );
             completeTask(tr, LHExecutionStatus.FAILED, result, event.timestamp);
             return true;
+        } else if (node.nodeType == NodeType.SLEEP) {
+            TaskRun tr = createNewTaskRun(node);
+            taskRuns.add(tr);
+
+            WFRunTimer timer = new WFRunTimer();
+            timer.setConfig(config);
+
+            timer.threadRunId = id;
+            timer.wfRunId = wfRun.id;
+            timer.taskRunId = tr.number;
+
+            // Object target = assignVariable(node.variables.get(
+            //     Constants.SLEEP_VALUE
+            // ));
+
+            // long target;
+
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.SECOND, node.sleepSeconds);
+            timer.maturationTimestamp = calendar.getTimeInMillis();
+
+            timers.add(timer);
         }
         throw new RuntimeException("invalid node type: " + node.nodeType);
     }
@@ -866,6 +896,22 @@ public class ThreadRun extends BaseSchema {
         }
 
         return true;
+    }
+
+    public void handleTimer(WFRunTimer timer) throws LHConnectionError {
+        TaskRun taskRun = taskRuns.get(timer.taskRunId);
+
+        if (taskRun.getNode().nodeType == NodeType.SLEEP) {
+            TaskRunResult result = new TaskRunResult();
+            result.success = true;
+            completeTask(
+                taskRun, LHExecutionStatus.COMPLETED,
+                result, new Date(timer.maturationTimestamp)
+            );
+        } else {
+            LHUtil.log(taskRun, "\n\n", timer);
+            throw new RuntimeException("not implemented yet or something broke");
+        }
     }
 
     /**
