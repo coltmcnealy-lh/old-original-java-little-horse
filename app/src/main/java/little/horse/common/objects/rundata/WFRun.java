@@ -407,7 +407,7 @@ class WFRunApiStuff {
     }
 
     public void postStopThread(Context ctx) {
-        String wfRunGuid = ctx.pathParam("wfRunGuid");
+        String wfRunGuid = ctx.pathParam("wfRunId");
         int tid = Integer.valueOf(ctx.pathParam("tid"));
 
         LHRpcResponse<WFRun> response = new LHRpcResponse<>();
@@ -447,7 +447,7 @@ class WFRunApiStuff {
     }
 
     public void postResumeThread(Context ctx) {
-        String wfRunGuid = ctx.pathParam("wfRunGuid");
+        String wfRunGuid = ctx.pathParam("wfRunId");
         int tid = Integer.valueOf(ctx.pathParam("tid"));
 
         LHRpcResponse<WFRun> response = new LHRpcResponse<>();

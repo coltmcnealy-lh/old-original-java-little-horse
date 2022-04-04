@@ -33,8 +33,9 @@ class Printer:
         self._indent = indent
 
     def print(self, *args):
+        print('\t' * self._indent, end='')
         for arg in args:
-            print(('\t' * self._indent) + arg, end='')
+            print(arg, end='')
         print()
 
     def indent(self):
@@ -52,6 +53,7 @@ printer.print("Threads:")
 printer.indent()
 
 for trun in wf_run['threadRuns']:
+    print("--->>")
     printer.print("Id: ", trun['id'])
     if trun['isInterruptThread']:
         printer.print("Interrupt thread!")
