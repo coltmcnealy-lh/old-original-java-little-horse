@@ -270,7 +270,6 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     private void handleTaskStarted(TaskRunEvent trEvent) {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
-        LHUtil.log("\\n\n\n\n\n\n", tr, "\n****\n\n\n****\n\n*asdfasdf", trEvent, "\n\n\n\n\n");
         TaskRunStartedEvent event = trEvent.startedEvent;
 
         tr.status = LHExecutionStatus.RUNNING;
@@ -310,12 +309,12 @@ public class ThreadRun extends BaseSchema {
         for (Edge edge: task.getNode().getOutgoingEdges()) {
             addEdgeToUpNext(edge);
         }
-        LHUtil.log("Up next: ", upNext);
 
         if (taskStatus == LHExecutionStatus.COMPLETED) {
             try {
                 mutateVariables(task);
             } catch(VarSubOrzDash exn) {
+                exn.printStackTrace();
                 failTask(
                     task, LHFailureReason.VARIABLE_LOOKUP_ERROR,exn.getMessage()
                 );
@@ -427,7 +426,7 @@ public class ThreadRun extends BaseSchema {
             halt(
                 WFHaltReasonEnum.FAILED,
                 "Thread " + String.valueOf(id) + " failed on task "
-                + tr.nodeName + ": " + message
+                + tr.nodeName + ": " + reason + ": " + message
             );
         }
     }
@@ -446,7 +445,7 @@ public class ThreadRun extends BaseSchema {
             case EQUALS: return lhs != null && lhs.equals(rhs);
             case NOT_EQUALS: return lhs != null && !lhs.equals(rhs);
             case IN: return Mutation.contains(rhs, lhs);
-            case NOT_IN: return !Mutation.contains(lhs, rhs);
+            case NOT_IN: return !Mutation.contains(rhs, lhs);
             default: return false;
         }
     }
@@ -789,12 +788,6 @@ public class ThreadRun extends BaseSchema {
             timer.threadRunId = id;
             timer.wfRunId = wfRun.id;
             timer.taskRunId = tr.number;
-
-            // Object target = assignVariable(node.variables.get(
-            //     Constants.SLEEP_VALUE
-            // ));
-
-            // long target;
 
             Calendar calendar = Calendar.getInstance();
             calendar.add(Calendar.SECOND, node.sleepSeconds);
@@ -1173,7 +1166,8 @@ class Mutation {
             exn.printStackTrace();
             throw new VarSubOrzDash(
                 exn,
-                "Failed determing whether the left contains the right "
+                "Failed determing whether the left contains the right: " +
+                LHUtil.stringify(left) + " , " + LHUtil.stringify(right)
             );
         }
         return false;

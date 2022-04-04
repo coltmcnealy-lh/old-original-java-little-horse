@@ -33,5 +33,13 @@ def add_thing(filename):
 
 if __name__ == '__main__':
     for fname in sys.argv[1:]:
-        add_thing(fname)
-        time.sleep(0.1)
+        if not fname.endswith('wf.json'):
+            add_thing(fname)
+            time.sleep(0.1)
+
+    # Add the workflows only after the tasks have been created so we don't have
+    # phantom dependencies
+    for fname in sys.argv[1:]:
+        if fname.endswith('wf.json'):
+            add_thing(fname)
+            time.sleep(0.1)

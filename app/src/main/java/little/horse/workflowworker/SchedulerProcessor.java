@@ -152,11 +152,11 @@ public class SchedulerProcessor
         ArrayList<WFRunTimer> timers = new ArrayList<>();
 
         while (shouldAdvance) {
-            // // This call here seems redundant but it's actually not...if I don't put
-            // // it here then the parent thread never notices if the exception
-            // // handler thread has finished.
-            // // Jury still out on whether necessary.
-            // wfRun.updateStatuses(event);
+            // This call here seems redundant but it's actually not...if I don't put
+            // it here then the parent thread never notices if the exception
+            // handler thread has finished.
+            // Jury still out on whether necessary.
+            wfRun.updateStatuses(event);
             boolean didAdvance = false;
             for (int i = 0; i < wfRun.threadRuns.size(); i++) {
                 ThreadRun thread = wfRun.threadRuns.get(i);

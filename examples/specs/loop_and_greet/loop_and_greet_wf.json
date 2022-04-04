@@ -1,0 +1,109 @@
+{
+  "name": "loop_and_greet",
+  "entrypointThreadName": "entrypointThread",
+  "threadSpecs": {
+    "entrypointThread": {
+      "variableDefs": {
+        "person_name": {
+          "type": "STRING",
+          "defaultValue": "Raj"
+        }
+      },
+      "entrypointNodeName": "wait_a_bit",
+      "nodes": {
+        "greet_person": {
+          "nodeType": "TASK",
+          "taskDefName": "basic_greeting",
+          "variables": {
+            "person_name": {
+              "wfRunVariableName": "person_name"
+            }
+          }
+        },
+        "wait_a_bit": {
+          "nodeType": "SLEEP",
+          "sleepSeconds": 10
+        },
+        "greet_ceo": {
+          "nodeType": "TASK",
+          "taskDefName": "formal_greeting",
+          "variables": {
+            "person_name": {
+              "wfRunVariableName": "person_name"
+            }
+          }
+        }
+      },
+      "edges": [
+        {
+          "sourceNodeName": "wait_a_bit",
+          "sinkNodeName": "greet_ceo",
+          "condition": {
+            "leftSide": {
+              "wfRunVariableName": "person_name"
+            },
+            "comparator": "IN",
+            "rightSide": {
+              "literalValue": [
+                "Raj",
+                "Scott",
+                "Colt"
+              ]
+            }
+          }
+        },
+        {
+          "sourceNodeName": "wait_a_bit",
+          "sinkNodeName": "greet_person",
+          "condition": {
+            "leftSide": {
+              "wfRunVariableName": "person_name"
+            },
+            "comparator": "NOT_IN",
+            "rightSide": {
+              "literalValue": [
+                "Raj",
+                "Scott",
+                "Colt"
+              ]
+            }
+          }
+        },
+        {
+          "sourceNodeName": "greet_ceo",
+          "sinkNodeName": "wait_a_bit"
+        },
+        {
+          "sourceNodeName": "greet_person",
+          "sinkNodeName": "wait_a_bit"
+        }
+      ],
+      "interruptDefs": {
+        "set_name": {
+          "handlerThreadName": "interruptHandlerThread"
+        }
+      }
+    },
+    "interruptHandlerThread": {
+      "variableDefs": {
+        "new_name": {
+          "type": "STRING"
+        }
+      },
+      "nodes": {
+        "onlyNode": {
+          "nodeType": "TASK",
+          "taskDefName": "dummy",
+          "variableMutations": {
+            "person_name": {
+              "operation": "ASSIGN",
+              "sourceVariable": {
+                "wfRunVariableName": "new_name"
+              }
+            }
+          }
+        }
+      }
+    }
+  } 
+}

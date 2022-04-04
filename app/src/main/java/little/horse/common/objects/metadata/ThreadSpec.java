@@ -29,10 +29,10 @@ public class ThreadSpec extends BaseSchema {
 
     // @JsonManagedReference("vardef-to-thread")
     public HashMap<String, WFRunVariableDef> variableDefs;
-    
+
     @JsonManagedReference
     public HashMap<String, InterruptDef> interruptDefs;
-    
+
     @JsonManagedReference
     public ArrayList<Edge> edges;
 

@@ -31,6 +31,10 @@ public class DockerTaskWorker {
     public static void main(String[] args) {
         LHUtil.log("Running Docker Task Worker!");
         DepInjContext config = new DepInjContext();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            config.cleanup();
+        }));
         DDConfig ddConfig = new DDConfig();
         DockerTaskWorker dtw = new DockerTaskWorker(ddConfig, config);
         dtw.run();

@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -103,12 +104,15 @@ public class LHUtil {
      * @param obj the thing to unsplat
      * @return the unsplatted object
      */
-    public static HashMap<String, Object> unsplat(Object obj, DepInjContext cfg) {
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> unsplat(Object obj, DepInjContext cfg) {
         HashMap<String, Object> out;
         try {
             LHUtil.log("obj:", obj.toString());
+            if (obj instanceof Map) {
+                return (Map<String, Object>) Map.class.cast(obj);
+            }
 
-            @SuppressWarnings("unchecked")
             HashMap<String, Object> tmp = (HashMap<String, Object>) jsonifyIfPossible(
                 obj.toString(), cfg
             );
@@ -156,6 +160,11 @@ public class LHUtil {
 
     public static Object jsonPath(String json, String path) {
         return JsonPath.parse(json).read(path);
+    }
+
+    public static String stringify(Object thing) {
+        if (thing == null) return "null";
+        return thing.toString();
     }
 
     @SuppressWarnings("unchecked")

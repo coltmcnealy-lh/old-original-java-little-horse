@@ -1,0 +1,9 @@
+{
+  "name": "basic_greeting",
+  "deployMetadata": "{\"dockerImage\": \"little-horse-api:latest\", \"metadata\": \"{\\\"bashCommand\\\": [\\\"python3\\\", \\\"/starwarstasks/basic_greeting.py\\\", \\\"<<person_name>>\\\"]}\", \"secondaryValidatorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashValidator\", \"taskExecutorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor\"}",
+  "requiredVars": {
+    "person_name": {
+      "type": "INT"
+    }
+  }
+}

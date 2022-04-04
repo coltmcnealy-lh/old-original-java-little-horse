@@ -8,4 +8,8 @@ public class VarSubOrzDash extends Exception {
         this.message = message;
         this.exn = exn;
     }
+
+    public String getMessage() {
+        return this.message;
+    }
 }
