@@ -34,7 +34,8 @@ class Printer:
 
     def print(self, *args):
         for arg in args:
-            print(('\t' * self._indent) + arg)
+            print(('\t' * self._indent) + arg, end='')
+        print()
 
     def indent(self):
         self._indent += 1
@@ -52,12 +53,20 @@ printer.indent()
 
 for trun in wf_run['threadRuns']:
     printer.print("Id: ", trun['id'])
+    if trun['isInterruptThread']:
+        printer.print("Interrupt thread!")
     printer.print("Status: ", trun['status'])
 
     printer.print("Tasks:")
     printer.indent()
+
     for task in trun['taskRuns']:
-        printer.print(f"{task['nodeName']}: {task['stdout']}")
+        if task['stdout'] is None:
+            adjusted_stdout = None
+        else:
+            adjusted_stdout = task['stdout'].rstrip("\n")
+
+        printer.print(f"{task['nodeName']}: {adjusted_stdout}")
     printer.unindent()
 
     up_next = trun['upNext']
