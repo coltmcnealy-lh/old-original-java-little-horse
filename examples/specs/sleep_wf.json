@@ -1,0 +1,32 @@
+{
+  "name": "my-wf",
+  "entrypointThreadName": "entrypointThread",
+  "threadSpecs": {
+    "entrypointThread": {
+      "nodes": {
+        "firstNode": {
+          "nodeType": "TASK",
+          "taskDefName": "dummy"
+        },
+        "thirdNode": {
+          "nodeType": "TASK",
+          "taskDefName": "dummy"
+        },
+        "secondNode": {
+          "nodeType": "SLEEP",
+          "sleepSeconds": 20
+        }
+      },
+      "edges": [
+        {
+          "sourceNodeName": "firstNode",
+          "sinkNodeName": "secondNode"
+        },
+        {
+          "sourceNodeName": "secondNode",
+          "sinkNodeName": "thirdNode"
+        }
+      ]
+    }
+  } 
+}
