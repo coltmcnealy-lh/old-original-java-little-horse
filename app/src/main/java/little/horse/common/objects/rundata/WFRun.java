@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
+import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
@@ -334,8 +336,26 @@ public class WFRun extends CoreMetadata {
 
         app.post("/WFRun/stop/{wfRunId}/{tid}", apiStuff::postStopThread);
         app.post("/WFRun/resume/{wfRunId}/{tid}", apiStuff::postResumeThread);
+    }
 
+    @Override
+    public Set<AliasIdentifier> getAliases() {
+        HashSet<AliasIdentifier> out = new HashSet<>();
 
+        for (ThreadRun tr: threadRuns) {
+            for (String varName: tr.variables.keySet()) {
+                AliasIdentifier i = new AliasIdentifier();
+                Object varResult = tr.variables.get(varName);
+                if (! (varResult instanceof String)) {
+                    continue;
+                }
+                String val = String.class.cast(varResult);
+                i.aliasName = varName;
+                i.aliasValue = val;
+                out.add(i);
+            }
+        }
+        return out;
     }
 
 }
