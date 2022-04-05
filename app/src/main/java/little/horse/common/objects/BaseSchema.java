@@ -37,8 +37,7 @@ public class BaseSchema {
     public String getId() {
         return LHUtil.fullDigestify(getDigest());
     }
-    @JsonIgnore private String id;
-    // public void setId(String foo) {} // just here for jackson stupidity
+    public void setId(String foo) {} // just here for jackson stupidity
 
 
     @SuppressWarnings("unchecked")

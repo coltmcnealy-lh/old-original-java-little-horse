@@ -28,7 +28,17 @@ def add_thing(filename):
         )
 
     response = requests.post(f"{URL}/{type_name}", json=data)
-    print(response.json())
+    try:
+        response.raise_for_status()
+    except:
+        print(response.content.decode())
+        return
+
+    j = response.json()
+    if j['status'] != 'OK':
+        print(json.dumps(response.json()))
+    else:
+        print(f"Successfully created {type_name} {j['result']['id']}.")
 
 
 if __name__ == '__main__':
