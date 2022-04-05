@@ -1,5 +1,5 @@
 {
-  "name": "my-wf",
+  "name": "basic_exceptions",
   "entrypointThreadName": "entrypointThread",
   "threadSpecs": {
     "entrypointThread": {

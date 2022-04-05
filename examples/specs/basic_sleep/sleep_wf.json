@@ -1,5 +1,5 @@
 {
-  "name": "my-wf",
+  "name": "sleep",
   "entrypointThreadName": "entrypointThread",
   "threadSpecs": {
     "entrypointThread": {
