@@ -12,7 +12,7 @@ URL = "http://localhost:5000"
 
 event_id = requests.get(
     f'{URL}/ExternalEventDefAlias/name/{event_name}'
-).json()['objectId']
+).json()['result']['entries'][0]['objectId']
 
 if event_id is None:
     raise RuntimeError("Couldn't find provided event!")

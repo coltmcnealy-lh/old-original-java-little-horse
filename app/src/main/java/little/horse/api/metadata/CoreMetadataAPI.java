@@ -182,7 +182,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             "forceLocal", Boolean.class
         ).getOrDefault(false);        
 
-        LHRpcResponse<T> response = new LHRpcResponse<>();
+        LHRpcResponse<AliasEntryCollection> response = new LHRpcResponse<>();
 
         try {
             AliasEntryCollection collection = streamsContext.getTFromAlias(
@@ -199,13 +199,14 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                     );
                 }
 
-                AliasEntry entry = collection.entries.get(
-                    collection.entries.size() - 1
-                );
+                // AliasEntry entry = collection.entries.get(
+                //     collection.entries.size() - 1
+                // );
 
-                response.result = streamsContext.getTFromId(
-                    entry.objectId, forceLocal
-                );
+                // response.result = streamsContext.getTFromId(
+                //     entry.objectId, forceLocal
+                // );
+                response.result = collection;
                 if (response.result != null) {
                     response.status = ResponseStatus.OK;
                     response.objectId = response.result.getId();

@@ -1,5 +1,7 @@
 package little.horse.common.util;
 
+import little.horse.api.ResponseStatus;
+import little.horse.api.metadata.AliasEntryCollection;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.CoreMetadata;
@@ -29,10 +31,17 @@ public class LHDatabaseClient {
             // Try to look up by name.
             url = config.getAPIUrlFor(T.getAliasPath(cls)) + "/name/" + idOrName;
             LHUtil.log(url);
+            LHRpcResponse<AliasEntryCollection> entries = client.getResponse(
+                url, AliasEntryCollection.class
+            );
+            if (entries.status == ResponseStatus.OBJECT_NOT_FOUND) return null;
+            
+            url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/";
+            url += entries.result.getLatestEntry().objectId;
+                
+            LHUtil.log(url);
             response = client.getResponse(url, cls);
         }
-
-
         return response.result;
     }
 
