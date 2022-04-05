@@ -154,7 +154,8 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             } else {
                 RecordMetadata record = T.sendNullRecord(id, config, cls).get();
                 streamsContext.waitForProcessing(
-                    result.objectId, record.offset(), record.partition(), false,
+                    result.result.getId(), record.offset(),
+                    record.partition(), false,
                     T.getWaitForAPIPath(
                         id, record.offset(), record.partition(), cls
                     )

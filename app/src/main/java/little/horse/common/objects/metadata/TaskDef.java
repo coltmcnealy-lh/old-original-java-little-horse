@@ -112,6 +112,12 @@ public class TaskDef extends CoreMetadata {
 
     }
 
+    @Override
+    @JsonIgnore
+    public void remove() throws LHConnectionError {
+        getTaskDeployer().undeploy(this, config);
+    }
+
     public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
         this.config = config;
 

@@ -17,6 +17,7 @@ public class LHDeserializer<T extends BaseSchema> implements Deserializer<T> {
 
     @Override
     public T deserialize(String topic, byte[] bytes) {
+        if (bytes == null) return null;
         try {
             return BaseSchema.fromBytes(
                 bytes,
