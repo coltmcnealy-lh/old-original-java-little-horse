@@ -168,4 +168,10 @@ public abstract class CoreMetadata extends BaseSchema {
         out.add(i);
         return out;
     }
+
+    // Just here for Jackson, let's see if it works!
+    public String getObjectId() {
+        return getId();
+    }
+    public void setObjectId(String foobar) {}
 }

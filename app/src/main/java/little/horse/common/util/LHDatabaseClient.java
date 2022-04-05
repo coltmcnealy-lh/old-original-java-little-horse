@@ -26,11 +26,11 @@ public class LHDatabaseClient {
         LHRpcCLient client = new LHRpcCLient(config);
         String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + idOrName;
         LHRpcResponse<T> response = client.getResponse(url, cls);
-        LHUtil.log(url);
+
         if (response.result == null) {
             // Try to look up by name.
             url = config.getAPIUrlFor(T.getAliasPath(cls)) + "/name/" + idOrName;
-            LHUtil.log(url);
+
             LHRpcResponse<AliasEntryCollection> entries = client.getResponse(
                 url, AliasEntryCollection.class
             );
@@ -38,8 +38,7 @@ public class LHDatabaseClient {
             
             url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/";
             url += entries.result.getLatestEntry().objectId;
-                
-            LHUtil.log(url);
+
             response = client.getResponse(url, cls);
         }
         return response.result;

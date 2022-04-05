@@ -38,7 +38,7 @@ def add_thing(filename):
     if j['status'] != 'OK':
         print(json.dumps(response.json()))
     else:
-        print(f"Successfully created {type_name} {j['result']['id']}.")
+        print(f"Successfully created {type_name} {j['result']['objectId']}")
 
 
 if __name__ == '__main__':
