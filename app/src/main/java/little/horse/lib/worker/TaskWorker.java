@@ -139,15 +139,11 @@ public class TaskWorker {
         );
         this.txnProducer.send(prodRecord);
         this.txnProducer.commitTransaction();
-
-        LHUtil.log("about to submit the actual task");
-
         // Now, execute the actual thing.
         this.threadPool.submit(() -> { this.herdCats(schedReq);});            
     }
 
     private void herdCats(TaskScheduleRequest schedReq) {
-        LHUtil.log("hello there");
         WorkerContext ctx = new WorkerContext(config, schedReq);
 
         Object output = null;
@@ -169,7 +165,9 @@ public class TaskWorker {
             PrintWriter pw = new PrintWriter(sw);
             exn.printStackTrace(pw);
             result.stderr = sw.toString();
-            result.stderr += "\n\n\n\n" + ctx.getStderr();
+            if (ctx.getStderr() != null) {
+                result.stderr += "\n\n\n\n" + ctx.getStderr();
+            }
             result.returncode = -1;
             result.success = false;
         }

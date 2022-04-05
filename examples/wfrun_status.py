@@ -33,10 +33,11 @@ class Printer:
         self._indent = indent
 
     def print(self, *args):
-        print('\t' * self._indent, end='')
-        for arg in args:
-            print(arg, end='')
-        print()
+        thing = ''.join(args)
+        things = thing.split('\n')
+
+        for t in things:
+            print('\t' * self._indent, t)
 
     def indent(self):
         self._indent += 1
@@ -68,6 +69,9 @@ for trun in wf_run['threadRuns']:
         else:
             adjusted_stdout = task['stdout'].rstrip("\n")
 
+        if task['stderr'] is not None:
+            adjusted_stdout = str(adjusted_stdout) + ' ||| Stderr:' + task['stderr']
+
         printer.print(f"{task['nodeName']}: {adjusted_stdout}")
     printer.unindent()
 
@@ -76,7 +80,8 @@ for trun in wf_run['threadRuns']:
         next_edge = up_next[0]
         printer.print(f"Waiting on node {next_edge['sinkNodeName']}")
 
-    printer.print("Variables:")
+    if len(trun['variables']) > 0:
+        printer.print("Variables:")
     printer.indent()
     for varname in trun['variables'].keys():
         printer.print(varname, ": ", json.dumps(trun['variables'][varname]))
