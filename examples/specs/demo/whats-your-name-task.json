@@ -1,0 +1,4 @@
+{
+  "name": "whats-your-name",
+  "deployMetadata": "{\"dockerImage\": \"little-horse-api:latest\", \"metadata\": \"{\\\"bashCommand\\\": [\\\"python3\\\", \\\"/starwarstasks/whats_your_name.py\\\"]}\", \"secondaryValidatorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashValidator\", \"taskExecutorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor\"}"
+}
