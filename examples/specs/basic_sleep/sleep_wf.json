@@ -14,7 +14,7 @@
         },
         "secondNode": {
           "nodeType": "SLEEP",
-          "sleepSeconds": {
+          "timeoutSeconds": {
             "literalValue": 20
           }
         }

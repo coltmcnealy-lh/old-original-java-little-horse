@@ -713,6 +713,7 @@ public class ThreadRun extends BaseSchema {
         WFRunTimer timer = new WFRunTimer();
         timer.setConfig(config);
 
+        timer.wfRunId = wfRun.id;
         timer.threadRunId = id;
         timer.wfRunId = wfRun.id;
         timer.taskRunId = tr.number;
@@ -806,6 +807,7 @@ public class ThreadRun extends BaseSchema {
                 timer.threadRunId = id;
                 timer.taskRunId = tr.number;
                 timer.nodeName = node.name;
+                timer.wfRunId = wfRun.id;
                 timer.maturationTimestamp = timeoutTime.getTimeInMillis();
                 timers.add(timer);
             }
@@ -873,8 +875,47 @@ public class ThreadRun extends BaseSchema {
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
         List<WFRunTimer> timers
     ) throws LHConnectionError {
+        Edge relevantEdge = null;
+        for (Edge e: upNext) {
+            if (e.sinkNodeName.equals(node.name)) {
+                relevantEdge = e;
+                break;
+            }
+        }
+        if (relevantEdge == null) {
+            halt(WFHaltReasonEnum.FAILED, "Somehow there was no relevant edge");
+            return true;
+        }
+
+        if (!relevantEdge.alreadyActivated) {
+            relevantEdge.alreadyActivated = true;
+            LHUtil.log("Setting timer for edge ", relevantEdge);
+
+            try {
+                Calendar cal = getTimeoutTime(node);
+                if (cal != null) {
+                    WFRunTimer timer = new WFRunTimer();
+                    timer.nodeName = node.name;
+                    timer.threadRunId = id;
+                    timer.wfRunId = wfRun.id;
+                    timer.taskRunId = taskRuns.size();
+                    timer.maturationTimestamp = cal.getTimeInMillis();
+                    timers.add(timer);
+                }
+            } catch (VarSubOrzDash exn) {
+                TaskRun tr = createNewTaskRun(node);
+                taskRuns.add(tr);
+                failTask(
+                    tr,
+                    LHFailureReason.INVALID_WF_SPEC_ERROR,
+                    "Failed to determine timeout: " + exn.getMessage()
+                );
+                return true;
+            }
+        }
+
         ArrayList<ExternalEventCorrel> relevantEvents =
-        wfRun.correlatedEvents.get(node.externalEventDefName);
+            wfRun.correlatedEvents.get(node.externalEventDefName);
         if (relevantEvents == null) {
             relevantEvents = new ArrayList<ExternalEventCorrel>();
             wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
@@ -1003,7 +1044,10 @@ public class ThreadRun extends BaseSchema {
     }
 
     public void handleTimer(WFRunTimer timer) throws LHConnectionError {
-        TaskRun taskRun = taskRuns.get(timer.taskRunId);
+        TaskRun taskRun = null;
+        if (timer.taskRunId < taskRuns.size()) {
+            taskRun = taskRuns.get(timer.taskRunId);
+        }
 
         if (taskRun == null) {
             // Most likely, we have an EXTERNAL_EVENT node which didn't fire in
@@ -1020,7 +1064,7 @@ public class ThreadRun extends BaseSchema {
             TaskRun timedOutEventNode = null;
             for (Edge e: upNext) {
                 if (e.sinkNodeName.equals(timer.nodeName)) {
-                    timedOutEventNode = createNewTaskRun(threadSpec.nodes.get(
+                    timedOutEventNode = createNewTaskRun(getThreadSpec().nodes.get(
                         e.sinkNodeName
                     ));
                     taskRuns.add(timedOutEventNode);

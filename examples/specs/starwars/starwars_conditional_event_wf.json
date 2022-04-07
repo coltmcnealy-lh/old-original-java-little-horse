@@ -15,11 +15,17 @@
       "nodes": {
         "walk_into_room": {
           "nodeType": "TASK",
-          "taskDefName": "walk_into_room"
+          "taskDefName": "walk_into_room",
+          "timeoutSeconds": {
+            "literalValue": 5
+          }
         },
         "wait_for_mystery_person": {
           "nodeType": "EXTERNAL_EVENT",
           "externalEventDefName": "mystery_person_arrives",
+          "timeoutSeconds": {
+            "literalValue": 10
+          },
           "variableMutations": {
             "mystery_person_type": {
               "copyDirectlyFromNodeOutput": true,
