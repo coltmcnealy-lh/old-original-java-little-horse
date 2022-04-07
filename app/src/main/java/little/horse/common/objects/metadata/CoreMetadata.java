@@ -25,6 +25,7 @@ public abstract class CoreMetadata extends BaseSchema {
     public String name;
     public LHDeployStatus desiredStatus;
     public LHDeployStatus status;
+    public String statusMessage;
 
     @JsonIgnore
     public static boolean onlyUseDefaultAPIforGET = false;
