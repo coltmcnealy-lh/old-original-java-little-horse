@@ -56,7 +56,7 @@ public class Node extends BaseSchema {
     public String taskDefName;
     public String taskDefId;
 
-    public SleepTypeEnum sleepType;
+    public int timeoutSeconds;
 
     // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
     public String exceptionToThrow;

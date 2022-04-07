@@ -682,25 +682,164 @@ public class ThreadRun extends BaseSchema {
         List<WFRunTimer> timers
     ) throws LHConnectionError {
         if (node.nodeType == NodeType.TASK) {
-            upNext = new ArrayList<Edge>();
-            TaskRun tr = createNewTaskRun(node);
-            taskRuns.add(tr);
-
-            scheduleTask(tr, node, toSchedule, timers);
-            return true;
+            return activateTaskNode(node, event, toSchedule, timers);
 
         } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
-            ArrayList<ExternalEventCorrel> relevantEvents =
+            return activateExternalEventNode(node, event, toSchedule, timers);
+
+        } else if (node.nodeType == NodeType.SPAWN_THREAD) {
+            return activateSpawnThreadNode(node, event, toSchedule, timers);
+
+        } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
+            return activateWaitForThreadNode(node, event, toSchedule, timers);
+
+        } else if (node.nodeType == NodeType.THROW_EXCEPTION) {
+            return activateThrowExceptionNode(node, event, toSchedule, timers);
+
+        } else if (node.nodeType == NodeType.SLEEP) {
+            return activateSleepNode(node, event, toSchedule, timers);
+
+        }
+        throw new RuntimeException("invalid node type: " + node.nodeType);
+    }
+
+    private boolean activateThrowExceptionNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
+    ) throws LHConnectionError {
+        TaskRun tr = createNewTaskRun(node);
+        taskRuns.add(tr);
+        exceptionName = node.exceptionToThrow;
+
+        TaskRunResult result = new TaskRunResult(
+            null, "Throwing exception " + exceptionName, false, -1
+        );
+        completeTask(tr, LHExecutionStatus.FAILED, result, event.timestamp);
+        return true;
+    }
+
+    private boolean activateSleepNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
+    ) throws LHConnectionError {
+        TaskRun tr = createNewTaskRun(node);
+        taskRuns.add(tr);
+
+        WFRunTimer timer = new WFRunTimer();
+        timer.setConfig(config);
+
+        timer.threadRunId = id;
+        timer.wfRunId = wfRun.id;
+        timer.taskRunId = tr.number;
+
+        Calendar calendar = Calendar.getInstance();
+
+        Object sleepSeconds;
+        try {
+            sleepSeconds = assignVariable(node.sleepSeconds);
+        } catch(VarSubOrzDash exn) {
+            failTask(tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                "Failed determining sleepSeconds: " + exn.getMessage()
+            );
+            return true;
+        }
+        if (!(sleepSeconds instanceof Integer) || (Integer)sleepSeconds < 0) {
+            String s = (sleepSeconds == null)
+                ? "null pointer": sleepSeconds.getClass().getCanonicalName();
+            if (sleepSeconds instanceof Integer) {
+                s += " with val: " + String.valueOf((Integer)sleepSeconds);
+            }
+
+            failTask(
+                tr,
+                LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                "Needed a positive int of some sort for sleep time but got a " +
+                s
+            );
+            return true;
+        }
+        Integer intVal = Integer.class.cast(sleepSeconds);
+
+        calendar.add(Calendar.SECOND, intVal);
+        timer.maturationTimestamp = calendar.getTimeInMillis();
+
+        timers.add(timer);
+        upNext = new ArrayList<>();
+        return true;
+    }
+
+    private boolean activateTaskNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
+    ) throws LHConnectionError {
+        upNext = new ArrayList<Edge>();
+        TaskRun tr = createNewTaskRun(node);
+        taskRuns.add(tr);
+
+        scheduleTask(tr, node, toSchedule, timers);
+        return true;
+    }
+
+    private boolean activateSpawnThreadNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
+    ) throws LHConnectionError {
+        upNext = new ArrayList<Edge>();
+        HashMap<String, Object> inputVars = new HashMap<String, Object>();
+        TaskRun tr = createNewTaskRun(node);
+        try {
+            for (Map.Entry<String, VariableAssignment> pair:
+                node.variables.entrySet()
+            ) {
+                inputVars.put(pair.getKey(), assignVariable(pair.getValue()));
+            }
+
+        } catch(VarSubOrzDash exn) {
+            exn.printStackTrace();
+            failTask(
+                tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                "Failed creating variables for subthread: " + exn.getMessage()
+            );
+            return true;
+        }
+
+        ThreadRun thread = wfRun.createThreadClientAdds(
+            node.threadSpawnThreadSpecName, inputVars, this
+        );
+        wfRun.threadRuns.add(thread);
+
+        if (wfRun.awaitableThreads.get(tr.nodeName) == null) {
+            wfRun.awaitableThreads.put(
+                tr.nodeName, new ArrayList<ThreadRunMeta>()
+            );
+        }
+
+        ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
+        wfRun.awaitableThreads.get(tr.nodeName).add(meta);
+        taskRuns.add(tr);
+        TaskRunResult result = new TaskRunResult(meta.toString(), null, true, 0);
+        completeTask(
+            tr, LHExecutionStatus.COMPLETED, result, event.timestamp
+        );
+        return true;
+    }
+
+    private boolean activateExternalEventNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
+    ) throws LHConnectionError {
+        ArrayList<ExternalEventCorrel> relevantEvents =
             wfRun.correlatedEvents.get(node.externalEventDefName);
             if (relevantEvents == null) {
                 relevantEvents = new ArrayList<ExternalEventCorrel>();
                 wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
             }
             ExternalEventCorrel correlSchema = null;
-            
+
             for (ExternalEventCorrel candidate : relevantEvents) {
                 // In the future, we may want to add the ability to signal
-                // a specific thread rather than the whole wfRun. We would do that here.
+                // a specific thread rather than the whole wfRun. We would do
+                // that here.
                 if (candidate.event != null && candidate.assignedNodeName== null) {
                     correlSchema = candidate;
                 }
@@ -725,111 +864,11 @@ public class ThreadRun extends BaseSchema {
                 addEdgeToUpNext(edge);
             }
             return true; // Obviously something changed, we done did add a task.
-
-        } else if (node.nodeType == NodeType.SPAWN_THREAD) {
-            upNext = new ArrayList<Edge>();
-            HashMap<String, Object> inputVars = new HashMap<String, Object>();
-            TaskRun tr = createNewTaskRun(node);
-            try {
-                for (Map.Entry<String, VariableAssignment> pair:
-                    node.variables.entrySet()
-                ) {
-                    inputVars.put(pair.getKey(), assignVariable(pair.getValue()));
-                }
-
-            } catch(VarSubOrzDash exn) {
-                exn.printStackTrace();
-                failTask(
-                    tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
-                    "Failed creating variables for subthread: " + exn.getMessage()
-                );
-                return true;
-            }
-
-            ThreadRun thread = wfRun.createThreadClientAdds(
-                node.threadSpawnThreadSpecName, inputVars, this
-            );
-            wfRun.threadRuns.add(thread);
-    
-            if (wfRun.awaitableThreads.get(tr.nodeName) == null) {
-                wfRun.awaitableThreads.put(
-                    tr.nodeName, new ArrayList<ThreadRunMeta>()
-                );
-            }
-
-            ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
-            wfRun.awaitableThreads.get(tr.nodeName).add(meta);
-            taskRuns.add(tr);
-            TaskRunResult result = new TaskRunResult(meta.toString(), null, true, 0);
-            completeTask(
-                tr, LHExecutionStatus.COMPLETED, result, event.timestamp
-            );
-            return true;
-
-        } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
-            return handleWaitForThreadNode(node, event);
-        } else if (node.nodeType == NodeType.THROW_EXCEPTION) {
-            TaskRun tr = createNewTaskRun(node);
-            taskRuns.add(tr);
-            exceptionName = node.exceptionToThrow;
-
-            TaskRunResult result = new TaskRunResult(
-                null, "Throwing exception " + exceptionName, false, -1
-            );
-            completeTask(tr, LHExecutionStatus.FAILED, result, event.timestamp);
-            return true;
-        } else if (node.nodeType == NodeType.SLEEP) {
-            TaskRun tr = createNewTaskRun(node);
-            taskRuns.add(tr);
-
-            WFRunTimer timer = new WFRunTimer();
-            timer.setConfig(config);
-
-            timer.threadRunId = id;
-            timer.wfRunId = wfRun.id;
-            timer.taskRunId = tr.number;
-
-            Calendar calendar = Calendar.getInstance();
-
-            Object sleepSeconds;
-            try {
-                sleepSeconds = assignVariable(node.sleepSeconds);
-            } catch(VarSubOrzDash exn) {
-                failTask(tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
-                    "Failed determining sleepSeconds: " + exn.getMessage()
-                );
-                return true;
-            }
-            if (!(sleepSeconds instanceof Integer) || (Integer)sleepSeconds < 0) {
-                String s = (sleepSeconds == null)
-                    ? "null pointer": sleepSeconds.getClass().getCanonicalName();
-                if (sleepSeconds instanceof Integer) {
-                    s += " with val: " + String.valueOf((Integer)sleepSeconds);
-                }
-
-                failTask(
-                    tr,
-                    LHFailureReason.VARIABLE_LOOKUP_ERROR,
-                    "Needed a positive int of some sort for sleep time but got a " +
-                    s
-                );
-                return true;
-            }
-            Integer intVal = Integer.class.cast(sleepSeconds);
-
-            calendar.add(Calendar.SECOND, intVal);
-            timer.maturationTimestamp = calendar.getTimeInMillis();
-
-            LHUtil.log(timers);
-            timers.add(timer);
-            upNext = new ArrayList<>();
-            return true;
-        }
-        throw new RuntimeException("invalid node type: " + node.nodeType);
     }
 
-    private boolean handleWaitForThreadNode(
-        Node node, WFEvent event
+    private boolean activateWaitForThreadNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers
     ) throws LHConnectionError {
         // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
         // If it's from the node we're waiting for and it's NOT done, then
