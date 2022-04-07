@@ -790,7 +790,34 @@ public class ThreadRun extends BaseSchema {
             timer.taskRunId = tr.number;
 
             Calendar calendar = Calendar.getInstance();
-            calendar.add(Calendar.SECOND, node.sleepSeconds);
+
+            Object sleepSeconds;
+            try {
+                sleepSeconds = assignVariable(node.sleepSeconds);
+            } catch(VarSubOrzDash exn) {
+                failTask(tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                    "Failed determining sleepSeconds: " + exn.getMessage()
+                );
+                return true;
+            }
+            if (!(sleepSeconds instanceof Integer) || (Integer)sleepSeconds < 0) {
+                String s = (sleepSeconds == null)
+                    ? "null pointer": sleepSeconds.getClass().getCanonicalName();
+                if (sleepSeconds instanceof Integer) {
+                    s += " with val: " + String.valueOf((Integer)sleepSeconds);
+                }
+
+                failTask(
+                    tr,
+                    LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                    "Needed a positive int of some sort for sleep time but got a " +
+                    s
+                );
+                return true;
+            }
+            Integer intVal = Integer.class.cast(sleepSeconds);
+
+            calendar.add(Calendar.SECOND, intVal);
             timer.maturationTimestamp = calendar.getTimeInMillis();
 
             LHUtil.log(timers);

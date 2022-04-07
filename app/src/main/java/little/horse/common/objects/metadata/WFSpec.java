@@ -161,6 +161,20 @@ public class WFSpec extends CoreMetadata {
                     );
                 }
             }
+
+            if (node.sleepSeconds != null) {
+                VariableAssignment assn = node.sleepSeconds;
+                if (assn.wfRunVariableName != null) {
+                    if (!seenVars.containsKey(node.sleepSeconds.wfRunVariableName)) {
+                        throw new LHValidationError(
+                            "refers to wfRunVariable named " +
+                            assn.wfRunVariableName + ", which is either not defined"
+                            + " or not in scope for thread " + thread.name +
+                            " on node " + node.name
+                        );
+                    }
+                }
+            }
         }
 
         // Now process every potential child thread.

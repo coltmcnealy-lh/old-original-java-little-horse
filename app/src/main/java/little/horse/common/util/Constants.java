@@ -42,5 +42,4 @@ public class Constants {
     public static String WF_RUN_STORE_NAME = "wfRunStore";
 
     public static String FORCE_LOCAL = "forceLocal";
-    public static String SLEEP_VALUE = "sleepValue";
 }

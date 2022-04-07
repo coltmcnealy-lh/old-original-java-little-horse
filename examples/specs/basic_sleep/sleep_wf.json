@@ -14,7 +14,9 @@
         },
         "secondNode": {
           "nodeType": "SLEEP",
-          "sleepSeconds": 20
+          "sleepSeconds": {
+            "literalValue": 20
+          }
         }
       },
       "edges": [

@@ -17,7 +17,6 @@ import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
 import little.horse.common.objects.metadata.Node;
-import little.horse.common.util.Constants;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 import little.horse.common.util.json.JsonMapKey;
@@ -30,7 +29,7 @@ public class Node extends BaseSchema {
     @JsonMapKey
     public String name;
 
-    public int sleepSeconds;
+    public VariableAssignment sleepSeconds;
 
     public NodeType nodeType;
 
@@ -294,15 +293,14 @@ public class Node extends BaseSchema {
 
     private void validateSleepNode(DepInjContext config) throws LHValidationError {
         // Need to check that the variables specify how long to sleep.
-        VariableAssignment assn = variables.get(Constants.SLEEP_VALUE);
 
-        if (assn == null) {
-            // throw new LHValidationError(
-            //     "Didn't provide " + Constants.SLEEP_VALUE + " var for sleep node!"
-            // );
+        if (sleepSeconds == null) {
+            throw new LHValidationError(
+                "Didn't provide sleepSeconds VariableASsignment var for sleep node!"
+            );
         }
 
         // TODO: Once we have some sort of JSONSchema validation, make sure that we
-        // are getting the correct type.
+        // are gonna get an INT back.
     }
 }
