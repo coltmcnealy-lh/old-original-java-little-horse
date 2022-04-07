@@ -94,13 +94,19 @@ public class TaskDef extends CoreMetadata {
 
         if (oldTD != null) {
             if (oldTD.partitions != partitions) {
-                throw new RuntimeException("Oh boy, this is bad");
+                throw new RuntimeException(
+                    "Oh boy, this is bad and shouldn't be possible"
+                );
             }
 
-            LHUtil.log("\n\none day we gotta fix this\n\n");
-            if (true || !java.util.Objects.equals(oldTD.deployMetadata, deployMetadata)) {
+            if (
+                !java.util.Objects.equals(oldTD.deployMetadata, deployMetadata) ||
+                desiredStatus == LHDeployStatus.DESIRED_REDEPLOY
+            ) {
                 deployer.undeploy(oldTD, config);
                 deployer.deploy(this, config);
+                this.status = LHDeployStatus.RUNNING;
+                this.desiredStatus = LHDeployStatus.RUNNING;
             }
 
         } else {
@@ -108,6 +114,7 @@ public class TaskDef extends CoreMetadata {
                 name, partitions, (short) config.getDefaultReplicas()
             ));
             deployer.deploy(this, config);
+            this.status = LHDeployStatus.RUNNING;
         }
 
     }
@@ -116,6 +123,7 @@ public class TaskDef extends CoreMetadata {
     @JsonIgnore
     public void remove() throws LHConnectionError {
         getTaskDeployer().undeploy(this, config);
+        this.status = LHDeployStatus.STOPPED;
     }
 
     public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {

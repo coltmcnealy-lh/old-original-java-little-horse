@@ -303,11 +303,18 @@ public class WFSpec extends CoreMetadata {
 
         WFSpec oldSpec = (WFSpec) old;
         if (oldSpec == null || oldSpec.status != desiredStatus) {
-            if (desiredStatus == LHDeployStatus.RUNNING) {
+            if (desiredStatus == LHDeployStatus.DESIRED_REDEPLOY) {
+                remove();
+                deploy(false);
+                status = LHDeployStatus.RUNNING;
+                desiredStatus = LHDeployStatus.RUNNING;
+            } else if (desiredStatus == LHDeployStatus.RUNNING) {
                 boolean shouldCreateTopic = (oldSpec == null);
                 deploy(shouldCreateTopic);
+                status = LHDeployStatus.RUNNING;
             } else if (desiredStatus == LHDeployStatus.STOPPED) {
                 remove();
+                status = LHDeployStatus.STOPPED;
             }
         }
     }

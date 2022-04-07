@@ -17,6 +17,9 @@ public class ExternalEventDef extends CoreMetadata {
     @Override
     public void processChange(CoreMetadata other) {
         // Nothing to do I believe.
+        if (desiredStatus == LHDeployStatus.RUNNING) {
+            status = LHDeployStatus.RUNNING;
+        }
     }
 
     public void validate(DepInjContext config) {

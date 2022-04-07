@@ -6,5 +6,6 @@ public enum LHDeployStatus {
     COMPLETED,
     STOPPING,
     STOPPED,
+    DESIRED_REDEPLOY,
     ERROR;
 }

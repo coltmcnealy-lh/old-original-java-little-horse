@@ -1,6 +1,7 @@
 {
   "name": "sleep",
   "entrypointThreadName": "entrypointThread",
+  "desiredStatus": "DESIRED_REDEPLOY",
   "threadSpecs": {
     "entrypointThread": {
       "nodes": {
