@@ -29,7 +29,7 @@ public class Node extends BaseSchema {
     @JsonMapKey
     public String name;
 
-    public VariableAssignment sleepSeconds;
+    public VariableAssignment timeoutSeconds;
 
     public NodeType nodeType;
 
@@ -55,8 +55,6 @@ public class Node extends BaseSchema {
     public TaskDef taskDef;
     public String taskDefName;
     public String taskDefId;
-
-    public int timeoutSeconds;
 
     // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
     public String exceptionToThrow;
@@ -294,7 +292,7 @@ public class Node extends BaseSchema {
     private void validateSleepNode(DepInjContext config) throws LHValidationError {
         // Need to check that the variables specify how long to sleep.
 
-        if (sleepSeconds == null) {
+        if (timeoutSeconds == null) {
             throw new LHValidationError(
                 "Didn't provide sleepSeconds VariableASsignment var for sleep node!"
             );

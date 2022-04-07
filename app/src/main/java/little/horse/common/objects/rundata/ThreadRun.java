@@ -391,21 +391,6 @@ public class ThreadRun extends BaseSchema {
         addAndStartInterruptThread(
             handlerSpecName, new HashMap<String, Object>(), true
         );
-        // ThreadRun handler = wfRun.createThreadClientAdds(
-        //     handlerSpecName,
-        //     // In the future we may pass info to the handler thread.
-        //     new HashMap<String, Object>(),
-        //     this
-        // );
-        // wfRun.threadRuns.add(handler);
-        // exceptionHandlerThread = handler.id;
-
-        // // Important to do this after creating the exception handler thread
-        // // so that we don't propagate HALTED/ING status to it.
-        // halt(
-        //     WFHaltReasonEnum.HANDLING_EXCEPTION,
-        //     "Handling exception on failed task " + tr.nodeName
-        // );
     }
 
     @JsonIgnore
@@ -638,43 +623,43 @@ public class ThreadRun extends BaseSchema {
         return activateNode(activatedNode, event, toSchedule, timers);
     }
 
-    @JsonIgnore
-    private void scheduleTask(
-        TaskRun tr, Node node, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
-    ) throws LHConnectionError {
-        TaskScheduleRequest te = new TaskScheduleRequest();
-        te.setConfig(config);
-        te.taskDefName = node.taskDef.name;
-        te.wfRunId = wfRun.id;
-        te.wfSpecId = wfRun.wfSpecDigest;
-        te.wfSpecName = wfRun.wfSpecName;
-        te.threadRunNumber = id;
-        te.taskRunNumber = tr.number;
-        te.kafkaTopic = wfRun.getWFSpec().getEventTopic();
-        try {
-            te.taskDefName = tr.getNode().taskDefName;
-            te.taskDefId = tr.getNode().taskDefId;
-        } catch(LHConnectionError exn) {
-            throw new RuntimeException(
-                "Shouldn't happen because we should have already loaded the wfspec"
-            );
-        }
+    // @JsonIgnore
+    // private void scheduleTask(
+    //     TaskRun tr, Node node, List<TaskScheduleRequest> toSchedule,
+    //     List<WFRunTimer> timers
+    // ) throws LHConnectionError {
+    //     TaskScheduleRequest te = new TaskScheduleRequest();
+    //     te.setConfig(config);
+    //     te.taskDefName = node.taskDef.name;
+    //     te.wfRunId = wfRun.id;
+    //     te.wfSpecId = wfRun.wfSpecDigest;
+    //     te.wfSpecName = wfRun.wfSpecName;
+    //     te.threadRunNumber = id;
+    //     te.taskRunNumber = tr.number;
+    //     te.kafkaTopic = wfRun.getWFSpec().getEventTopic();
+    //     try {
+    //         te.taskDefName = tr.getNode().taskDefName;
+    //         te.taskDefId = tr.getNode().taskDefId;
+    //     } catch(LHConnectionError exn) {
+    //         throw new RuntimeException(
+    //             "Shouldn't happen because we should have already loaded the wfspec"
+    //         );
+    //     }
 
-        te.variableSubstitutions = new HashMap<>();
-        for (String varName: node.variables.keySet()) {
-            try {
-                te.variableSubstitutions.put(
-                    varName,
-                    assignVariable(node.variables.get(varName))
-                );
-            } catch(VarSubOrzDash exn) {
-                exn.printStackTrace();
-            }
-        }
+    //     te.variableSubstitutions = new HashMap<>();
+    //     for (String varName: node.variables.keySet()) {
+    //         try {
+    //             te.variableSubstitutions.put(
+    //                 varName,
+    //                 assignVariable(node.variables.get(varName))
+    //             );
+    //         } catch(VarSubOrzDash exn) {
+    //             exn.printStackTrace();
+    //         }
+    //     }
 
-        toSchedule.add(te);
-    }
+    //     toSchedule.add(te);
+    // }
 
     @JsonIgnore
     private boolean activateNode(
@@ -732,17 +717,33 @@ public class ThreadRun extends BaseSchema {
         timer.wfRunId = wfRun.id;
         timer.taskRunId = tr.number;
 
-        Calendar calendar = Calendar.getInstance();
+        Calendar calendar = null;
 
-        Object sleepSeconds;
         try {
-            sleepSeconds = assignVariable(node.sleepSeconds);
-        } catch(VarSubOrzDash exn) {
-            failTask(tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
-                "Failed determining sleepSeconds: " + exn.getMessage()
+            calendar = getTimeoutTime(node);
+            timer.maturationTimestamp = calendar.getTimeInMillis();
+            timers.add(timer);
+
+        } catch (VarSubOrzDash exn) {
+            exn.printStackTrace();
+            failTask(
+                tr,
+                LHFailureReason.INVALID_WF_SPEC_ERROR,
+                "Failed calculating sleep seconds: " + exn.getMessage()
             );
-            return true;
         }
+
+        upNext = new ArrayList<>();
+        return true;
+    }
+
+    private Calendar getTimeoutTime(Node node)
+    throws VarSubOrzDash, LHConnectionError {
+        if (node.timeoutSeconds == null) return null;
+
+        Calendar calendar = Calendar.getInstance();
+        Object sleepSeconds = assignVariable(node.timeoutSeconds);
+
         if (!(sleepSeconds instanceof Integer) || (Integer)sleepSeconds < 0) {
             String s = (sleepSeconds == null)
                 ? "null pointer": sleepSeconds.getClass().getCanonicalName();
@@ -750,22 +751,13 @@ public class ThreadRun extends BaseSchema {
                 s += " with val: " + String.valueOf((Integer)sleepSeconds);
             }
 
-            failTask(
-                tr,
-                LHFailureReason.VARIABLE_LOOKUP_ERROR,
-                "Needed a positive int of some sort for sleep time but got a " +
-                s
-            );
-            return true;
+            throw new VarSubOrzDash(null, s);
         }
+
         Integer intVal = Integer.class.cast(sleepSeconds);
 
         calendar.add(Calendar.SECOND, intVal);
-        timer.maturationTimestamp = calendar.getTimeInMillis();
-
-        timers.add(timer);
-        upNext = new ArrayList<>();
-        return true;
+        return calendar;
     }
 
     private boolean activateTaskNode(
@@ -776,7 +768,60 @@ public class ThreadRun extends BaseSchema {
         TaskRun tr = createNewTaskRun(node);
         taskRuns.add(tr);
 
-        scheduleTask(tr, node, toSchedule, timers);
+        TaskScheduleRequest te = new TaskScheduleRequest();
+        te.setConfig(config);
+        te.taskDefName = node.taskDef.name;
+        te.wfRunId = wfRun.id;
+        te.wfSpecId = wfRun.wfSpecDigest;
+        te.wfSpecName = wfRun.wfSpecName;
+        te.threadRunNumber = id;
+        te.taskRunNumber = tr.number;
+        te.kafkaTopic = wfRun.getWFSpec().getEventTopic();
+        try {
+            te.taskDefName = tr.getNode().taskDefName;
+            te.taskDefId = tr.getNode().taskDefId;
+        } catch(LHConnectionError exn) {
+            throw new RuntimeException(
+                "Shouldn't happen because we should have already loaded the wfspec"
+            );
+        }
+
+        te.variableSubstitutions = new HashMap<>();
+        for (String varName: node.variables.keySet()) {
+            try {
+                te.variableSubstitutions.put(
+                    varName,
+                    assignVariable(node.variables.get(varName))
+                );
+            } catch(VarSubOrzDash exn) {
+                exn.printStackTrace();
+            }
+        }
+
+        
+        try {
+            Calendar timeoutTime = getTimeoutTime(node);
+            if (timeoutTime != null) {
+                WFRunTimer timer = new WFRunTimer();
+                timer.threadRunId = id;
+                timer.taskRunId = tr.number;
+                timer.nodeName = node.name;
+                timer.maturationTimestamp = timeoutTime.getTimeInMillis();
+                timers.add(timer);
+            }
+
+            // Only schedule the task if we aren't going to fail it.
+            // That's why it's here and not outside the try.
+            toSchedule.add(te);
+
+        } catch (VarSubOrzDash exn) {
+            failTask(
+                tr,
+                LHFailureReason.INVALID_WF_SPEC_ERROR,
+                "Failed calculating timeout: " + exn.getMessage()
+            );
+        }
+
         return true;
     }
 
@@ -829,41 +874,41 @@ public class ThreadRun extends BaseSchema {
         List<WFRunTimer> timers
     ) throws LHConnectionError {
         ArrayList<ExternalEventCorrel> relevantEvents =
-            wfRun.correlatedEvents.get(node.externalEventDefName);
-            if (relevantEvents == null) {
-                relevantEvents = new ArrayList<ExternalEventCorrel>();
-                wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
+        wfRun.correlatedEvents.get(node.externalEventDefName);
+        if (relevantEvents == null) {
+            relevantEvents = new ArrayList<ExternalEventCorrel>();
+            wfRun.correlatedEvents.put(node.externalEventDefName, relevantEvents);
+        }
+        ExternalEventCorrel correlSchema = null;
+
+        for (ExternalEventCorrel candidate : relevantEvents) {
+            // In the future, we may want to add the ability to signal
+            // a specific thread rather than the whole wfRun. We would do
+            // that here.
+            if (candidate.event != null && candidate.assignedNodeName== null) {
+                correlSchema = candidate;
             }
-            ExternalEventCorrel correlSchema = null;
+        }
+        if (correlSchema == null) return false;  // Still waiting nothing changed
 
-            for (ExternalEventCorrel candidate : relevantEvents) {
-                // In the future, we may want to add the ability to signal
-                // a specific thread rather than the whole wfRun. We would do
-                // that here.
-                if (candidate.event != null && candidate.assignedNodeName== null) {
-                    correlSchema = candidate;
-                }
-            }
-            if (correlSchema == null) return false;  // Still waiting nothing changed
+        TaskRun tr = createNewTaskRun(node);
+        taskRuns.add(tr);
+        correlSchema.assignedNodeName = node.name;
+        correlSchema.assignedTaskRunExecutionNumber = tr.number;
+        correlSchema.assignedThreadID = tr.threadID;
 
-            TaskRun tr = createNewTaskRun(node);
-            taskRuns.add(tr);
-            correlSchema.assignedNodeName = node.name;
-            correlSchema.assignedTaskRunExecutionNumber = tr.number;
-            correlSchema.assignedThreadID = tr.threadID;
+        TaskRunResult result = new TaskRunResult(
+            correlSchema.event.content.toString(), null, true, 0
+        );
 
-            TaskRunResult result = new TaskRunResult(
-                correlSchema.event.content.toString(), null, true, 0
-            );
-
-            completeTask(
-                tr, LHExecutionStatus.COMPLETED, result, correlSchema.event.timestamp
-            );
-            upNext = new ArrayList<Edge>();
-            for (Edge edge: node.getOutgoingEdges()) {
-                addEdgeToUpNext(edge);
-            }
-            return true; // Obviously something changed, we done did add a task.
+        completeTask(
+            tr, LHExecutionStatus.COMPLETED, result, correlSchema.event.timestamp
+        );
+        upNext = new ArrayList<Edge>();
+        for (Edge edge: node.getOutgoingEdges()) {
+            addEdgeToUpNext(edge);
+        }
+        return true; // Obviously something changed, we done did add a task.
     }
 
     private boolean activateWaitForThreadNode(
@@ -960,16 +1005,63 @@ public class ThreadRun extends BaseSchema {
     public void handleTimer(WFRunTimer timer) throws LHConnectionError {
         TaskRun taskRun = taskRuns.get(timer.taskRunId);
 
-        if (taskRun.getNode().nodeType == NodeType.SLEEP) {
+        if (taskRun == null) {
+            // Most likely, we have an EXTERNAL_EVENT node which didn't fire in
+            // time.
+
+            if (upNext == null || upNext.size() < 1) {
+                LHUtil.log(timer, taskRuns);
+                halt(
+                    WFHaltReasonEnum.FAILED,
+                    "Somehow a phantom timer got sent out."
+                );
+            }
+
+            TaskRun timedOutEventNode = null;
+            for (Edge e: upNext) {
+                if (e.sinkNodeName.equals(timer.nodeName)) {
+                    timedOutEventNode = createNewTaskRun(threadSpec.nodes.get(
+                        e.sinkNodeName
+                    ));
+                    taskRuns.add(timedOutEventNode);
+                    failTask(
+                        timedOutEventNode,
+                        LHFailureReason.TIMEOUT,
+                        "External event didnt come in time."
+                    );
+                }
+            }
+
+            if (timedOutEventNode == null) {
+                LHUtil.log("arg, never found right node.", timer, taskRuns);
+                halt(
+                    WFHaltReasonEnum.FAILED,
+                    "Somehow a phantom timer got sent out."
+                );
+            }
+
+        } else if (taskRun.isTerminated()) {
+            // Should be nothing to do here
+            LHUtil.log("Timer matured for taskRun which is already complete (:");
+
+        } else if (taskRun.getNode().nodeType == NodeType.SLEEP) {
             TaskRunResult result = new TaskRunResult();
             result.success = true;
             completeTask(
                 taskRun, LHExecutionStatus.COMPLETED,
                 result, new Date(timer.maturationTimestamp)
             );
+
+        } else if (
+            taskRun.getNode().nodeType == NodeType.TASK ||
+            taskRun.getNode().nodeType == NodeType.WAIT_FOR_THREAD
+        ) {
+            // The thing has timed out, we must fail it.
+            failTask(taskRun, LHFailureReason.TIMEOUT, "taskRun Timed out!");
+
         } else {
             LHUtil.log(taskRun, "\n\n", timer);
-            throw new RuntimeException("not implemented yet or something broke");
+            throw new RuntimeException("Shouldn't have timer in this case.");
         }
     }
 

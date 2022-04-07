@@ -53,7 +53,7 @@ public class SchedulerProcessor
         punctuator = context.schedule(
             Constants.PUNCTUATOR_INERVAL,
             PunctuationType.WALL_CLOCK_TIME,
-            this::punctuate
+            this::clearTimers
         );
     }
 
@@ -67,7 +67,7 @@ public class SchedulerProcessor
         }
     }
 
-    public void punctuate(long timestamp) {
+    public void clearTimers(long timestamp) {
         String start = getTimerKey(0);
         String end = getTimerKey(timestamp);
 

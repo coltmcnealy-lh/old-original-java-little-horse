@@ -164,10 +164,10 @@ public class WFSpec extends CoreMetadata {
                 }
             }
 
-            if (node.sleepSeconds != null) {
-                VariableAssignment assn = node.sleepSeconds;
+            if (node.timeoutSeconds != null) {
+                VariableAssignment assn = node.timeoutSeconds;
                 if (assn.wfRunVariableName != null) {
-                    if (!seenVars.containsKey(node.sleepSeconds.wfRunVariableName)) {
+                    if (!seenVars.containsKey(node.timeoutSeconds.wfRunVariableName)) {
                         throw new LHValidationError(
                             "refers to wfRunVariable named " +
                             assn.wfRunVariableName + ", which is either not defined"
