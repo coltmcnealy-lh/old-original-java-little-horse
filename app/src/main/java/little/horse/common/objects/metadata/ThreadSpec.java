@@ -91,6 +91,12 @@ public class ThreadSpec extends BaseSchema {
     @JsonIgnore
     private String calculateEntrypointNode() throws LHValidationError {
         if (entrypointNodeName != null) {
+            if (nodes.get(entrypointNodeName) == null) {
+                throw new LHValidationError(
+                    "Thread " + name + " has nonexistent entrypoint node " +
+                    entrypointNodeName
+                );
+            }
             return entrypointNodeName;
         }
         Node entrypoint = null;
