@@ -10,6 +10,11 @@ public class ExternalEventDef extends CoreMetadata {
     public static String typeName = "ExternalEventDef";
 
     @Override
+    public String getId() {
+        return this.name;
+    }
+
+    @Override
     public void processChange(CoreMetadata other) {
         // Nothing to do I believe.
     }
