@@ -81,7 +81,6 @@ public class DockerTaskDeployer implements TaskDeployer {
     public void undeploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
         DDConfig ddconfig = new DDConfig();
         DockerClient client = ddconfig.getDockerClient();
-
         client.killContainerCmd("lh-task-" + spec.name).exec();
         client.removeContainerCmd("lh-task-" + spec.name).exec();
     }

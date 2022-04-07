@@ -44,12 +44,58 @@ implements Processor<String, T, String, AliasEvent> {
 
     @Override
     public void process(final Record<String, T> record) {
+        Optional<RecordMetadata> rm = context.recordMetadata();
+        RecordMetadata recordMeta = rm.isPresent() ? rm.get() : null;
+        Long offset = recordMeta == null ? null : recordMeta.offset();
+
         try {
             processHelper(record);
-        } catch (LHSerdeError exn) {
-            exn.printStackTrace();
+        } catch (Exception exn) {
+            // exn.printStackTrace();
             // In the future, maybe implement a deadletter queue.
+
+            T newMeta = record.value();
+            newMeta.status = LHDeployStatus.ERROR;
+            newMeta.statusMessage = String.format(
+                "Had an %s error: %s",
+                exn.getClass().getCanonicalName(),
+                exn.getMessage()
+            );
+            CoreMetadataEntry entry = new CoreMetadataEntry(newMeta, offset);
+            kvStore.put(record.key(), new Bytes(entry.toBytes()));
         }
+
+        if (recordMeta != null) {
+            Bytes nb = kvStore.get(Constants.LATEST_OFFSET_ROCKSDB_KEY);
+            OffsetInfoCollection infos = null;
+            try {
+                infos = nb != null ? BaseSchema.fromBytes(
+                    nb.get(), OffsetInfoCollection.class, config
+                ) : null;
+            } catch (LHSerdeError exn) {
+                exn.printStackTrace();
+                LHUtil.logError("Shouldn't be possible.");
+                return;
+            }
+
+            if (infos == null) {
+                infos = new OffsetInfoCollection();
+                infos.partitionMap = new HashMap<String, OffsetInfo>();
+            }
+
+            // Now save the offset.
+            OffsetInfo oi = new OffsetInfo();
+            oi.offset = offset;
+            oi.recordTime = new Date(record.timestamp());
+            oi.processTime = LHUtil.now();
+
+            infos.latest = oi;
+            String key = recordMeta.topic() + recordMeta.partition();
+            infos.partitionMap.put(key, oi);
+
+            kvStore.put(Constants.LATEST_OFFSET_ROCKSDB_KEY, new Bytes(infos.toBytes()));
+        }
+
     }
 
     private void processHelper(final Record<String, T> record) throws LHSerdeError {
@@ -73,32 +119,11 @@ implements Processor<String, T, String, AliasEvent> {
                 removeOld(record, old, offset);
             }
         } else {
+            LHUtil.log("about to updateMeta");
             updateMeta(old, newMeta, record, offset);
+            LHUtil.log("Just did updateMeta");
         }
 
-        if (recordMeta != null) {
-            Bytes nb = kvStore.get(Constants.LATEST_OFFSET_ROCKSDB_KEY);
-            OffsetInfoCollection infos = nb != null ? BaseSchema.fromBytes(
-                nb.get(), OffsetInfoCollection.class, config
-            ) : null;
-
-            if (infos == null) {
-                infos = new OffsetInfoCollection();
-                infos.partitionMap = new HashMap<String, OffsetInfo>();
-            }
-
-            // Now save the offset.
-            OffsetInfo oi = new OffsetInfo();
-            oi.offset = offset;
-            oi.recordTime = new Date(record.timestamp());
-            oi.processTime = LHUtil.now();
-
-            infos.latest = oi;
-            String key = recordMeta.topic() + recordMeta.partition();
-            infos.partitionMap.put(key, oi);
-
-            kvStore.put(Constants.LATEST_OFFSET_ROCKSDB_KEY, new Bytes(infos.toBytes()));
-        }
     }
 
     private void updateMeta(T old, T newMeta, final Record<String, T> record, long offset) {
@@ -115,7 +140,7 @@ implements Processor<String, T, String, AliasEvent> {
         // low, so we don't have to be super fast.
         try {
             newMeta.processChange(old);
-        } catch(LHConnectionError exn) {
+        } catch(LHConnectionError exn) { // Maybe catch all exceptions here
             exn.printStackTrace();
             newMeta.status = LHDeployStatus.ERROR;
         }
