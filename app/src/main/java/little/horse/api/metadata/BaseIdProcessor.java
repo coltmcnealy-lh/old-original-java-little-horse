@@ -119,9 +119,7 @@ implements Processor<String, T, String, AliasEvent> {
                 removeOld(record, old, offset);
             }
         } else {
-            LHUtil.log("about to updateMeta");
             updateMeta(old, newMeta, record, offset);
-            LHUtil.log("Just did updateMeta");
         }
 
     }
