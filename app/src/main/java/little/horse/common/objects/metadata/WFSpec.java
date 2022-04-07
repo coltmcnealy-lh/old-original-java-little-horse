@@ -39,7 +39,9 @@ public class WFSpec extends CoreMetadata {
     public static String typeName = "wfSpec";
 
     // Journalling
+    @DigestIgnore
     public LHDeployStatus status;
+    @DigestIgnore
     public LHDeployStatus desiredStatus;
 
     // Actual definition here.
