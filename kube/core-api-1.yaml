@@ -9,7 +9,7 @@ metadata:
     io.littlehorse/active: "true"
 spec:
   serviceName: little-horse-api
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: little-horse-api
@@ -62,14 +62,14 @@ spec:
           - name: "LHORSE_ADVERTISED_PROTO"
             value: "http"
           - name: "LHORSE_DEFAULT_PARTITIONS"
-            value: "2"
+            value: "9"
           - name: "LHORSE_DEFAULT_REPLICAS"
-            value: "1"
+            value: "3"
           - name: "LHORSE_EXPOSE_KSTREAMS_HEALTH"
             value: "true"
           - name: "LHORSE_KAFKA_APPLICATION_ID"
             value: "lh-core-api"
-          
+
           # Deployer Stuff
           - name: "LHORSE_DEFAULT_WF_DEPLOYER"
             value: "little.horse.lib.deployers.examples.kubernetes.K8sWorkflowDeployer"
