@@ -78,7 +78,6 @@ implements Processor<String, AliasEvent, Void, Void> {
                 kvStore.delete(storeKey);
             } else {
                 kvStore.put(storeKey, new Bytes(entries.toBytes()));
-                LHUtil.log("PUT", storeKey, entries);
             }
 
         } else if (ae.operation == AliasOperation.CREATE) {

@@ -35,4 +35,4 @@ sleep 3
 
 kubectl port-forward svc/little-horse-api 5000:5000 -ndefault &
 
-kubectl logs -f -lapp=little-horse-api --namespace default
+kubectl get po -w --namespace default

@@ -335,7 +335,7 @@ public class DepInjContext {
 
     public int getAdvertisedPort() {
         return Integer.valueOf(getOrSetDefault(
-            Constants.ADVERTISED_PORT_KEY, "80"
+            Constants.ADVERTISED_PORT_KEY, "5000"
         ));
     }
 

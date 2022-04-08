@@ -124,7 +124,7 @@ public class K8sTaskDeployer implements TaskDeployer {
 
     public void undeploy(TaskDef spec, DepInjContext config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
-        kdConfig.deleteK8sDeployment("io.littlehorse.taskDefId", spec.getId());
+        kdConfig.deleteK8sDeployment("io.littlehorse/taskDefId", spec.getId());
     }
 
     public void validate(TaskDef spec, DepInjContext config) throws LHValidationError {

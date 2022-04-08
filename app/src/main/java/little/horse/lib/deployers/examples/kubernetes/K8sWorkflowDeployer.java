@@ -82,22 +82,22 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
 
         HttpGet hget = new HttpGet();
         hget.path = "/health";
-        hget.port = 80;
+        hget.port = 5000;
 
         container.startupProbe = new Probe();
         container.startupProbe.httpGet = hget;
-        container.startupProbe.failureThreshold = 10;
+        container.startupProbe.failureThreshold = 30;
         container.startupProbe.periodSeconds = 2;
 
         container.livenessProbe = new Probe();
         container.livenessProbe.httpGet = hget;
-        container.startupProbe.failureThreshold = 5;
-        container.startupProbe.periodSeconds = 2;
+        container.livenessProbe.failureThreshold = 5;
+        container.livenessProbe.periodSeconds = 2;
 
         container.readinessProbe = new Probe();
         container.readinessProbe.httpGet = hget;
-        container.startupProbe.failureThreshold = 1;
-        container.startupProbe.periodSeconds = 2;
+        container.readinessProbe.failureThreshold = 1;
+        container.readinessProbe.periodSeconds = 2;
 
 
         HashMap<String, String> env = config.getBaseEnv();
@@ -136,7 +136,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
 
     public void undeploy(WFSpec spec, DepInjContext config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
-        kdConfig.deleteK8sDeployment("io.littlehorse.wfSpecId", spec.getId());
+        kdConfig.deleteK8sDeployment("io.littlehorse/wfSpecId", spec.getId());
     }
 
     public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {
