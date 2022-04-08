@@ -54,7 +54,9 @@ public class WorkflowWorker {
         DepInjContext config = new DepInjContext();
 
         Javalin app = LHUtil.createAppWithHealth(listener);
-        app.start(config.getAdvertisedPort());
+        if (config.getShouldExposeHealth()) {
+            app.start(config.getAdvertisedPort());
+        }
         ww.run();
     }
 }

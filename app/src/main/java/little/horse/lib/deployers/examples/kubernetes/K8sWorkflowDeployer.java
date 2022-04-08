@@ -103,6 +103,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, "wf-" + spec.name);
         env.put(KDConstants.WF_SPEC_ID_KEY, spec.getId());
+        env.put(Constants.EXPOSE_KSTREAMS_HEALTH_KEY, "true");
         container.env = new ArrayList<EnvEntry>();
         for (Map.Entry<String, String> envEntry: env.entrySet()) {
             container.env.add(new EnvEntry(

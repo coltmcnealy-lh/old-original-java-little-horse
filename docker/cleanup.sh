@@ -6,7 +6,7 @@ cd $SCRIPT_DIR
 CONTAINERS=$(docker ps -aq --filter label=io.littlehorse/active)
 
 
-if [ -z $CONTAINERS ]
+if [ -z "$CONTAINERS" ]
 then
     echo "No containers to stop."
 else
@@ -15,7 +15,7 @@ fi
 
 wait
 
-if [ -z $CONTAINERS ]
+if [ -z "$CONTAINERS" ]
 then
     echo "No containers to remove."
 else

@@ -24,7 +24,7 @@
           "nodeType": "EXTERNAL_EVENT",
           "externalEventDefName": "mystery_person_arrives",
           "timeoutSeconds": {
-            "literalValue": 10
+            "literalValue": 30
           },
           "variableMutations": {
             "mystery_person_type": {

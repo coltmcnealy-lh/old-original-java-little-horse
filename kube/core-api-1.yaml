@@ -65,6 +65,8 @@ spec:
             value: "2"
           - name: "LHORSE_DEFAULT_REPLICAS"
             value: "1"
+          - name: "LHORSE_EXPOSE_KSTREAMS_HEALTH"
+            value: "true"
           - name: "LHORSE_KAFKA_APPLICATION_ID"
             value: "lh-core-api"
           

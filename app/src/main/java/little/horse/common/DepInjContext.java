@@ -352,6 +352,12 @@ public class DepInjContext {
         )));
     }
 
+    public boolean getShouldExposeHealth() {
+        return getOrSetDefault(
+            Constants.EXPOSE_KSTREAMS_HEALTH_KEY, ""
+        ).equals("true");
+    }
+
     /**
      * Cleans up this object (i.e. closes any kafka producers or consumers, etc).
      * Should only be called at the end of lifecycle; suggested for use in a try/finally
