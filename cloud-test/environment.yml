@@ -1,0 +1,29 @@
+name: little-horse
+channels:
+  - default
+  - conda-forge
+  - zeroae
+dependencies:
+  - python>=3.8
+  - alembic
+  - flake8
+  - sqlalchemy
+  - flask
+  - flask-sqlalchemy
+  - hypercorn
+  - requests
+  - openssl
+  - pip
+  - psycopg2
+  - pydantic
+  - pyhumps
+  - python-confluent-kafka
+  - werkzeug
+  - xmltodict
+  - pip:
+    - pylint
+    - quart
+    - Quart-CORS
+    - quart-openapi
+    - pyyaml
+    - jsonpath-python
