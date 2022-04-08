@@ -9,4 +9,8 @@ public class Container {
     public List<ContainerPort> ports;
     public List<EnvEntry> env;
     public String imagePullPolicy;
+
+    public Probe startupProbe;
+    public Probe livenessProbe;
+    public Probe readinessProbe;
 }

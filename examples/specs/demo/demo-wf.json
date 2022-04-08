@@ -1,6 +1,7 @@
 {
   "name": "demo",
   "entrypointThreadName": "entrypointThread",
+  "desiredStatus": "DESIRED_REDEPLOY",
   "threadSpecs": {
     "entrypointThread": {
       "variableDefs": {

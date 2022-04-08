@@ -23,7 +23,9 @@ import little.horse.lib.deployers.examples.kubernetes.specs.Deployment;
 import little.horse.lib.deployers.examples.kubernetes.specs.DeploymentMetadata;
 import little.horse.lib.deployers.examples.kubernetes.specs.DeploymentSpec;
 import little.horse.lib.deployers.examples.kubernetes.specs.EnvEntry;
+import little.horse.lib.deployers.examples.kubernetes.specs.HttpGet;
 import little.horse.lib.deployers.examples.kubernetes.specs.PodSpec;
+import little.horse.lib.deployers.examples.kubernetes.specs.Probe;
 import little.horse.lib.deployers.examples.kubernetes.specs.Selector;
 import little.horse.lib.deployers.examples.kubernetes.specs.Template;
 import little.horse.workflowworker.WorkflowWorker;
@@ -77,6 +79,26 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
             "java", "-cp", "/littleHorse.jar",
             WorkflowWorker.class.getCanonicalName()
         );
+
+        HttpGet hget = new HttpGet();
+        hget.path = "/health";
+        hget.port = 80;
+
+        container.startupProbe = new Probe();
+        container.startupProbe.httpGet = hget;
+        container.startupProbe.failureThreshold = 10;
+        container.startupProbe.periodSeconds = 2;
+
+        container.livenessProbe = new Probe();
+        container.livenessProbe.httpGet = hget;
+        container.startupProbe.failureThreshold = 5;
+        container.startupProbe.periodSeconds = 2;
+
+        container.readinessProbe = new Probe();
+        container.readinessProbe.httpGet = hget;
+        container.startupProbe.failureThreshold = 1;
+        container.startupProbe.periodSeconds = 2;
+
 
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, "wf-" + spec.name);
