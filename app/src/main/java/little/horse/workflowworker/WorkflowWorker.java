@@ -3,18 +3,27 @@ package little.horse.workflowworker;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
+import io.javalin.Javalin;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.util.KStreamsStateListener;
+import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.examples.docker.DDConfig;
 
 public class WorkflowWorker {
     private DDConfig ddConfig;
     private DepInjContext config;
+    private KStreamsStateListener listener;
 
-    public WorkflowWorker(DDConfig ddConfig, DepInjContext config) {
+    public WorkflowWorker(
+        DDConfig ddConfig,
+        DepInjContext config,
+        KStreamsStateListener listener
+    ) {
         this.ddConfig = ddConfig;
         this.config = config;
+        this.listener = listener;
     }
 
     public void run() throws LHConnectionError {
@@ -30,6 +39,7 @@ public class WorkflowWorker {
         KafkaStreams schedulerStreams = new KafkaStreams(
             scheduler, config.getStreamsConfig()
         );
+        schedulerStreams.setStateListener(listener);
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
         Runtime.getRuntime().addShutdownHook(new Thread(schedulerStreams::close));
 
@@ -37,9 +47,14 @@ public class WorkflowWorker {
     }
 
     public static void main(String[] args) throws LHConnectionError {
-        WorkflowWorker dww = new WorkflowWorker(
-            new DDConfig(), new DepInjContext()
+        KStreamsStateListener listener = new KStreamsStateListener();
+        WorkflowWorker ww = new WorkflowWorker(
+            new DDConfig(), new DepInjContext(), listener
         );
-        dww.run();
+        DepInjContext config = new DepInjContext();
+
+        Javalin app = LHUtil.createAppWithHealth(listener);
+        app.start(config.getAdvertisedPort());
+        ww.run();
     }
 }

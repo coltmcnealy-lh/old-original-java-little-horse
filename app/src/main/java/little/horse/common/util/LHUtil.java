@@ -23,7 +23,9 @@ import com.google.common.hash.Hashing;
 import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.streams.KafkaStreams;
 
+import io.javalin.Javalin;
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
@@ -194,6 +196,23 @@ public class LHUtil {
         }
     }
 
+    public static Javalin createAppWithHealth(KStreamsStateListener listener) {
+        Javalin app = Javalin.create(javalinConf -> {
+            javalinConf.prefer405over404 = true;
+            javalinConf.enableCorsForAllOrigins();
+        });
+
+        app.get("/health", (ctx) -> {
+            if (listener.getState() == KafkaStreams.State.RUNNING) {
+                ctx.status(200);
+                ctx.result("OK");
+            } else {
+                ctx.status(500);
+                ctx.result(listener.getState().toString());
+            }
+        });
+        return app;
+    }
 }
 
 

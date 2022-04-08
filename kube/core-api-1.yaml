@@ -24,6 +24,25 @@ spec:
       - name: little-horse-api
         image: little-horse-api:latest
         imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          failureThreshold: 10
+          periodSeconds: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          failureThreshold: 30
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          failureThreshold: 1
+          periodSeconds: 2
+
         command:
           - 'java'
           - '-cp'

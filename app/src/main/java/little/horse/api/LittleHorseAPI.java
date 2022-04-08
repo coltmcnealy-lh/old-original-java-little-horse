@@ -25,6 +25,7 @@ import little.horse.common.objects.metadata.ExternalEventDef;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
+import little.horse.common.util.KStreamsStateListener;
 import little.horse.common.util.LHRpcRawResponse;
 import little.horse.common.util.LHUtil;
  
@@ -45,10 +46,8 @@ public class LittleHorseAPI {
         this.apis = new HashSet<>();
         
         // Frontend api component
-        this.app = Javalin.create(javalinConf -> {
-            javalinConf.prefer405over404 = true;
-            javalinConf.enableCorsForAllOrigins();
-        });
+        KStreamsStateListener listener = new KStreamsStateListener();
+        this.app = LHUtil.createAppWithHealth(listener);
 
         // Kafka Streams component
         List<Class<? extends CoreMetadata>> resources = Arrays.asList(
@@ -62,6 +61,7 @@ public class LittleHorseAPI {
         }
 
         this.streams = new KafkaStreams(topology, config.getStreamsConfig());
+        this.streams.setStateListener(listener);
 
         for (Class<? extends CoreMetadata> cls: resources) {
             // Now that the backing KafkaStreams is setup, let's add some routes.
