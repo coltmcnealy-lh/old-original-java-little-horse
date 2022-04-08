@@ -7,6 +7,13 @@
   - [Understanding the Code](#understanding-the-code)
     - [Repository Structure](#repository-structure)
     - [Where the Logic Is](#where-the-logic-is)
+    - [Entrypoint Classes](#entrypoint-classes)
+  - [Running Examples](#running-examples)
+    - [Build the Main Docker Image](#build-the-main-docker-image)
+    - [Install in Docker Compose](#install-in-docker-compose)
+    - [Run a Workflow](#run-a-workflow)
+    - [Cleanup](#cleanup)
+      - [Aside: How the Tasks Work](#aside-how-the-tasks-work)
 
 This repository contains code for the LittleHorse Runtime.
 
@@ -66,3 +73,131 @@ The repository has the following components:
         * `DockerWorkflowDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
     * `TaskDeployer.java` is the interface for deploying tasks.
         * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
+
+### Entrypoint Classes
+* `LittleHorseAPI.java` is run for the core API.
+* `DockerTaskWorker.java` is an example of a process that executes Tasks.
+* `WorkflowWorker.java` is an example of a process that does the Workflow Scheduling.
+
+## Running Examples
+
+After installing all dependencies (see above), you can run a simple example in docker by the following.
+
+### Build the Main Docker Image
+
+`./build.sh`
+
+### Install in Docker Compose
+
+`./docker/setup.sh`
+
+If you run `docker ps`, you should see the following:
+```
+-> docker ps
+CONTAINER ID   IMAGE                             COMMAND                  CREATED         STATUS        PORTS     NAMES
+d63da278489a   little-horse-api:latest           "java -cp /littleHor…"   2 seconds ago   Up 1 second             little-horse-api
+2f97f257f8e9   confluentinc/cp-kafka:6.2.0       "/etc/confluent/dock…"   2 seconds ago   Up 1 second             broker
+df1608e502ab   confluentinc/cp-zookeeper:6.2.0   "/etc/confluent/dock…"   2 seconds ago   Up 1 second             zookeeper
+
+```
+There is one container for the core API server, a kafka broker, and zookeeper (used for kafka).
+
+### Run a Workflow
+
+Let's run the `demo` workflow. The `demo` workflow is quite simple. It consists of three Node's:
+
+1. The `ask_for_name` Node executes the `whats-your-name` task.
+2. The `wait_for_name` Node waits for the `my-name` External Event to come in, and updates the `person_name` variable to be the value provided in the External Event.
+3. The `greet` Node executes the `hell-there` Task, providing `person_name` as an input variable.
+
+Before we can run it, we gotta deploy the workflow:
+
+```
+-> python examples/apply.py examples/specs/demo/*
+Successfully created TaskDef hello-there
+Successfully created ExternalEventDef my-name
+Successfully created TaskDef whats-your-name
+Successfully created WFSpec 3aa42d2038442e4297
+```
+
+You should see the following via `docker ps`:
+```
+->docker ps
+CONTAINER ID   IMAGE                             COMMAND                  CREATED          STATUS          PORTS     NAMES
+5cf78303fc9e   little-horse-api:latest           "java -cp /littleHor…"   3 seconds ago    Up 2 seconds              demo-3aa42d20
+242b3fbc7e5f   little-horse-api:latest           "java -cp /littleHor…"   3 seconds ago    Up 2 seconds              lh-task-whats-your-name
+6bc65e081168   little-horse-api:latest           "java -cp /littleHor…"   4 seconds ago    Up 3 seconds              lh-task-hello-there
+6b6cdc451942   little-horse-api:latest           "java -cp /littleHor…"   58 seconds ago   Up 56 seconds             little-horse-api
+70376d2e206e   confluentinc/cp-kafka:6.2.0       "/etc/confluent/dock…"   58 seconds ago   Up 57 seconds             broker
+80019d5e14b4   confluentinc/cp-zookeeper:6.2.0   "/etc/confluent/dock…"   58 seconds ago   Up 57 seconds             zookeeper
+
+```
+The `demo-3aa42d20` is the Workflow Scheduler; the `lh-task-whats-your-name` is the Task Worker for the `whats-your-name` task; and the `lh-task-hello-there` is the Task Worker for the `hello-there` task.
+
+
+To run the workflow, do the following:
+```
+-> python examples/run_wf.py demo
+9cdbadb4-6c86-454e-80c9-932e3729b3ff
+
+```
+The long guid thing is the ID of the Workflow Run you've just created. You can check its status via:
+
+```
+-> python examples/wfrun_status.py 9cdbadb4-6c86-454e-80c9-932e3729b3ff
+ WFRun Status:RUNNING
+ Threads:
+--->>
+	 Id: 0
+	 Status: RUNNING
+	 Tasks:
+		 ask_for_name: What's your name?
+	 Waiting on node wait_for_name
+	 Variables:
+		 my_name: null
+
+```
+The WFRun is stuck waiting on the node `wait_for_name`, which means it's waiting for an External Event. Perfect! That's what's supposed to happen. Let's send an External Event to get things moving again:
+
+```
+-> python examples/send_event.py 9cdbadb4-6c86-454e-80c9-932e3729b3ff my-name Obi-Wan
+{"message":null,"status":null,"objectId":null,"result":null}
+
+```
+
+And let's look at the workflow status to make sure it's completed:
+
+```
+-> python examples/wfrun_status.py 9cdbadb4-6c86-454e-80c9-932e3729b3ff
+ WFRun Status:COMPLETED
+ Threads:
+--->>
+	 Id: 0
+	 Status: COMPLETED
+	 Tasks:
+		 ask_for_name: What's your name?
+		 wait_for_name: Obi-Wan
+		 greet: Hello there, Obi-Wan!
+	 Variables:
+		 my_name: "Obi-Wan"
+
+```
+You can see that the External Event was saved to the `my_name` variable, and the Workflow Run has completed. Great!!
+
+### Cleanup
+
+To clean up the docker containers created via the `python examples/apply.py examples/specs/demo/*` command above, you can:
+
+```
+-> python examples/delete.py examples/specs/demo/*
+```
+
+To clean up the LittleHorse Core API and Kafka containers, you can:
+```
+-> ./docker/cleanup.sh
+```
+
+#### Aside: How the Tasks Work
+Look at the `*_task.json` files in `examples/specs/demo/` to see how the `TaskDef`'s are formed. Essentially, they use the `BashExecutor` class as the executor for the `DockerTaskWorker`, and you can see the bash command in the doubly-encoded Json string if you look close enough.
+
+Next, peek at the `Dockerfile` in the root of the repo. There you can see that for debugging we copy all of the `examples/tasks` into the `little-horse-api` docker image so that we can run them with the `BashExecutor`. This is going to be removed by the time we have our production release, but for now, it is convenient to be able to easily put a python file in `/examples/tasks` and use it for developing workflows.
