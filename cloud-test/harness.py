@@ -55,6 +55,15 @@ def idempotent_pre_setup():
         """)
         session.execute(sql)
 
+        sql = text("""
+        create table if not exists get_request (
+            success integer,
+            time timestamp DEFAULT current_timestamp,
+            url varchar(256)
+        )
+        """)
+        session.execute(sql)
+
 
 def run_wf(wf_spec_id, data):
     with closing(get_connection()) as session:
