@@ -4,6 +4,7 @@
   - [Development](#development)
     - [Dependencies](#dependencies)
     - [Building LittleHorse](#building-littlehorse)
+      - [Temporary CLI Dependencies](#temporary-cli-dependencies)
   - [Understanding the Code](#understanding-the-code)
     - [Repository Structure](#repository-structure)
     - [Where the Logic Is](#where-the-logic-is)
@@ -27,6 +28,7 @@ The following software is needed to develop LittleHorse:
 * `gradle` version `7.3` or later.
 * `docker` CLI and engine, tested with version `20.10.14`.
 * `docker-compose`, tested with version `1.29.2`.
+* `anaconda3`
 * Optional: `kubectl` version 16 or later.
 * Optional: `kind` version `v0.11.1` or later.
 
@@ -34,6 +36,16 @@ The following software is needed to develop LittleHorse:
 Running the script `./build.sh` should build LittleHorse, creating an all-in-one docker image tagged `little-horse-api:latest`.
 
 To simply build the Java binary (but not the docker image), run `gradle build` in the root of the repository. This will allow you to run an arbitrary class using the command `java -cp "./app/bin/main:./app/build/libs/app-all.jar" little.horse.SomeClass` from the root of the repository.
+
+#### Temporary CLI Dependencies
+Currently, LittleHorse has a temporary stand-in CLI implemented in Python. We plan to build a more robust version of it (most likely in Java); however, for now you need to install python (I recommend through [anaconda](https://docs.anaconda.com/anaconda/install/index.html)).
+
+You can create your conda environment by navigating to the root of the repo, then running:
+```
+-> conda env update -f environment.yml
+...
+-> conda activate little-horse
+```
 
 ## Understanding the Code
 
@@ -110,7 +122,7 @@ Let's run the `demo` workflow. The `demo` workflow is quite simple. It consists 
 2. The `wait_for_name` Node waits for the `my-name` External Event to come in, and updates the `person_name` variable to be the value provided in the External Event.
 3. The `greet` Node executes the `hell-there` Task, providing `person_name` as an input variable.
 
-Before we can run it, we gotta deploy the workflow:
+Before we can run it, we gotta deploy the workflow (Make sure you've activated the `little-horse` conda environment):
 
 ```
 -> python examples/apply.py examples/specs/demo/*
