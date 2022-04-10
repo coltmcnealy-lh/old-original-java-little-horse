@@ -1,6 +1,9 @@
-package little.horse.sdk;
+package little.horse.sdk.examples;
 
 import little.horse.common.DepInjContext;
+import little.horse.sdk.LHTaskFunction;
+import little.horse.sdk.LHTaskOutput;
+import little.horse.sdk.LHVariable;
 import little.horse.sdk.sdk.SpecBuilderThreadContext;
 
 class MyTask {
@@ -10,7 +13,7 @@ class MyTask {
     }
 }
 
-public class Example {
+public class Basic {
     public static void main(String[] args) {
         SpecBuilderThreadContext wf = new SpecBuilderThreadContext(
             new DepInjContext(), "my-wf"
