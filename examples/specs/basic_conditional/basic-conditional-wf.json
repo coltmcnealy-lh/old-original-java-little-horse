@@ -1,0 +1,71 @@
+{
+  "name": "basic-conditional",
+  "entrypointThreadName": "entrypointThread",
+  "threadSpecs": {
+    "entrypointThread": {
+      "variableDefs": {
+        "random_number": {
+          "type": "INT"
+        }
+      },
+      "nodes": {
+        "get_random_number": {
+          "nodeType": "TASK",
+          "taskDefName": "random",
+          "variableMutations": {
+            "random_number": {
+              "copyDirectlyFromNodeOutput": true,
+              "operation": "ASSIGN"
+            }
+          }
+        },
+        "basic_greeting": {
+          "nodeType": "TASK",
+          "taskDefName": "basic_greeting",
+          "variables": {
+            "person_name": {
+              "literalValue": "friend"
+            }
+          }
+        },
+        "formal_greeting": {
+          "nodeType": "TASK",
+          "taskDefName": "formal_greeting",
+          "variables": {
+            "person_name": { 
+              "literalValue": "Master Jedi"
+            }
+          }
+        }
+      },
+      "edges": [
+        {
+          "sourceNodeName": "get_random_number",
+          "sinkNodeName": "basic_greeting",
+          "condition": {
+            "leftSide": {
+              "wfRunVariableName": "random_number"
+            },
+            "comparator": "GREATER_THAN",
+            "rightSide": {
+              "literalValue": 4
+            }
+          }
+        },
+        {
+          "sourceNodeName": "get_random_number",
+          "sinkNodeName": "formal_greeting",
+          "condition": {
+            "leftSide": {
+              "wfRunVariableName": "random_number"
+            },
+            "comparator": "LESS_THAN_EQ",
+            "rightSide": {
+              "literalValue": 4
+            }
+          }
+        }
+      ]
+    }
+  }
+}
