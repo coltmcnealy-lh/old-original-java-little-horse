@@ -1,0 +1,25 @@
+{
+  "name": "basic",
+  "entrypointThreadName": "entrypointThread",
+  "threadSpecs": {
+    "entrypointThread": {
+      "variableDefs": {
+        "my_variable": {
+          "type": "STRING"
+        }
+      },
+      "nodes": {
+        "firstNode": {
+          "nodeType": "TASK",
+          "taskDefName": "dummy",
+          "variableMutations": {
+            "my_variable": {
+              "copyDirectlyFromNodeOutput": true,
+              "operation": "ASSIGN"
+            }
+          }
+        }
+      }
+    }
+  }
+}

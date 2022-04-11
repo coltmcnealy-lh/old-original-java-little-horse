@@ -1,0 +1,18 @@
+[
+    {
+        "command": {},
+        "timeout": 0.5,
+        "output": [
+            {
+                "tr_number": 0,
+                "variables": {
+                    "my_variable": "This task got executed!\n"
+                },
+                "task_runs": [{
+                    "stdout": "This task got executed!\n",
+                    "stderr": null
+                }]
+            }
+        ]
+    }
+]

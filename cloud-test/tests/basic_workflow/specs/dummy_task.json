@@ -1,0 +1,9 @@
+{
+  "name": "dummy",
+  "deployMetadata": "{\"dockerImage\": \"little-horse-test:latest\", \"metadata\": \"{\\\"bashCommand\\\": [\\\"python3\\\", \\\"/cloud-test/task_files/dummy.py\\\"]}\", \"secondaryValidatorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashValidator\", \"taskExecutorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor\"}",
+  "requiredVars": {
+    "person_type": {
+      "type": "INT"
+    }
+  }
+}
