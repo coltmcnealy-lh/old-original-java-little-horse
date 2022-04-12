@@ -22,3 +22,9 @@ class TestCase(BaseModel):
     command: Command
     output: List[ThreadRunOutput]
     timeout: float = 0.5
+
+
+class TestSuite(BaseModel):
+    test_cases: List[TestCase]
+    wf_spec: dict
+    description: Optional[str] = None
