@@ -75,7 +75,7 @@ def get_specs_for_testcase(test_filename):
     test_suite = TestSuite(**data)
     wf = test_suite.wf_spec
 
-    return get_taskdefs_for_wf(wf), get_external_events_for_wf(wf)
+    return get_taskdefs_for_wf(wf), get_external_events_for_wf(wf), wf
 
 
 def _cleanup_case_name(case):
@@ -111,12 +111,13 @@ if __name__ == '__main__':
 
     all_tasks = set({})
     all_eevs = set({})
-    all_wfs = set({})
+    all_wfs = []
 
     for case in cases:
         new_tasks, new_eevs, wf = get_specs_for_testcase(case)
         all_tasks.update(new_tasks)
         all_eevs.update(new_eevs)
+        all_wfs.append(wf)
 
     for td in all_tasks:
         add_thing(
@@ -129,4 +130,9 @@ if __name__ == '__main__':
         )
 
     time.sleep(0.5)
-    
+
+    for wf in all_wfs:
+        response = requests.post(f"{ns.api_url}/WFSpec", json=wf)
+        response.raise_for_status()
+        wf_id = response.json()['objectId']
+        print(f"Successfully created WFSpec {wf['name']}: {wf_id}")
