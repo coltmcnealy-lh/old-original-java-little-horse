@@ -1,5 +1,4 @@
 import argparse
-
 import json
 import time
 import requests
@@ -8,6 +7,7 @@ import os
 
 from lh_harness.check_models import TestSuite
 
+from lh_harness.utils import cleanup_case_name
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
 
@@ -78,16 +78,6 @@ def get_specs_for_testcase(test_filename):
     return get_taskdefs_for_wf(wf), get_external_events_for_wf(wf), wf
 
 
-def _cleanup_case_name(case):
-    if not case.endswith('.json'):
-        case += '.json'
-
-    if not case.startswith('tests/test_cases/'):
-        case = 'tests/test_cases/' + case
-
-    return case
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Deploy a test case")
 
@@ -107,7 +97,7 @@ if __name__ == '__main__':
     else:
         cases = ns.cases
 
-    cases = [_cleanup_case_name(case) for case in cases]
+    cases = [cleanup_case_name(case) for case in cases]
 
     all_tasks = set({})
     all_eevs = set({})

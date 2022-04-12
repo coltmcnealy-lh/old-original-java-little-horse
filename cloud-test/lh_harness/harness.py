@@ -7,6 +7,7 @@ import sys
 import requests
 
 from lh_harness.check_models import Command, TestCase, TestSuite, ThreadRunOutput
+from lh_harness.utils import cleanup_case_name
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
@@ -64,16 +65,6 @@ def run_test(wf_spec_id: str, case: TestCase, url):
                 raise RuntimeError("Mismatched variable!")
 
 
-def _cleanup_case_name(case):
-    if not case.endswith('.json'):
-        case += '.json'
-
-    if not case.startswith('tests/test_cases/'):
-        case = 'tests/test_cases/' + case
-
-    return case
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Deploy a test case")
 
@@ -101,7 +92,7 @@ if __name__ == '__main__':
     else:
         cases = ns.cases
 
-    cases = [_cleanup_case_name(case) for case in cases]
+    cases = [cleanup_case_name(case) for case in cases]
 
     for case in cases:
         with open(case, 'r') as f:
