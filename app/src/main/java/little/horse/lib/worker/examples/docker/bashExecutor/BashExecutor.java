@@ -33,12 +33,25 @@ public class BashExecutor implements DockerTaskExecutor {
         ArrayList<String> cmd = new ArrayList<>();
 
         for (String arg: meta.bashCommand) {
-            Matcher m = BashValidator.VARIABLE_PATTERN.matcher(arg);
-            if (m.matches()) {
+            Matcher varMatcher = BashValidator.VARIABLE_PATTERN.matcher(arg);
+            Matcher metaVarMatcher = BashValidator.META_VARIABLE_PATTERN.matcher(arg);
+
+            if (varMatcher.matches()) {
                 String varName = arg.substring(2, arg.length() - 2);
                 cmd.add(String.class.cast(
                     request.variableSubstitutions.get(varName)
                 ));
+            } else if (metaVarMatcher.matches()) {
+                String metaVarname = arg.substring(4, arg.length() - 4);
+                if (metaVarname.equals("THREAD_RUN_ID")) {
+                    cmd.add(String.valueOf(request.threadRunNumber));
+                } else if (metaVarname.equals("TASK_RUN_NUMBER")) {
+                    cmd.add(String.valueOf(request.taskRunNumber));
+                } else if (metaVarname.equals("WF_RUN_ID")) {
+                    cmd.add(request.wfRunId);
+                } else {
+                    throw new RuntimeException("Invalid metavarname: " + metaVarname);
+                }
             } else {
                 cmd.add(arg);
             }

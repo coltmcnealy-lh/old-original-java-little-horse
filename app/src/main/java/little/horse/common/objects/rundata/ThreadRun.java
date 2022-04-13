@@ -623,44 +623,6 @@ public class ThreadRun extends BaseSchema {
         return activateNode(activatedNode, event, toSchedule, timers);
     }
 
-    // @JsonIgnore
-    // private void scheduleTask(
-    //     TaskRun tr, Node node, List<TaskScheduleRequest> toSchedule,
-    //     List<WFRunTimer> timers
-    // ) throws LHConnectionError {
-    //     TaskScheduleRequest te = new TaskScheduleRequest();
-    //     te.setConfig(config);
-    //     te.taskDefName = node.taskDef.name;
-    //     te.wfRunId = wfRun.id;
-    //     te.wfSpecId = wfRun.wfSpecDigest;
-    //     te.wfSpecName = wfRun.wfSpecName;
-    //     te.threadRunNumber = id;
-    //     te.taskRunNumber = tr.number;
-    //     te.kafkaTopic = wfRun.getWFSpec().getEventTopic();
-    //     try {
-    //         te.taskDefName = tr.getNode().taskDefName;
-    //         te.taskDefId = tr.getNode().taskDefId;
-    //     } catch(LHConnectionError exn) {
-    //         throw new RuntimeException(
-    //             "Shouldn't happen because we should have already loaded the wfspec"
-    //         );
-    //     }
-
-    //     te.variableSubstitutions = new HashMap<>();
-    //     for (String varName: node.variables.keySet()) {
-    //         try {
-    //             te.variableSubstitutions.put(
-    //                 varName,
-    //                 assignVariable(node.variables.get(varName))
-    //             );
-    //         } catch(VarSubOrzDash exn) {
-    //             exn.printStackTrace();
-    //         }
-    //     }
-
-    //     toSchedule.add(te);
-    // }
-
     @JsonIgnore
     private boolean activateNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
@@ -769,28 +731,28 @@ public class ThreadRun extends BaseSchema {
         TaskRun tr = createNewTaskRun(node);
         taskRuns.add(tr);
 
-        TaskScheduleRequest te = new TaskScheduleRequest();
-        te.setConfig(config);
-        te.taskDefName = node.taskDef.name;
-        te.wfRunId = wfRun.id;
-        te.wfSpecId = wfRun.wfSpecDigest;
-        te.wfSpecName = wfRun.wfSpecName;
-        te.threadRunNumber = id;
-        te.taskRunNumber = tr.number;
-        te.kafkaTopic = wfRun.getWFSpec().getEventTopic();
+        TaskScheduleRequest tsr = new TaskScheduleRequest();
+        tsr.setConfig(config);
+        tsr.taskDefName = node.taskDef.name;
+        tsr.wfRunId = wfRun.id;
+        tsr.wfSpecId = wfRun.wfSpecDigest;
+        tsr.wfSpecName = wfRun.wfSpecName;
+        tsr.threadRunNumber = id;
+        tsr.taskRunNumber = tr.number;
+        tsr.kafkaTopic = wfRun.getWFSpec().getEventTopic();
         try {
-            te.taskDefName = tr.getNode().taskDefName;
-            te.taskDefId = tr.getNode().taskDefId;
+            tsr.taskDefName = tr.getNode().taskDefName;
+            tsr.taskDefId = tr.getNode().taskDefId;
         } catch(LHConnectionError exn) {
             throw new RuntimeException(
                 "Shouldn't happen because we should have already loaded the wfspec"
             );
         }
 
-        te.variableSubstitutions = new HashMap<>();
+        tsr.variableSubstitutions = new HashMap<>();
         for (String varName: node.variables.keySet()) {
             try {
-                te.variableSubstitutions.put(
+                tsr.variableSubstitutions.put(
                     varName,
                     assignVariable(node.variables.get(varName))
                 );
@@ -814,7 +776,7 @@ public class ThreadRun extends BaseSchema {
 
             // Only schedule the task if we aren't going to fail it.
             // That's why it's here and not outside the try.
-            toSchedule.add(te);
+            toSchedule.add(tsr);
 
         } catch (VarSubOrzDash exn) {
             failTask(
