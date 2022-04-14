@@ -131,6 +131,11 @@ if __name__ == '__main__':
 
     for wf in all_wfs:
         response = requests.post(f"{ns.api_url}/WFSpec", json=wf)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except Exception as exn:
+            print(response.content.decode())
+            raise exn
+
         wf_id = response.json()['objectId']
         print(f"Successfully created WFSpec {wf['name']}: {wf_id}")

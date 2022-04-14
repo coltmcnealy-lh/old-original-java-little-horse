@@ -6,7 +6,7 @@ import time
 import requests
 
 from lh_harness.check_models import TestCase, TestSuite
-from lh_harness.utils import cleanup_case_name, get_file_location
+from lh_harness.utils import are_equal, cleanup_case_name, get_file_location
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
@@ -37,6 +37,7 @@ def run_test(wf_spec_id: str, case: TestCase, url):
     run_wf_response.raise_for_status()
 
     wf_run_id = run_wf_response.json()['objectId']
+    print(wf_run_id)
 
     # Step 2: Wait for it to complete
     time.sleep(case.timeout)
@@ -65,26 +66,24 @@ def run_test(wf_spec_id: str, case: TestCase, url):
 
         thread_run = wf_run['threadRuns'][output.tr_number]
 
-        if output.task_runs is None:
-            continue
-
-        if len(output.task_runs) != len(thread_run['taskRuns']):
-            raise LHTestError(
-                f"{output.task_runs} TaskRuns",
-                f"{thread_run['taskRuns']} TaskRuns",
-                test_run_id
-            )
-
-        for i in range(len(output.task_runs or [])):
-            answer = output.task_runs[i]
-            actual = thread_run['taskRuns'][i]
-
-            if answer.stdout != actual['stdout']:
+        if output.task_runs is not None:
+            if len(output.task_runs) != len(thread_run['taskRuns']):
                 raise LHTestError(
-                    f"Stdout: {answer.stdout}",
-                    f"Stdout: {actual['stdout']}",
+                    f"{output.task_runs} TaskRuns",
+                    f"{thread_run['taskRuns']} TaskRuns",
                     test_run_id
                 )
+
+            for i in range(len(output.task_runs or [])):
+                answer = output.task_runs[i]
+                actual = thread_run['taskRuns'][i]
+
+                if answer.stdout != actual['stdout']:
+                    raise LHTestError(
+                        f"Stdout: {answer.stdout}",
+                        f"Stdout: {actual['stdout']}",
+                        test_run_id
+                    )
 
         for varname in (output.variables or {}).keys():
             assert output.variables is not None
@@ -96,7 +95,9 @@ def run_test(wf_spec_id: str, case: TestCase, url):
                     test_run_id
                 )
 
-            if thread_run['variables'][varname] != output.variables[varname]:
+            if not are_equal(
+                thread_run['variables'][varname], output.variables[varname]
+            ):
                 raise LHTestError(
                     f"{varname} = {output.variables[varname]}",
                     f"{varname} = {thread_run['variables'][varname]}",

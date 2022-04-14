@@ -24,3 +24,38 @@ def cleanup_case_name(case):
     case = os.path.join(test_dir, os.path.split(case)[1])
 
     return case
+
+
+def are_equal(var1, var2):
+    if var1 is not None and var2 is None:
+        return False
+
+    if var2 is not None and var1 is None:
+        return False
+
+    if type(var1) != type(var2):
+        return False
+
+    if type(var1) in [str, int, bool, float]:
+        return var1 == var2
+
+    if type(var1) == list:
+        if len(var1) != len(var2):
+            return False
+
+        for i in range(len(var1)):
+            if not are_equal(var1[i], var2[i]):
+                return False
+        return True
+
+    assert type(var1) == dict
+
+    if len(list(var1.keys())) != len(list(var2.keys())):
+        return False
+
+    for k in var1.keys():
+        if k not in var2:
+            return False
+        if not are_equal(var1[k], var2[k]):
+            return False
+    return True
