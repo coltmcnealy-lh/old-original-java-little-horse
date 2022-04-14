@@ -19,7 +19,7 @@ def cleanup_case_name(case):
     dir_of_this_file = os.path.split(this_file)[0]
     test_dir = os.path.join(
         dir_of_this_file,
-        "../tests/test_cases"
+        "../tests/"
     )
     case = os.path.join(test_dir, os.path.split(case)[1])
 

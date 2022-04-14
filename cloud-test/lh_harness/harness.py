@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     if ns.cases is None or len(ns.cases) == 0:
         cases = os.listdir(os.path.join(
-            get_file_location(), '..', 'tests/test_cases')
+            get_file_location(), '..', 'tests')
         )
     else:
         cases = ns.cases
