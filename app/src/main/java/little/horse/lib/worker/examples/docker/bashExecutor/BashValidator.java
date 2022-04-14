@@ -16,7 +16,7 @@ public class BashValidator implements DockerSecondaryTaskValidator {
         "<<(.*?)>>"
     );
     public static Pattern META_VARIABLE_PATTERN = Pattern.compile(
-        "<<<<(.*?)>>>>"
+        "---(.*?)---"
     );
 
     public void validate(TaskDef task, DepInjContext config) throws LHValidationError {

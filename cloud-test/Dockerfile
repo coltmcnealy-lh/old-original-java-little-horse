@@ -8,6 +8,8 @@ RUN apt-get update && \
 COPY cloud-test/environment.yml /environment.yml
 RUN conda env update -f /environment.yml
 
+ENV PYTHONPATH=/cloud-test/
+
 COPY app/build/libs/app-all.jar /littleHorse.jar
 
 COPY cloud-test /cloud-test

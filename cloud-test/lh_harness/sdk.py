@@ -8,12 +8,11 @@ import json
 import os
 from typing import Any, Callable
 
+# Magic so that we have the relevant functions in our "path" or whatever they call
+# it in python
+from lh_harness.task_implementations import *
 
 DOCKER_IMAGE = os.getenv("LHORSE_TEST_DOCKER_IMAGE", "little-horse-test:latest")
-
-
-def my_func(a: str, b: int, c: list = []) -> list:
-    return ["asdf"]
 
 
 def get_func(func_name) -> Callable:
@@ -37,6 +36,32 @@ def get_lh_var_type(original_type: Any):
         raise RuntimeError(f"Bad class type for param: {original_type}")
 
 
+def cast_all_args(func, *args):
+    sig: Signature = signature(func)
+
+    args = [thing for thing in args[0]]
+    assert len(args) == len(list(sig.parameters.keys()))
+
+    out = []
+    i = 0
+    for param_name in sig.parameters.keys():
+        arg = args[i]
+        i += 1
+
+        param = sig.parameters[param_name]
+        assert param.annotation is not None  # we know it's annotated by now
+
+        if param.annotation in [list, dict]:
+            out.append(json.loads(arg))
+        elif param.annotation == bool:
+            out.append(True if arg.lower() == 'true' else False)
+        else:
+            assert param.annotation in [int, float, str]
+            out.append(param.annotation(arg))
+
+    return out
+
+
 def get_task_def(task_def_name):
     task_func = get_func(task_def_name)
     sig: Signature = signature(task_func)
@@ -55,9 +80,9 @@ def get_task_def(task_def_name):
     bash_command = [
         "python",
         "/cloud-test/lh_harness/do_task.py",
-        "<<<<THREAD_RUN_ID>>>>",
-        "<<<<TASK_RUN_NUMBER>>>>",
-        "<<<<WF_RUN_ID>>>>",
+        "---THREAD_RUN_ID---",
+        "---TASK_RUN_NUMBER---",
+        "---WF_RUN_ID---",
         task_def_name,
     ]
 
@@ -70,14 +95,11 @@ def get_task_def(task_def_name):
             "dockerImage": DOCKER_IMAGE,
             "metadata": json.dumps({
                 "bashCommand": bash_command,
-                "secondaryValidatorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashValidator",
-                "taskExecutorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
-            })
-        })
+            }),
+            "secondaryValidatorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashValidator",
+            "taskExecutorClassName": "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor",
+        }),
+        "requiredVars": required_vars,
     }
 
     return td
-
-
-if __name__ == '__main__':
-    get_task_def('my_func')

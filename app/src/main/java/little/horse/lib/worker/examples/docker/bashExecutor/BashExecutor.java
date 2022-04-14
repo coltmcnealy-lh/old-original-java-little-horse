@@ -42,7 +42,7 @@ public class BashExecutor implements DockerTaskExecutor {
                     request.variableSubstitutions.get(varName)
                 ));
             } else if (metaVarMatcher.matches()) {
-                String metaVarname = arg.substring(4, arg.length() - 4);
+                String metaVarname = arg.substring(3, arg.length() - 3);
                 if (metaVarname.equals("THREAD_RUN_ID")) {
                     cmd.add(String.valueOf(request.threadRunNumber));
                 } else if (metaVarname.equals("TASK_RUN_NUMBER")) {
@@ -50,7 +50,7 @@ public class BashExecutor implements DockerTaskExecutor {
                 } else if (metaVarname.equals("WF_RUN_ID")) {
                     cmd.add(request.wfRunId);
                 } else {
-                    throw new RuntimeException("Invalid metavarname: " + metaVarname);
+                    throw new RuntimeException("Invalid metavarname: " + arg);
                 }
             } else {
                 cmd.add(arg);
@@ -68,7 +68,8 @@ public class BashExecutor implements DockerTaskExecutor {
             return LHUtil.inputStreamToString(proc.getInputStream());
         } else {
             throw new RuntimeException("Task Execution failed: " +
-                LHUtil.inputStreamToString(proc.getErrorStream())
+                LHUtil.inputStreamToString(proc.getErrorStream()) + "\n\n" +
+                LHUtil.inputStreamToString(proc.getInputStream())
             );
         }
     }

@@ -6,8 +6,9 @@ import requests
 import os
 
 from lh_harness.check_models import TestSuite
+from lh_harness.sdk import get_task_def
+from lh_harness.utils import cleanup_case_name, get_file_location
 
-from lh_harness.utils import cleanup_case_name
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
 
@@ -19,9 +20,9 @@ def add_thing(filename, type_name, api_url):
     response = requests.post(f"{api_url}/{type_name}", json=data)
     try:
         response.raise_for_status()
-    except:
+    except Exception as exn:
         print(response.content.decode())
-        return
+        raise exn
 
     j = response.json()
     if j['status'] != 'OK':
@@ -92,8 +93,10 @@ if __name__ == '__main__':
 
     ns = parser.parse_args()
 
-    if ns.cases is None:
-        cases = os.listdir('tests/test_cases')
+    if ns.cases is None or len(ns.cases) == 0:
+        cases = os.listdir(os.path.join(
+            get_file_location(), '..', 'tests/test_cases')
+        )
     else:
         cases = ns.cases
 
@@ -109,10 +112,15 @@ if __name__ == '__main__':
         all_eevs.update(new_eevs)
         all_wfs.append(wf)
 
-    for td in all_tasks:
-        add_thing(
-            f'tests/tasks/{td}.json', "TaskDef", ns.api_url
-        )
+    for td_name in all_tasks:
+        task_def = get_task_def(td_name)
+        response = requests.post(f"{ns.api_url}/TaskDef", json=task_def)
+        try:
+            response.raise_for_status()
+        except Exception as exn:
+            print(response.content.decode())
+            raise exn
+        print(f"Successfully created TaskDef {td_name}")
 
     for eev in all_eevs:
         add_thing(

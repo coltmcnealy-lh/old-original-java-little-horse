@@ -33,10 +33,10 @@
         {
           "tr_number": 0,
           "variables": {
-            "my_variable": "This task got executed!\n"
+            "my_variable": "This task got executed!"
           },
           "task_runs": [{
-            "stdout": "This task got executed!\n",
+            "stdout": "This task got executed!",
             "stderr": null
           }]
         }
