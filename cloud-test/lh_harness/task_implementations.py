@@ -42,5 +42,6 @@ def json_with_object():
 
 def json_with_array():
     return {
-        "my-array": [0, 1, 2]
+        "my-array": [0, 1, 2],
+        "my-null-array": None,
     }

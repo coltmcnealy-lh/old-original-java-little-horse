@@ -133,7 +133,7 @@
   "test_cases": [
     {
       "command": {},
-      "timeout": 1.0,
+      "timeout": 1.5,
       "output": [
         {
           "tr_number": 0,
@@ -143,7 +143,7 @@
             "my-str": "asdf",
             "my-null-str": null,
             "my-bool": true,
-            "my-null-bool": false,
+            "my-null-bool": null,
             "my-double": 1.01,
             "my-null-double": null,
             "my-object": {"foo": "bar"},

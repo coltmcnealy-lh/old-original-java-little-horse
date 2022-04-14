@@ -164,7 +164,9 @@ public class ThreadRun extends BaseSchema {
         if (mutSchema.copyDirectlyFromNodeOutput) {
             return tr.stdout;
         } else if (mutSchema.jsonPath != null) {
-            return LHUtil.jsonPath(tr.toString(), mutSchema.jsonPath);
+            return LHUtil.jsonPath(
+                tr.stdout.toString(), mutSchema.jsonPath
+            );
         } else if (mutSchema.sourceVariable != null) {
             return assignVariable(mutSchema.sourceVariable);
         } else {
@@ -1239,6 +1241,22 @@ class Mutation {
     }
 
     public void execute(boolean dryRun) throws VarSubOrzDash {
+        try {
+            doExecuteHelper(dryRun);
+        } catch (VarSubOrzDash vsod) {
+            throw vsod;
+        } catch (Exception exn) {
+            exn.printStackTrace();
+            throw new VarSubOrzDash(
+                exn,
+                "Had an unexpected error mutating variable " + varName +
+                ", lhs: " + LHUtil.stringify(lhs) + ", rhs: " + 
+                LHUtil.stringify(rhs) + ":\n" + exn.getMessage()
+            );
+        }
+    }
+
+    private void doExecuteHelper(boolean dryRun) throws VarSubOrzDash {
         // Can't rely upon the WFRunVariableDefSchema because if, for example, the
         // LHS variable is an OBJECT, and there is a jsonpath, we could index from
         // the object to an Integer, in which case the LHS is not of the same type
@@ -1249,7 +1267,7 @@ class Mutation {
         // Now we handle every operation that's legal. Because I'm lazy, there's
         // only two so far.
         if (op == VariableMutationOperation.ASSIGN) {
-            if (!defTypeCls.isInstance(rhs)) {
+            if (rhs != null && !defTypeCls.isInstance(rhs)) {
                 throw new VarSubOrzDash(null,
                     "Tried to set var " + varName + ", which is of type " +
                     defTypeCls.getName() + " to " + rhs.toString() + ", which is " +

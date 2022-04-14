@@ -28,6 +28,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import io.javalin.Javalin;
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.rundata.VarSubOrzDash;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
 
 
@@ -156,12 +157,33 @@ public class LHUtil {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
+            LHUtil.log("Caught exception", exn.getMessage());
             return data;
         }
     }
 
-    public static Object jsonPath(String json, String path) {
-        return JsonPath.parse(json).read(path);
+    public static Object jsonPath(String json, String path) throws VarSubOrzDash {
+        try {
+            return JsonPath.parse(json).read(path);
+        } catch (Exception exn) {
+            throw new VarSubOrzDash(
+                exn,
+                "Failed accessing path " + path + " on data " + json + "  :\n" +
+                exn.getMessage()
+            );
+        }
+    }
+
+    public static String unjsonify(Object json, DepInjContext cfg)
+    throws VarSubOrzDash {
+        try {
+            return LHUtil.getObjectMapper(cfg).writeValueAsString(json);
+        } catch (Exception exn) {
+            throw new VarSubOrzDash(
+                exn,
+                "Failed unjsonning: " + exn.getMessage()
+            );
+        }
     }
 
     public static String stringify(Object thing) {

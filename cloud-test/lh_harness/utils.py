@@ -27,6 +27,9 @@ def cleanup_case_name(case):
 
 
 def are_equal(var1, var2):
+    if var1 is None and var2 is None:
+        return True
+
     if var1 is not None and var2 is None:
         return False
 
