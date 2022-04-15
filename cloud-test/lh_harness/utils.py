@@ -1,5 +1,27 @@
+import hashlib
 from inspect import getsourcefile
 import os
+import uuid
+
+from sqlalchemy import create_engine
+
+
+DEFAULT_API_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
+
+POSTGRES_URI = os.getenv(
+    "DB_URI",
+    "postgresql://postgres:postgres@localhost:5432/postgres"
+)
+
+engine = create_engine(POSTGRES_URI)
+
+
+def get_connection():
+    return engine.connect()
+
+
+def generate_guid():
+    return uuid.uuid4().hex
 
 
 def get_file_location():

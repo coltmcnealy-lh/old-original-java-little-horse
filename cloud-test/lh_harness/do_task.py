@@ -1,5 +1,7 @@
 import argparse
+from contextlib import closing
 import json
+import os
 from typing import Callable
 
 from lh_harness.sdk import cast_all_args, get_func

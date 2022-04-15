@@ -15,7 +15,7 @@ class ThreadRunOutput(BaseModel):
     tr_number: int
     variables: Optional[Mapping[str, Any]] = None
     task_runs: Optional[List[TaskRunOutput]] = None
-    status: Optional[str] = 'COMPLETED'
+    status: str = 'COMPLETED'
 
 
 class TestCase(BaseModel):

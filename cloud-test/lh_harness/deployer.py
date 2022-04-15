@@ -5,7 +5,7 @@ import requests
 
 import os
 
-from lh_harness.check_models import TestSuite
+from lh_harness.test_case_schema import TestSuite
 from lh_harness.sdk import get_task_def
 from lh_harness.utils import cleanup_case_name, get_file_location
 
