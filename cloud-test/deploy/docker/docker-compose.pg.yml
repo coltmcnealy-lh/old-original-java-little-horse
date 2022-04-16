@@ -5,8 +5,11 @@ services:
 
   db:
     image: postgres
+    container_name: little-horse-test-db
     restart: always
     network_mode: "host"
+    labels:
+      - io.littlehorse/active=true
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres

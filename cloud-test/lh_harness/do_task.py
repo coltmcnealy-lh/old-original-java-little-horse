@@ -4,7 +4,7 @@ import json
 import os
 from typing import Callable
 
-from lh_harness.sdk import cast_all_args, get_func
+from lh_harness.sdk.sdk import cast_all_args, get_func
 
 # # Make all the task implementation functions available for the voodoo we do.
 # from lh_harness.task_implementations import *
