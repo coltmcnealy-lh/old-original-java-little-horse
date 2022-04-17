@@ -1,12 +1,12 @@
-FROM continuumio/miniconda3 AS base
+FROM python:3.10-slim AS base
 
 # Install OpenJDK-11
 RUN apt-get update && \
-    apt-get install -y openjdk-17-jre-headless && \
+    apt-get install -y libpq-dev python-dev openjdk-17-jre-headless gcc && \
     apt-get clean;
 
-COPY cloud-test/environment.yml /environment.yml
-RUN conda env update -f /environment.yml
+COPY cloud-test/requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
 
 ENV PYTHONPATH=/cloud-test/
 

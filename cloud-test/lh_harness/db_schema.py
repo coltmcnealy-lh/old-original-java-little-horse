@@ -87,7 +87,6 @@ class TaskRun(BaseOrm):
     execution_time: datetime = Column(
         DateTime, default=lambda: datetime.now()
     )  # type: ignore
-    wf_spec_id: str = Column(String, nullable=False)  # type: ignore
     wf_run_id: str = Column(
         String,
         ForeignKey('wf_run.wf_run_id'),
@@ -98,7 +97,6 @@ class TaskRun(BaseOrm):
     stdout: str = Column(String, nullable=True)  # type: ignore
     stderr: str = Column(String, nullable=True)  # type: ignore
     task_def: str = Column(String, nullable=True)  # type: ignore
-    harness_worker_partition: int = Column(Integer, nullable=False)  # type: ignore
 
     wf_run: WFRun = relationship('WFRun', back_populates='task_runs')
 

@@ -36,13 +36,13 @@ def get_lh_var_type(original_type: Any):
         raise RuntimeError(f"Bad class type for param: {original_type}")
 
 
-def cast_all_args(func, *args):
+def cast_all_args(func, *args) -> dict:
     sig: Signature = signature(func)
 
     args = [thing for thing in args[0]]
     assert len(args) == len(list(sig.parameters.keys()))
 
-    out = []
+    out = {}
     i = 0
     for param_name in sig.parameters.keys():
         arg = args[i]
@@ -52,12 +52,12 @@ def cast_all_args(func, *args):
         assert param.annotation is not None  # we know it's annotated by now
 
         if param.annotation in [list, dict]:
-            out.append(json.loads(arg))
+            out[param_name] = json.loads(arg)
         elif param.annotation == bool:
-            out.append(True if arg.lower() == 'true' else False)
+            out[param_name] = True if arg.lower() == 'true' else False
         else:
             assert param.annotation in [int, float, str]
-            out.append(param.annotation(arg))
+            out[param_name] = param.annotation(arg)
 
     return out
 
