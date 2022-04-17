@@ -27,4 +27,10 @@ fi
 
 cd $SCRIPT_DIR
 docker-compose up -d
-docker logs -f little-horse-api
+
+if [ -z $1 ]
+then
+    echo "Add any random string as an argument to follow logs"
+else
+    docker logs -f little-horse-api
+fi

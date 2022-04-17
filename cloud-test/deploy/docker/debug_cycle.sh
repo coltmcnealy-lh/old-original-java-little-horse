@@ -5,8 +5,8 @@ cd ${SCRIPT_DIR}
 
 rm -r ../../alembic/versions/*
 set -e
-docker-compose -p docker-test-harness -f docker-compose.pg.yml down
-docker-compose -f ../../../docker/docker-compose.yml down
+
+../../../docker/debug_cycle.sh
 
 cd ../..
 

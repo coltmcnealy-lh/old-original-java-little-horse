@@ -12,7 +12,6 @@ from lh_harness.utils.test_case_schema import TestCase, TestSuite
 from lh_harness.db_schema import (
     TestStatus,
     WFRun,
-    TaskRun,
 )
 from lh_harness.utils.utils import (
     cleanup_case_name,
@@ -63,8 +62,6 @@ def run_wf_helper(
     except Exception:
         new_status = TestStatus.FAILED_LAUNCH
         message = "Failed launching the WFRun!"
-
-    print(response.content.decode())
 
     wf_run.status = new_status
     wf_run.message = message

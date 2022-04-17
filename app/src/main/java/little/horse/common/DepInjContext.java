@@ -187,7 +187,7 @@ public class DepInjContext {
                 "value.serializer",
                 "org.apache.kafka.common.serialization.BytesSerializer"
             );
-            conf.put("transactional.id", this.getAppInstanceId());
+            conf.put("transactional.id", getAppId() + "-_-" + getAppInstanceId());
             conf.put("enable.idempotence", "true");
 
             this.txnProducer = new KafkaProducer<String, Bytes>(conf);   
