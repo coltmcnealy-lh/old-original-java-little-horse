@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from enum import Enum as PythonEnum
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any, List, Mapping, Optional
 
 from sqlalchemy import (
     Column,
+    ForeignKey,
     Integer,
     String,
     DateTime,
@@ -15,11 +18,9 @@ from sqlalchemy.orm import registry, relation, relationship # type: ignore
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.orm.relationships import foreign
 from sqlalchemy.sql.schema import (
-    CheckConstraint,
-    ForeignKeyConstraint,
     PrimaryKeyConstraint,
-    UniqueConstraint,
 )
+
 from sqlalchemy.sql.sqltypes import BigInteger, Boolean
 
 mapper_registry = registry()
@@ -71,10 +72,13 @@ class WFRun(BaseOrm):
     )  # type: ignore
     wf_spec_id: str = Column(String, nullable=False)  # type: ignore
     wf_run_id: str = Column(String, nullable=False, primary_key=True)  # type: ignore
-    message: str = Column(String, nullable=True)  # type: ignore
+    message: Optional[str] = Column(String, nullable=True)  # type: ignore
     status: TestStatus = Column(
         Enum(TestStatus), default=TestStatus.LAUNCHING, nullable=False
     )  # type: ignore
+    harness_worker_partition: int = Column(Integer, nullable=False) # type: ignore
+
+    task_runs: List[TaskRun] = relationship('TaskRun')
 
 
 class TaskRun(BaseOrm):
@@ -84,13 +88,19 @@ class TaskRun(BaseOrm):
         DateTime, default=lambda: datetime.now()
     )  # type: ignore
     wf_spec_id: str = Column(String, nullable=False)  # type: ignore
-    wf_run_id: str = Column(String, nullable=False)  # type: ignore
+    wf_run_id: str = Column(
+        String,
+        ForeignKey('wf_run.wf_run_id'),
+        nullable=False
+    )  # type: ignore
     thread_run_id: int = Column(Integer, nullable=False)  # type: ignore
     task_run_number: int = Column(Integer, nullable=False)  # type: ignore
     stdout: str = Column(String, nullable=True)  # type: ignore
     stderr: str = Column(String, nullable=True)  # type: ignore
     task_def: str = Column(String, nullable=True)  # type: ignore
     harness_worker_partition: int = Column(Integer, nullable=False)  # type: ignore
+
+    wf_run: WFRun = relationship('WFRun', back_populates='task_runs')
 
     __table_args__ = (
         PrimaryKeyConstraint('wf_run_id', 'thread_run_id', 'task_run_number'),

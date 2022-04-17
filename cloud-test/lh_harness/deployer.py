@@ -7,7 +7,7 @@ import os
 
 from lh_harness.utils.test_case_schema import TestSuite
 from lh_harness.sdk.sdk import get_task_def
-from lh_harness.utils.utils import cleanup_case_name, get_file_location
+from lh_harness.utils.utils import cleanup_case_name, get_root_dir
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     if ns.cases is None or len(ns.cases) == 0:
         cases = os.listdir(os.path.join(
-            get_file_location(), '..', 'tests')
+            get_root_dir(), 'tests')
         )
     else:
         cases = ns.cases

@@ -12,8 +12,7 @@ from lh_harness.utils.test_case_schema import TestCase, TestSuite
 from lh_harness.utils.utils import (
     are_equal,
     cleanup_case_name,
-    get_connection,
-    get_file_location,
+    get_root_dir,
     DEFAULT_API_URL,
 )
 
@@ -104,7 +103,7 @@ if __name__ == '__main__':
 
     if len(ns.cases) == 0:
         cases = os.listdir(os.path.join(
-            get_file_location(), '..', 'tests')
+            get_root_dir(), 'tests')
         )
     else:
         cases = ns.cases

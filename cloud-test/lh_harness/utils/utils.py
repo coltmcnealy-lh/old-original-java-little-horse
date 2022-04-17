@@ -34,11 +34,11 @@ def generate_guid() -> str:
     return uuid.uuid4().hex
 
 
-def get_file_location():
+def get_root_dir():
     this_file = getsourcefile(lambda: 0)
     assert this_file is not None
     dir_of_this_file = os.path.split(this_file)[0]
-    return dir_of_this_file
+    return os.path.join(dir_of_this_file, '..', '..')
 
 
 def cleanup_case_name(case):
@@ -51,7 +51,7 @@ def cleanup_case_name(case):
     dir_of_this_file = os.path.split(this_file)[0]
     test_dir = os.path.join(
         dir_of_this_file,
-        "../tests/"
+        "../../tests/"
     )
     case = os.path.join(test_dir, os.path.split(case)[1])
 
