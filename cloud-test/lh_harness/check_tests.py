@@ -7,6 +7,7 @@ from typing import Tuple
 
 import requests
 from sqlalchemy import text
+from lh_harness.db_schema import WFRun
 
 from lh_harness.utils.test_case_schema import TestCase, TestSuite
 from lh_harness.utils.utils import (
@@ -14,6 +15,7 @@ from lh_harness.utils.utils import (
     cleanup_case_name,
     get_root_dir,
     DEFAULT_API_URL,
+    get_session,
 )
 
 
@@ -83,6 +85,28 @@ def check_test_suite(case_file: str, api_url: str):
         check_test_case(test_case, api_url, test_suite)
 
 
+def check_all_runs(
+    executor: ThreadPoolExecutor,
+    test_case: TestCase,
+    wf_spec_name: str,
+    url: str,
+    partition: int,
+):
+    with closing(get_session()) as session:
+        q = session.query(
+            WFRun
+        ).filter(
+            WFRun.wf_spec_id == wf_spec_name
+        ).filter(
+            WFRun.already_graded != True
+        ).filter(
+            WFRun.harness_worker_partition == partition
+        )
+
+        for result in q.all():
+            breakpoint()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Launch test cases")
 
@@ -98,6 +122,10 @@ if __name__ == '__main__':
         "--harness-worker-partition", default=0,
         help="partition number for this harness worker"
     )
+    parser.add_argument(
+        "--cases", '-c', nargs='+', default=[],
+        help="Names of test cases to test. If left blank, will test all cases."
+    )
 
     ns = parser.parse_args()
 
@@ -109,3 +137,25 @@ if __name__ == '__main__':
         cases = ns.cases
 
     cases = [cleanup_case_name(case) for case in cases]
+
+    futures = []
+
+    for case in cases:
+        executor = ThreadPoolExecutor(max_workers=ns.threads)
+        with open(case, 'r') as f:
+            data = json.loads(f.read())
+        test_suite = TestSuite(**data)
+
+        wf_name = test_suite.wf_spec['name']
+        for test_case in test_suite.test_cases:
+            check_all_runs(
+                executor,
+                test_case,
+                wf_name,
+                ns.api_url,
+                ns.harness_worker_partition,
+            )
+
+    for future in futures:
+        future.result()
+

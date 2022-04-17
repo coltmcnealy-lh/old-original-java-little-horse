@@ -79,6 +79,9 @@ class WFRun(BaseOrm):
     harness_worker_partition: int = Column(Integer, nullable=False) # type: ignore
 
     task_runs: List[TaskRun] = relationship('TaskRun')
+    already_graded: bool = Column(
+        Boolean, nullable=False, default=False
+    )  # type: ignore
 
 
 class TaskRun(BaseOrm):
