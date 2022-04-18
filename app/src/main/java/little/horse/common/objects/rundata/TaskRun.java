@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.Node;
+import little.horse.common.objects.metadata.NodeType;
 
 public class TaskRun extends BaseSchema {
     @JsonBackReference
@@ -63,4 +64,10 @@ public class TaskRun extends BaseSchema {
             parentThread.threadSpecName
         ).nodes.get(nodeName);
     }
+
+    public NodeType getNodeType() throws LHConnectionError {
+        return getNode().nodeType;
+    }
+    // Just here for Jackson
+    public void setNodeType(NodeType foo) {}
 }

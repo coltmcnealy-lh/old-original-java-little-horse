@@ -3,11 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 import json
 import os
-from typing import Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import requests
 from sqlalchemy import text
-from lh_harness.db_schema import TestStatus, WFRun
+from lh_harness.db_schema import TaskRun, TestStatus, WFRun
 
 from lh_harness.utils.test_case_schema import TestCase, TestSuite
 from lh_harness.utils.utils import (
@@ -97,7 +97,70 @@ def validate_wf_run_helper(
                     f"Variable {varname} had wrong value."
                 )
 
-    return TestStatus.SUCCEEDED, "The Force is with us!"
+    return check_task_runs_and_thread_runs(wf_run_orm, wf_run)
+
+
+def iter_all_task_runs(wf_run: dict) -> Iterable[Tuple[int, dict]]:
+    for i, thread_run in enumerate(wf_run['threadRuns']):
+        for task_run in thread_run['taskRuns']:
+            if task_run['nodeType'] != 'TASK':
+                continue
+            yield i, task_run
+
+
+def find_task_run(wf_run_orm, thr_num, tr_num) -> Optional[TaskRun]:
+    task_runs: List[TaskRun] = wf_run_orm.task_runs
+
+    for task_run in task_runs:
+        if task_run.thread_run_id == thr_num and task_run.task_run_number == tr_num:
+            return task_run
+
+    return None
+
+
+def check_task_runs_and_thread_runs(wf_run_orm, wf_run):
+    orphans = []
+    mis_reports = []
+    for thr_num, task_run in iter_all_task_runs(wf_run):
+        # make sure that each task_run:
+        # 1. Actually got executed and recorded in the db
+        # 2. Matches the output in the db
+        assert thr_num == task_run['threadID']
+        tr_orm = find_task_run(
+            wf_run_orm, task_run['threadID'], task_run['number']
+        )
+
+        if tr_orm == None:
+            if task_run['status'] == 'FAILED':
+                # This means that the task got scheduled but the worker was down.
+                orphans.append(task_run)
+                continue
+            else:
+                breakpoint()
+                # This means that LittleHorse hallucinated about the task and thought
+                # it got done but the task never did get done (either that, or the
+                # database decided to drop a record, which shouldn't be possible)
+                return (
+                    TestStatus.FAILED_UNACCEPTABLE,
+                    "Phantom task run that wasn't found in database!"
+                )
+
+        if tr_orm.stdout != task_run['stdout']:
+            if task_run['status'] == 'FAILED':
+                mis_reports.append(task_run)
+            else:
+                return (
+                    TestStatus.FAILED_UNACCEPTABLE,
+                    "DB and LH show different stdouts!"
+                )
+
+    wf_run_orm.num_mis_reported = len(mis_reports)
+    wf_run_orm.num_orphans = len(orphans)
+
+    if len(orphans) == 0 and len(mis_reports) == 0:
+        return TestStatus.SUCCEEDED, "The Force is with us!"
+
+    return TestStatus.FALIED_ACCEPTABLE, "Had some minor reporting errors"
 
 
 def iter_all_wf_runs():

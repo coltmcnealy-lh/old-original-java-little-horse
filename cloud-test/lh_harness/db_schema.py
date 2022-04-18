@@ -83,6 +83,9 @@ class WFRun(BaseOrm):
         Boolean, nullable=False, default=False
     )  # type: ignore
 
+    num_mis_reported: int = Column(Integer, nullable=True)  # type: ignore
+    num_orphans: int = Column(Integer, nullable=True)  # type: ignore
+
 
 class TaskRun(BaseOrm):
     __tablename__ = 'task_run'
