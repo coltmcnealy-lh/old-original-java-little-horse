@@ -7,7 +7,7 @@ from typing import Tuple
 
 import requests
 from sqlalchemy import text
-from lh_harness.db_schema import WFRun
+from lh_harness.db_schema import TestStatus, WFRun
 
 from lh_harness.utils.test_case_schema import TestCase, TestSuite
 from lh_harness.utils.utils import (
@@ -19,18 +19,56 @@ from lh_harness.utils.utils import (
 )
 
 
-def validate_wf_run(wf_run: dict, case: TestCase) -> Tuple[str, str]:
-    test_run_id = wf_run['objectId']
-    for output in case.output:
+def request_wf_run(wf_run_guid, url):
+    req_url = f"{url}/WFRun/{wf_run_guid}"
+    response = requests.get(req_url)
+    response.raise_for_status()
+    return response.json()['result']
+
+
+def validate_wf_run(
+    wf_run_orm: WFRun,
+    test_case: TestCase,
+    url: str
+):
+    new_status, new_message = validate_wf_run_helper(wf_run_orm, test_case, url)
+    wf_run_orm.status = new_status
+    wf_run_orm.message = new_message
+    wf_run_orm.already_graded = True
+
+
+def validate_wf_run_helper(
+    wf_run_orm: WFRun,
+    test_case: TestCase,
+    url: str
+) -> Tuple[TestStatus, str]:
+    try:
+        wf_run: dict = request_wf_run(wf_run_orm.wf_run_id, url)
+    except Exception as exn:
+        return (
+            TestStatus.FAILED_UNACCEPTABLE,
+            "Had orzdash when looking up: " + str(exn)
+        )
+
+    if wf_run is None:
+        return (
+            TestStatus.FAILED_UNACCEPTABLE,
+            "Couldn't find WFRun in the API."
+        )
+
+    for output in test_case.output:
         if output.tr_number >= len(wf_run['threadRuns']):
-            return "FAILED_UNACCEPTABLE", "Not enough threadruns in actual wf!"
+            return (
+                TestStatus.FAILED_UNACCEPTABLE,
+                "Not enough threadruns in actual wf!"
+            )
 
         thread_run = wf_run['threadRuns'][output.tr_number]
 
         if output.task_runs is not None:
             if len(output.task_runs) != len(thread_run['taskRuns']):
                 return (
-                    "FAILED_UNACCEPTABLE",
+                    TestStatus.FAILED_UNACCEPTABLE,
                     f"Wanted {len(output.task_runs)} taskruns," +
                     f" not {len(thread_run['taskRuns'])}"
                 )
@@ -40,14 +78,14 @@ def validate_wf_run(wf_run: dict, case: TestCase) -> Tuple[str, str]:
                 actual = thread_run['taskRuns'][i]
 
                 if not are_equal(answer.stdout, actual['stdout']):
-                    return "FALIED_UNACCEPTABLE", "Mismatched stdout!"
+                    return TestStatus.FAILED_UNACCEPTABLE, "Mismatched stdout!"
 
         for varname in (output.variables or {}).keys():
             assert output.variables is not None
 
             if varname not in thread_run['variables']:
                 return (
-                    "FAILED_UNACCEPTABLE",
+                    TestStatus.FAILED_UNACCEPTABLE,
                     f"{varname} not defined for ThreadRun."
                 )
 
@@ -55,11 +93,11 @@ def validate_wf_run(wf_run: dict, case: TestCase) -> Tuple[str, str]:
                 thread_run['variables'][varname], output.variables[varname]
             ):
                 return (
-                    "FAILED_UNACCEPTABLE",
+                    TestStatus.FAILED_UNACCEPTABLE,
                     f"Variable {varname} had wrong value."
                 )
 
-    return "SUCCEEDED", "The Force is with us!"
+    return TestStatus.SUCCEEDED, "The Force is with us!"
 
 
 def iter_all_wf_runs():
@@ -104,7 +142,13 @@ def check_all_runs(
         )
 
         for result in q.all():
-            breakpoint()
+            validate_wf_run(
+                result,
+                test_case,
+                url
+            )
+            session.merge(result)
+            session.commit()
 
 
 if __name__ == '__main__':
