@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -28,6 +29,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import io.javalin.Javalin;
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
+import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.rundata.VarSubOrzDash;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
 
@@ -234,6 +236,18 @@ public class LHUtil {
             }
         });
         return app;
+    }
+
+    public static Class<? extends Object> getNeededClass(WFRunVariableDef vardef) {
+        switch (vardef.type) {
+            case STRING:    return String.class;
+            case INT:       return Integer.class;
+            case DOUBLE:    return Double.class;
+            case ARRAY:     return List.class;
+            case OBJECT:    return Object.class;
+            case BOOLEAN:   return Boolean.class;
+            default: throw new RuntimeException("Not possible");
+        }
     }
 }
 

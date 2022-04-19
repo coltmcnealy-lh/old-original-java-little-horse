@@ -318,7 +318,7 @@ public class ThreadRun extends BaseSchema {
             } catch(VarSubOrzDash exn) {
                 exn.printStackTrace();
                 failTask(
-                    task, LHFailureReason.VARIABLE_LOOKUP_ERROR,exn.getMessage()
+                    task, LHFailureReason.VARIABLE_LOOKUP_ERROR, exn.getMessage()
                 );
                 return;
             }
@@ -479,25 +479,6 @@ public class ThreadRun extends BaseSchema {
                 removeHaltReason(WFHaltReasonEnum.INTERRUPT);
             }
 
-            // Can comment out this stuff because we are no longer treating
-            // exceptions differently than interrupts
-            // // Check if we just fixed an exception handler
-            // if (exceptionHandlerThread != null) {
-            //     ThreadRun handler = wfRun.threadRuns.get(
-            //         exceptionHandlerThread
-            //     );
-
-            //     if (handler.isCompleted()) {
-            //         removeHaltReason(WFHaltReasonEnum.HANDLING_EXCEPTION);
-            //     } else if (handler.isFailed()) {
-            //         // we're failed.
-            //         halt(WFHaltReasonEnum.FAILED,
-            //             "Exception handler on thread " + handler.id + " failed!"
-            //         );
-            //     } else {
-            //         LHUtil.log("waiting for exception handler to finish");
-            //     }
-            // }
         } else if (status == LHExecutionStatus.HALTING) {
             // Well we just gotta see if the last task run is done.
             if (taskRuns.size() == 0 || taskRuns.get(
@@ -1115,11 +1096,6 @@ public class ThreadRun extends BaseSchema {
             if (kid.isInterruptThread && reason == WFHaltReasonEnum.INTERRUPT) {
                 continue;
             }
-            // if (exceptionHandlerThread != null && kid.id == exceptionHandlerThread &&
-            //     reason == WFHaltReasonEnum.HANDLING_EXCEPTION
-            // ) {
-            //     continue;
-            // }
             kid.halt(WFHaltReasonEnum.PARENT_STOPPED, "Parent thread was halted.");
         }
     }
@@ -1262,7 +1238,7 @@ class Mutation {
         // the object to an Integer, in which case the LHS is not of the same type
         // as the varDef.type; but we will get more fancy once we add jsonschema
         // validation.
-        Class<?> defTypeCls = lhs == null ? Object.class : lhs.getClass();
+        Class<?> defTypeCls = LHUtil.getNeededClass(varDef);
 
         // Now we handle every operation that's legal. Because I'm lazy, there's
         // only two so far.
