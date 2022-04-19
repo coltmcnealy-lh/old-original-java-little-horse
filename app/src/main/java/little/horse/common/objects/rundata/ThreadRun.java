@@ -56,7 +56,7 @@ public class ThreadRun extends BaseSchema {
 
     @JsonManagedReference
     public ArrayList<TaskRun> taskRuns;
-    public ArrayList<Edge> upNext;
+    public ArrayList<UpNextPair> upNext;
     public LHExecutionStatus status;
 
     public HashMap<String, Object> variables;
@@ -229,13 +229,24 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
+    public void addEdgeToUpNext(int attemptNumber, Edge edge) {
+        upNext.add(new UpNextPair(attemptNumber, edge));
+    }
+
+    @JsonIgnore
     public void addEdgeToUpNext(Edge edge) {
-        upNext.add(edge);
+        upNext.add(new UpNextPair(0, edge));
     }
 
     @JsonIgnore
     public TaskRun createNewTaskRun(Node node) 
     throws LHConnectionError {
+        return createNewTaskRun(node, 0);
+    }
+
+    @JsonIgnore
+    public TaskRun createNewTaskRun(Node node, int attemptNumber)
+    throws LHConnectionError{
         TaskRun tr = new TaskRun();
         tr.status = LHExecutionStatus.RUNNING;
         tr.threadID = id;
@@ -243,6 +254,7 @@ public class ThreadRun extends BaseSchema {
         tr.nodeName = node.name;
         tr.wfSpecDigest = wfRun.getWFSpec().getId();
         tr.wfSpecName = wfRun.getWFSpec().name;
+        tr.attemptNumber = attemptNumber;
 
         tr.parentThread = this;
 
@@ -307,7 +319,7 @@ public class ThreadRun extends BaseSchema {
 
         // Need the up next to be set whether or not the task fails/there is
         // a retry/it succeeds.
-        upNext = new ArrayList<Edge>();
+        upNext = new ArrayList<>();
         for (Edge edge: task.getNode().getOutgoingEdges()) {
             addEdgeToUpNext(edge);
         }
@@ -318,7 +330,8 @@ public class ThreadRun extends BaseSchema {
             } catch(VarSubOrzDash exn) {
                 exn.printStackTrace();
                 failTask(
-                    task, LHFailureReason.VARIABLE_LOOKUP_ERROR, exn.getMessage()
+                    task, LHFailureReason.VARIABLE_LOOKUP_ERROR, 
+                    "Failed mutating variables after task: " + exn.getMessage()
                 );
                 return;
             }
@@ -403,13 +416,22 @@ public class ThreadRun extends BaseSchema {
         tr.failureMessage = message;
         tr.failureReason = reason;
 
-        // TODO: Determine whether or not to enqueue a retry.
+        // Determine whether or not to enqueue a retry.
+        boolean retryable = LHUtil.isRetryable(reason);
+        if (retryable && tr.attemptNumber < tr.getNode().numRetries) {
+            // Enqueue a retry of the same node.
+            Edge newEdge = new Edge();
+            newEdge.sinkNodeName = tr.getNode().name;
+            upNext.add(new UpNextPair(tr.attemptNumber + 1, newEdge));
 
-        if (tr.getNode().baseExceptionhandler != null) {
+        } else if (tr.getNode().baseExceptionhandler != null) {
+            // Spawn an exception handler.
+
             // Treat the exception handler LIKE an interrupt, but not really.
             String tname = tr.getNode().baseExceptionhandler.handlerThreadSpecName;
             handleException(tname, tr, reason, message);
         } else {
+            // Just fail.
             halt(
                 WFHaltReasonEnum.FAILED,
                 "Thread " + String.valueOf(id) + " failed on task "
@@ -417,6 +439,8 @@ public class ThreadRun extends BaseSchema {
             );
         }
     }
+
+    
 
     @JsonIgnore
     boolean evaluateEdge(EdgeCondition condition)
@@ -439,7 +463,7 @@ public class ThreadRun extends BaseSchema {
 
     public void updateStatus() {
         if (isCompleted()) return;
-        if (upNext == null) upNext = new ArrayList<Edge>();
+        if (upNext == null) upNext = new ArrayList<>();
 
         if (status == LHExecutionStatus.RUNNING) {
             // If there are no pending taskruns and the last one executed was
@@ -451,12 +475,15 @@ public class ThreadRun extends BaseSchema {
                     status = LHExecutionStatus.COMPLETED;
                 }
             } else {
-                if (taskRuns.size() > 0) {
-                    TaskRun lastTr = taskRuns.get(taskRuns.size() - 1);
-                    if (lastTr.status == LHExecutionStatus.FAILED) {
-                        status = LHExecutionStatus.HALTED;
-                    }
-                }
+                // This shouldn't be here because it messes up the way re-tries
+                // work. Also, halting is handled by the halt() function.
+
+                // if (taskRuns.size() > 0) {
+                //     TaskRun lastTr = taskRuns.get(taskRuns.size() - 1);
+                //     if (lastTr.status == LHExecutionStatus.FAILED) {
+                //         status = LHExecutionStatus.HALTED;
+                //     }
+                // }
             }
 
         } else if (status == LHExecutionStatus.HALTED) {
@@ -565,12 +592,15 @@ public class ThreadRun extends BaseSchema {
         // fire.
         boolean shouldClear = true;
         Node activatedNode = null;
-        for (Edge edge: upNext) {
+        int attemptNumber = 0;
+        for (UpNextPair pair: upNext) {
+            Edge edge = pair.edge;
             try {
                 if (evaluateEdge(edge.condition)) {
                     Node n = getThreadSpec().nodes.get(edge.sinkNodeName);
                     if (lockVariables(n, id)) {
                         activatedNode = n;
+                        attemptNumber = pair.attemptNumber;
                         break;
                     }
                     // If we get here, we know there's still stuff to do, but we
@@ -594,7 +624,7 @@ public class ThreadRun extends BaseSchema {
         }
 
         if (activatedNode == null && shouldClear) {
-            upNext = new ArrayList<Edge>();
+            upNext = new ArrayList<>();
             return true;
         }
 
@@ -603,31 +633,39 @@ public class ThreadRun extends BaseSchema {
             return false;
         }
 
-        return activateNode(activatedNode, event, toSchedule, timers);
+        return activateNode(activatedNode, event, toSchedule, timers, attemptNumber);
     }
 
     @JsonIgnore
     private boolean activateNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
         if (node.nodeType == NodeType.TASK) {
-            return activateTaskNode(node, event, toSchedule, timers);
+            return activateTaskNode(node, event, toSchedule, timers, attemptNumber);
 
         } else if (node.nodeType == NodeType.EXTERNAL_EVENT) {
-            return activateExternalEventNode(node, event, toSchedule, timers);
+            return activateExternalEventNode(
+                node, event, toSchedule, timers, attemptNumber
+            );
 
         } else if (node.nodeType == NodeType.SPAWN_THREAD) {
-            return activateSpawnThreadNode(node, event, toSchedule, timers);
+            return activateSpawnThreadNode(
+                node, event, toSchedule, timers, attemptNumber
+            );
 
         } else if (node.nodeType == NodeType.WAIT_FOR_THREAD) {
-            return activateWaitForThreadNode(node, event, toSchedule, timers);
+            return activateWaitForThreadNode(
+                node, event, toSchedule, timers, attemptNumber
+            );
 
         } else if (node.nodeType == NodeType.THROW_EXCEPTION) {
-            return activateThrowExceptionNode(node, event, toSchedule, timers);
+            return activateThrowExceptionNode(
+                node, event, toSchedule, timers, attemptNumber
+            );
 
         } else if (node.nodeType == NodeType.SLEEP) {
-            return activateSleepNode(node, event, toSchedule, timers);
+            return activateSleepNode(node, event, toSchedule, timers, attemptNumber);
 
         }
         throw new RuntimeException("invalid node type: " + node.nodeType);
@@ -635,9 +673,9 @@ public class ThreadRun extends BaseSchema {
 
     private boolean activateThrowExceptionNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
-        TaskRun tr = createNewTaskRun(node);
+        TaskRun tr = createNewTaskRun(node, attemptNumber);
         taskRuns.add(tr);
         exceptionName = node.exceptionToThrow;
 
@@ -650,9 +688,9 @@ public class ThreadRun extends BaseSchema {
 
     private boolean activateSleepNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
-        TaskRun tr = createNewTaskRun(node);
+        TaskRun tr = createNewTaskRun(node, attemptNumber);
         taskRuns.add(tr);
 
         WFRunTimer timer = new WFRunTimer();
@@ -708,10 +746,10 @@ public class ThreadRun extends BaseSchema {
 
     private boolean activateTaskNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
-        upNext = new ArrayList<Edge>();
-        TaskRun tr = createNewTaskRun(node);
+        upNext = new ArrayList<>();
+        TaskRun tr = createNewTaskRun(node, attemptNumber);
         taskRuns.add(tr);
 
         TaskScheduleRequest tsr = new TaskScheduleRequest();
@@ -744,7 +782,6 @@ public class ThreadRun extends BaseSchema {
             }
         }
 
-        
         try {
             Calendar timeoutTime = getTimeoutTime(node);
             if (timeoutTime != null) {
@@ -774,11 +811,11 @@ public class ThreadRun extends BaseSchema {
 
     private boolean activateSpawnThreadNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
-        upNext = new ArrayList<Edge>();
+        upNext = new ArrayList<>();
         HashMap<String, Object> inputVars = new HashMap<String, Object>();
-        TaskRun tr = createNewTaskRun(node);
+        TaskRun tr = createNewTaskRun(node, attemptNumber);
         try {
             for (Map.Entry<String, VariableAssignment> pair:
                 node.variables.entrySet()
@@ -818,10 +855,11 @@ public class ThreadRun extends BaseSchema {
 
     private boolean activateExternalEventNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
         Edge relevantEdge = null;
-        for (Edge e: upNext) {
+        for (UpNextPair pair: upNext) {
+            Edge e = pair.edge;
             if (e.sinkNodeName.equals(node.name)) {
                 relevantEdge = e;
                 break;
@@ -848,7 +886,7 @@ public class ThreadRun extends BaseSchema {
                     timers.add(timer);
                 }
             } catch (VarSubOrzDash exn) {
-                TaskRun tr = createNewTaskRun(node);
+                TaskRun tr = createNewTaskRun(node, attemptNumber);
                 taskRuns.add(tr);
                 failTask(
                     tr,
@@ -877,7 +915,7 @@ public class ThreadRun extends BaseSchema {
         }
         if (correlSchema == null) return false;  // Still waiting nothing changed
 
-        TaskRun tr = createNewTaskRun(node);
+        TaskRun tr = createNewTaskRun(node, attemptNumber);
         taskRuns.add(tr);
         correlSchema.assignedNodeName = node.name;
         correlSchema.assignedTaskRunExecutionNumber = tr.number;
@@ -890,7 +928,7 @@ public class ThreadRun extends BaseSchema {
         completeTask(
             tr, LHExecutionStatus.COMPLETED, result, correlSchema.event.timestamp
         );
-        upNext = new ArrayList<Edge>();
+        upNext = new ArrayList<>();
         for (Edge edge: node.getOutgoingEdges()) {
             addEdgeToUpNext(edge);
         }
@@ -899,14 +937,14 @@ public class ThreadRun extends BaseSchema {
 
     private boolean activateWaitForThreadNode(
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
-        List<WFRunTimer> timers
+        List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
         // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
         // If it's from the node we're waiting for and it's NOT done, then
         // this node does nothing. But if it's already done, we mark it as
         // awaited and continue on. If all of the relevant threads are done,
         // then this node completes.
-        TaskRun tr = createNewTaskRun(node);
+        TaskRun tr = createNewTaskRun(node, attemptNumber);
         ArrayList<ThreadRunMeta> awaitables = wfRun.awaitableThreads.get(
             node.threadWaitSourceNodeName
         );
@@ -1007,7 +1045,8 @@ public class ThreadRun extends BaseSchema {
             }
 
             TaskRun timedOutEventNode = null;
-            for (Edge e: upNext) {
+            for (UpNextPair p: upNext) {
+                Edge e = p.edge;
                 if (e.sinkNodeName.equals(timer.nodeName)) {
                     timedOutEventNode = createNewTaskRun(getThreadSpec().nodes.get(
                         e.sinkNodeName

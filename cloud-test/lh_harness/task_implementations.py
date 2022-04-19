@@ -1,3 +1,6 @@
+from re import A
+
+
 def dummy():
     return "This task got executed!"
 
@@ -45,3 +48,7 @@ def json_with_array():
         "my-array": [0, 1, 2],
         "my-null-array": None,
     }
+
+
+def assert_false():
+    assert False

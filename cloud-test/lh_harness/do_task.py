@@ -27,9 +27,17 @@ def et_helper(thread_run_id, task_run_number, wf_run_id, task_def_name, ses, *ar
 
     new_args = cast_all_args(func, args)
 
-    result = func(*list(new_args.values()))
-    if isinstance(result, list) or isinstance(result, dict):
-        result = json.dumps(result)
+    result = None
+    stderr = None
+    exn_to_raise = None
+    try:
+        result = func(*list(new_args.values()))
+        if isinstance(result, list) or isinstance(result, dict):
+            result = json.dumps(result)
+    except Exception as exn:
+        exn_to_raise = exn
+        import traceback
+        stderr = traceback.format_exc()
 
     task_run = TaskRun(
         variables=new_args,
@@ -37,13 +45,15 @@ def et_helper(thread_run_id, task_run_number, wf_run_id, task_def_name, ses, *ar
         thread_run_id=thread_run_id,
         task_run_number=task_run_number,
         stdout=result,
-        stderr=None,  # TODO: do a try/catch and redirect stderr to here.
+        stderr=stderr,
         task_def=task_def_name,
     )
     ses.add(task_run)
     ses.commit()
 
     print(result, end='')
+    if exn_to_raise is not None:
+        raise exn_to_raise
 
 
 if __name__ == '__main__':

@@ -30,6 +30,7 @@ import io.javalin.Javalin;
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFRunVariableDef;
+import little.horse.common.objects.rundata.LHFailureReason;
 import little.horse.common.objects.rundata.VarSubOrzDash;
 import little.horse.common.util.json.JsonMapKeyDeserializer;
 
@@ -247,6 +248,23 @@ public class LHUtil {
             case OBJECT:    return Object.class;
             case BOOLEAN:   return Boolean.class;
             default: throw new RuntimeException("Not possible");
+        }
+    }
+
+    /**
+     * Returns whether or not TaskRun failures called by this failure are retryable.
+     * TODO: Maybe put this in somewhere that makes more sense rather than LHUtil.
+     * @param reason the LHFailureReason from task failure.
+     * @return True if we can retry task failures from that reason.
+     */
+    public static boolean isRetryable(LHFailureReason reason) {
+        switch (reason) {
+            case TASK_FAILURE:                  return true;
+            case VARIABLE_LOOKUP_ERROR:         return false;
+            case INVALID_WF_SPEC_ERROR:         return false;
+            case TIMEOUT:                       return true;
+            case INTERNAL_LITTLEHORSE_ERROR:    return true;
+            default: throw new RuntimeException("Not possible.");
         }
     }
 }

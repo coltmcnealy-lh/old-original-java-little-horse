@@ -87,7 +87,7 @@ if __name__ == '__main__':
         help=f"URL for LittleHorseAPI. Default: {DEFAULT_URL}"
     )
     parser.add_argument(
-        "--cases", '-c', nargs='+', default=[],
+        "cases", nargs='+', default=[],
         help="Names of test cases to run. If left blank, will deploy all cases."
     )
 

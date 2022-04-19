@@ -24,7 +24,7 @@ public class TaskRun extends BaseSchema {
 
     public String workerId;
     public Object stdin;
-    public int attemptNumber = 1;
+    public int attemptNumber = 0;
 
     public LHExecutionStatus status;
     public Object stdout;

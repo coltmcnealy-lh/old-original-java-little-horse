@@ -30,6 +30,7 @@ public class Node extends BaseSchema {
     public String name;
 
     public VariableAssignment timeoutSeconds;
+    public int numRetries = 0;  // For Retries (:
 
     public NodeType nodeType;
 
@@ -156,6 +157,10 @@ public class Node extends BaseSchema {
             throw new RuntimeException("Jackson didn't do its thing");
         }
 
+        if (numRetries < 0) {
+            throw new LHValidationError("Can't have negative retries.");
+        }
+
         // Just clear this to make sure we don't get anything polluted.
         outgoingEdges = null;
         incomingEdges = null;
@@ -255,6 +260,12 @@ public class Node extends BaseSchema {
             );
         }
 
+        if (numRetries > 0) {
+            throw new LHValidationError(
+                "Can't do retry on Spawn Thread node. `numRetries` must be 0."
+            );
+        }
+
         ThreadSpec tspec = threadSpec.wfSpec.threadSpecs.get(tname);
         if (tspec == null) {
             throw new LHValidationError(
@@ -295,6 +306,12 @@ public class Node extends BaseSchema {
         if (timeoutSeconds == null) {
             throw new LHValidationError(
                 "Didn't provide sleepSeconds VariableASsignment var for sleep node!"
+            );
+        }
+
+        if (numRetries > 0) {
+            throw new LHValidationError(
+                "Can't do retry on SLEEP node. `numRetries` must be 0."
             );
         }
 

@@ -80,10 +80,6 @@ if __name__ == '__main__':
         help=f"URL for LittleHorseAPI. Default: {DEFAULT_API_URL}"
     )
     parser.add_argument(
-        "--cases", '-c', nargs='+', default=[],
-        help="Names of test cases to test. If left blank, will test all cases."
-    )
-    parser.add_argument(
         "--requests", "-r", default=1,
         help="Number of requests to send per test case"
     )
@@ -94,6 +90,10 @@ if __name__ == '__main__':
     parser.add_argument(
         "--harness-worker-partition", default=0,
         help="partition number for this harness worker"
+    )
+    parser.add_argument(
+        "cases", nargs='+', default=[],
+        help="Names of test cases to test. If left blank, will test all cases."
     )
 
     ns = parser.parse_args()

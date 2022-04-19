@@ -1,0 +1,47 @@
+{
+  "wf_spec": {
+    "name": "basic_retries",
+    "entrypointThreadName": "entrypointThread",
+    "threadSpecs": {
+      "entrypointThread": {
+        "variableDefs": {
+          "my_variable": {
+            "type": "STRING"
+          }
+        },
+        "nodes": {
+          "firstNode": {
+            "nodeType": "TASK",
+            "taskDefName": "assert_false",
+            "numRetries": 1
+          }
+        }
+      }
+    }
+  },
+
+  "test_cases": [
+    {
+      "command": {},
+      "timeout": 0.5,
+      "output": [
+        {
+          "tr_number": 0,
+          "desired_status": "HALTED",
+          "variables": {
+            "my_variable": null
+          },
+          "task_runs": [{
+            "desired_failure_reason": "TASK_FAILURE",
+            "stdout": null
+          }, {
+            "stdout": null,
+            "desired_failure_reason": "TASK_FAILURE"
+          }]
+        }
+      ]
+    }
+  ],
+
+  "description": "Tests that a failing task can be retried"
+}

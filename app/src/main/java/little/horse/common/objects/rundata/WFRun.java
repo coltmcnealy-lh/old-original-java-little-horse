@@ -114,7 +114,7 @@ public class WFRun extends CoreMetadata {
                 trun.variables.put(varName, varDef.defaultValue);
             }
         }
-        trun.upNext = new ArrayList<Edge>();
+        trun.upNext = new ArrayList<>();
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
         if (parent != null) {
