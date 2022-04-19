@@ -36,6 +36,14 @@ public class BasicExceptions {
         });
         */
 
+        wf.execute(
+                new TaskThatFails()
+        );
+        wf.execute(
+                new MyOtherTask(),
+                "this is the input to the first execution"
+        );
+
         System.out.println(wf.compile().toString());
     }
 }
