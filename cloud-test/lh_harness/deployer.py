@@ -6,7 +6,7 @@ import requests
 import os
 
 from lh_harness.utils.test_case_schema import TestSuite
-from lh_harness.sdk.sdk import get_task_def
+from lh_harness.sdk.utils import get_task_def
 from lh_harness.utils.utils import cleanup_case_name, get_root_dir
 
 

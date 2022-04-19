@@ -474,16 +474,6 @@ public class ThreadRun extends BaseSchema {
                 if (lastTr == null || lastTr.isTerminated()) {
                     status = LHExecutionStatus.COMPLETED;
                 }
-            } else {
-                // This shouldn't be here because it messes up the way re-tries
-                // work. Also, halting is handled by the halt() function.
-
-                // if (taskRuns.size() > 0) {
-                //     TaskRun lastTr = taskRuns.get(taskRuns.size() - 1);
-                //     if (lastTr.status == LHExecutionStatus.FAILED) {
-                //         status = LHExecutionStatus.HALTED;
-                //     }
-                // }
             }
 
         } else if (status == LHExecutionStatus.HALTED) {

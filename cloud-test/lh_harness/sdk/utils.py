@@ -8,6 +8,15 @@ import json
 import os
 from typing import Any, Callable
 
+from pydantic import BaseModel as PyThingBaseModel
+from humps import camelize
+
+
+class LHBaseModel(PyThingBaseModel):
+    class Config:
+        alias_generator = camelize
+        allow_population_by_field_name = True
+
 # Magic so that we have the relevant functions in our "path" or whatever they call
 # it in python
 from lh_harness.task_implementations import *
