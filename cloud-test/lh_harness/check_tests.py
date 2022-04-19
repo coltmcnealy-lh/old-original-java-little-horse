@@ -6,7 +6,7 @@ import os
 from typing import Iterable, List, Optional, Tuple
 
 import requests
-from sqlalchemy import text
+from sqlalchemy import text, func
 from lh_harness.db_schema import TaskRun, TestStatus, WFRun
 
 from lh_harness.utils.test_case_schema import TestCase, TestSuite
@@ -65,6 +65,13 @@ def validate_wf_run_helper(
 
         thread_run = wf_run['threadRuns'][output.tr_number]
 
+        if output.desired_status is not None:
+            if thread_run['status'] != output.desired_status:
+                return (
+                    TestStatus.FAILED_UNACCEPTABLE,
+                    "Didn't get desired status for threadrun."
+                )
+
         if output.task_runs is not None:
             if len(output.task_runs) != len(thread_run['taskRuns']):
                 return (
@@ -76,6 +83,13 @@ def validate_wf_run_helper(
             for i in range(len(output.task_runs or [])):
                 answer = output.task_runs[i]
                 actual = thread_run['taskRuns'][i]
+
+                if answer.desired_failure_reason is not None:
+                    if actual['failureReason'] != answer.desired_failure_reason:
+                        return (
+                            TestStatus.FAILED_UNACCEPTABLE,
+                            "Incorrect failure reason for task run."
+                        )
 
                 if not are_equal(answer.stdout, actual['stdout']):
                     return TestStatus.FAILED_UNACCEPTABLE, "Mismatched stdout!"
@@ -136,7 +150,6 @@ def check_task_runs_and_thread_runs(wf_run_orm, wf_run):
                 orphans.append(task_run)
                 continue
             else:
-                breakpoint()
                 # This means that LittleHorse hallucinated about the task and thought
                 # it got done but the task never did get done (either that, or the
                 # database decided to drop a record, which shouldn't be possible)
@@ -145,7 +158,7 @@ def check_task_runs_and_thread_runs(wf_run_orm, wf_run):
                     "Phantom task run that wasn't found in database!"
                 )
 
-        if tr_orm.stdout != task_run['stdout']:
+        if not are_equal(tr_orm.stdout, task_run['stdout']):
             if task_run['status'] == 'FAILED':
                 mis_reports.append(task_run)
             else:
@@ -214,6 +227,18 @@ def check_all_runs(
             session.commit()
 
 
+def get_and_print_summary():
+    with closing(get_session()) as session:
+        result = session.query(
+            WFRun.status, func.count(WFRun.status) # type: ignore
+        ).group_by(
+            WFRun.status
+        )
+
+        for row in result.all():
+            print(row[0], "---", row[1])
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Launch test cases")
 
@@ -266,3 +291,4 @@ if __name__ == '__main__':
     for future in futures:
         future.result()
 
+    get_and_print_summary()

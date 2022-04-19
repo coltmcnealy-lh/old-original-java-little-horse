@@ -9,13 +9,14 @@ class Command(BaseModel):
 class TaskRunOutput(BaseModel):
     stdout: Optional[str] = None
     stderr: Optional[str] = None
+    desired_failure_reason: Optional[str] = None
 
 
 class ThreadRunOutput(BaseModel):
     tr_number: int
     variables: Optional[Mapping[str, Any]] = None
     task_runs: Optional[List[TaskRunOutput]] = None
-    status: str = 'COMPLETED'
+    desired_status: Optional[str] = "COMPLETED"
 
 
 class TestCase(BaseModel):

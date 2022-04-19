@@ -1,0 +1,44 @@
+{
+  "wf_spec": {
+    "name": "variable_mutation_mismatch_type_1",
+    "entrypointThreadName": "entrypointThread",
+    "threadSpecs": {
+      "entrypointThread": {
+        "variableDefs": {
+          "my-int": {"type": "INT"}
+        },
+        "edges": [],
+        "nodes": {
+          "firstNode": {
+            "nodeType": "TASK",
+            "taskDefName": "json_with_str",
+            "variableMutations": {
+              "my-int": {
+                "jsonPath": "$.my-str",
+                "operation": "ASSIGN"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "test_cases": [
+    {
+      "command": {},
+      "timeout": 1.5,
+      "output": [
+        {
+          "tr_number": 0,
+          "desired_status": "FAILED",
+          "task_runs": [{
+            "desired_failure_reason": "VARIABLE_LOOKUP_ERROR"
+          }]
+        }
+      ]
+    }
+  ],
+
+  "description": "Tests that we get a reported error when assigning a string to an int."
+}
