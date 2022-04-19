@@ -350,7 +350,7 @@ public class ThreadRun extends BaseSchema {
         TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
         TaskRunEndedEvent event = trEvent.endedEvent;
         LHExecutionStatus taskStatus = event.result.success
-            ? LHExecutionStatus.COMPLETED : LHExecutionStatus.FAILED;
+            ? LHExecutionStatus.COMPLETED : LHExecutionStatus.HALTED;
 
         completeTask(
             tr, taskStatus, event.result, trEvent.timestamp
@@ -399,7 +399,7 @@ public class ThreadRun extends BaseSchema {
     private void handleException(
         String handlerSpecName, TaskRun tr, LHFailureReason reason, String msg
     ) throws LHConnectionError {
-        tr.status = LHExecutionStatus.FAILED;
+        tr.status = LHExecutionStatus.HALTED;
         tr.failureMessage = msg;
         tr.failureReason = reason;
 
@@ -412,7 +412,7 @@ public class ThreadRun extends BaseSchema {
     private void failTask(
         TaskRun tr, LHFailureReason reason, String message
     ) throws LHConnectionError {
-        tr.status = LHExecutionStatus.FAILED;
+        tr.status = LHExecutionStatus.HALTED;
         tr.failureMessage = message;
         tr.failureReason = reason;
 
@@ -682,7 +682,7 @@ public class ThreadRun extends BaseSchema {
         TaskRunResult result = new TaskRunResult(
             null, "Throwing exception " + exceptionName, false, -1
         );
-        completeTask(tr, LHExecutionStatus.FAILED, result, event.timestamp);
+        completeTask(tr, LHExecutionStatus.HALTED, result, event.timestamp);
         return true;
     }
 
@@ -1013,7 +1013,7 @@ public class ThreadRun extends BaseSchema {
                 " we are handling it.";
 
                 completeTask(
-                    tr, LHExecutionStatus.FAILED, new TaskRunResult(
+                    tr, LHExecutionStatus.HALTED, new TaskRunResult(
                         awaitables.toString(), msg, false, 1
                     ), event.timestamp
                 );

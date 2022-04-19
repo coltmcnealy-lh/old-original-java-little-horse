@@ -92,7 +92,7 @@ if __name__ == '__main__':
         help="partition number for this harness worker"
     )
     parser.add_argument(
-        "cases", nargs='+', default=[],
+        "cases", nargs='?', default=[],
         help="Names of test cases to test. If left blank, will test all cases."
     )
 

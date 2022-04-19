@@ -43,7 +43,7 @@ public class TaskRun extends BaseSchema {
     public boolean isTerminated() {
         return (
             status == LHExecutionStatus.COMPLETED
-            || status == LHExecutionStatus.FAILED
+            || status == LHExecutionStatus.HALTED
         );
     }
 
@@ -51,7 +51,7 @@ public class TaskRun extends BaseSchema {
     public boolean isCompleted() {
         return (
             status == LHExecutionStatus.COMPLETED
-            || status == LHExecutionStatus.FAILED
+            || status == LHExecutionStatus.HALTED
         );
     }
 

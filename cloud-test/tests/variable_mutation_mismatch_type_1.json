@@ -31,9 +31,10 @@
       "output": [
         {
           "tr_number": 0,
-          "desired_status": "FAILED",
+          "desired_status": "HALTED",
           "task_runs": [{
-            "desired_failure_reason": "VARIABLE_LOOKUP_ERROR"
+            "desired_failure_reason": "VARIABLE_LOOKUP_ERROR",
+            "stdout": "{\"my-str\": \"asdf\", \"my-null-str\": null}"
           }]
         }
       ]
