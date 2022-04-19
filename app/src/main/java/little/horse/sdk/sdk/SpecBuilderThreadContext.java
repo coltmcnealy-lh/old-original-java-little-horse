@@ -43,7 +43,7 @@ public class SpecBuilderThreadContext implements LHThreadContext {
         this.spec.threadSpecs = new HashMap<>();
         this.spec.entrypointThreadName = "entrypoint";
         this.entrypoint = new ThreadSpec();
-        this.spec.threadSpecs.put("entrypoint", entrypoint);
+//        this.spec.threadSpecs.put("entrypoint", entrypoint);
         this.entrypoint.variableDefs = new HashMap<>();
         this.entrypoint.nodes = new HashMap<>();
         this.entrypoint.edges = new ArrayList<>();
@@ -62,6 +62,10 @@ public class SpecBuilderThreadContext implements LHThreadContext {
     }
 
     public LHTaskOutput execute(Object task, Object...args) {
+        ThreadSpec newentrypoint = new ThreadSpec();
+        newentrypoint.variableDefs = new HashMap<>();
+        newentrypoint.nodes = new HashMap<>();
+        newentrypoint.edges = new ArrayList<>();
         Method taskMethod = getTaskMethod(task);
 
         if (taskMethod == null) {
@@ -70,6 +74,7 @@ public class SpecBuilderThreadContext implements LHThreadContext {
                 "provided no methods with the LHTaskFunction annotation!"
             );
         }
+        this.spec.threadSpecs.put(taskMethod.getName()+"-Thread", newentrypoint);
 
         Node node = new Node();
         node.nodeType = NodeType.TASK;
@@ -112,8 +117,8 @@ public class SpecBuilderThreadContext implements LHThreadContext {
         // form a taskdef if necessary
         node.taskDefName = addTaskDef(task, taskMethod);
 
-        entrypoint.nodes.put(node.name, node);
-        node.threadSpec = entrypoint;
+        newentrypoint.nodes.put(node.name, node);
+        node.threadSpec = newentrypoint;
 
         return null;
     }
