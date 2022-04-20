@@ -161,16 +161,16 @@ public class ThreadRun extends BaseSchema {
     public Object getMutationRHS(
         VariableMutation mutSchema, TaskRun tr
     ) throws LHConnectionError, VarSubOrzDash {
-        if (mutSchema.copyDirectlyFromNodeOutput) {
-            return tr.stdout;
-        } else if (mutSchema.jsonPath != null) {
+        if (mutSchema.jsonPath != null) {
             return LHUtil.jsonPath(
                 tr.stdout.toString(), mutSchema.jsonPath
             );
         } else if (mutSchema.sourceVariable != null) {
             return assignVariable(mutSchema.sourceVariable);
-        } else {
+        } else if (mutSchema.literalValue != null) {
             return mutSchema.literalValue;
+        } else {
+            return tr.stdout;
         }
     }
 

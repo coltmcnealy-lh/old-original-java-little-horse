@@ -18,12 +18,7 @@ public class VariableMutation extends BaseSchema {
      * Else if `sourceVariable` is not null, then the RHS comes from the provided
      * VariableAssignmentSchema. Else, the RHS is set to the provided literal
      * value.
-     * 
-     * (NOTE: if you wish the RHS to be the output of a node without any jsonpath
-     * manipulation, set jsonpath/literalValue/sourceVariable all to null and set
-     * `copyDirectlyFromNodeOutput = true`.)
      */
-    public boolean copyDirectlyFromNodeOutput = false;
     public String jsonPath;
     public Object literalValue;
     public VariableAssignment sourceVariable;

@@ -195,7 +195,6 @@ public class SpecBuilderThreadContext implements LHThreadContext {
         VariableMutation mutation = new VariableMutation();
         mutation.operation = VariableMutationOperation.ASSIGN;
         mutation.jsonPath = null; // Could do something fancier here
-        mutation.copyDirectlyFromNodeOutput = true;
 
         node.variableMutations.put(var.getName(), mutation);
     }

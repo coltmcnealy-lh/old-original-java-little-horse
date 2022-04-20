@@ -28,7 +28,6 @@
           },
           "variableMutations": {
             "mystery_person_type": {
-              "copyDirectlyFromNodeOutput": true,
               "operation": "ASSIGN"
             }
           }
@@ -38,8 +37,7 @@
           "taskDefName": "greet_person",
           "variableMutations": {
             "greeting": {
-              "operation": "ASSIGN",
-              "copyDirectlyFromNodeOutput": true
+              "operation": "ASSIGN"
             }
           },
           "variables": {

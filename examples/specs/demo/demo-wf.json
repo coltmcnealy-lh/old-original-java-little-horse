@@ -19,7 +19,6 @@
           "externalEventDefName": "my-name",
           "variableMutations": {
             "my_name": {
-              "copyDirectlyFromNodeOutput": true,
               "operation": "ASSIGN"
             }
           }

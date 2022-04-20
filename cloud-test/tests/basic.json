@@ -15,7 +15,6 @@
             "taskDefName": "dummy",
             "variableMutations": {
               "my_variable": {
-                "copyDirectlyFromNodeOutput": true,
                 "operation": "ASSIGN"
               }
             }
