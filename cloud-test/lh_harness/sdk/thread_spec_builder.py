@@ -7,7 +7,7 @@ from typing import (
     Optional,
     Union,
 )
-from lh_harness.sdk.utils import get_task_def_name
+from lh_harness.sdk.utils import get_lh_var_type, get_task_def_name
 
 from lh_harness.sdk.wf_spec_schema import (
     EdgeSchema,
@@ -65,7 +65,7 @@ class WFRunVariable:
     def name(self) -> str:
         return self._name
 
-    def assign(self, target: Union[ACCEPTABLE_TYPES, VariableAssignment]):
+    def assign(self, target: Union[ACCEPTABLE_TYPES, VariableAssignment, NodeOutput]):
         self._thread.assign_var(
             self,
             target,
@@ -141,9 +141,14 @@ class ThreadSpecBuilder:
     def assign_var(
         self,
         var: WFRunVariable,
-        target: Union[ACCEPTABLE_TYPES, VariableAssignment],
+        target: Union[ACCEPTABLE_TYPES, VariableAssignment, NodeOutput],
     ):
-        pass
+        if isinstance(target, VariableAssignment):
+            self._assign_var_var_assign(var, target)
+        elif isinstance(target, NodeOutput):
+            self._assign_var_node_output(var, target)
+        else:
+            self._assign_var_literal(var, target)
 
     def _get_def_for_var(self, var_name: str) -> WFRunVariableDefSchema:
         # TODO: Traverse a tree upwards to find variables for thread-scoping stuff
@@ -162,8 +167,31 @@ class ThreadSpecBuilder:
         mutation = VariableMutationSchema(operation=VariableMutationOperation.ASSIGN)
 
         # Need to validate that we aren't breaking any type ruling here.
-        needed_type = self._get_def_for_var
-        mutation.literal_value = target
+        needed_type = self._get_def_for_var(var.name).type
+        if get_lh_var_type(target) != needed_type:
+            raise RuntimeError(
+                f"Tried to assign {var.name} to wrong type, needed {needed_type}!"
+            )
 
+        mutation.literal_value = target
         node.variable_mutations[var.name] = mutation
 
+    def _assign_var_node_output(
+        self,
+        var: WFRunVariable,
+        target: NodeOutput,
+    ):
+        if self._last_node_name is None:
+            raise RuntimeError("Tried to assign var before executing stuff!")
+
+        node = self._spec.nodes[self._last_node_name]
+        mutation = VariableMutationSchema(operation=VariableMutationOperation.ASSIGN)
+
+        mutation.copy_directly_from_node_output = True
+
+    def _assign_var_var_assign(
+        self,
+        var: WFRunVariable,
+        target: VariableAssignment
+    ):
+        raise NotImplementedError("Oops")
