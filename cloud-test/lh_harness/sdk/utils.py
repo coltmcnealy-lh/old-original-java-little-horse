@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 from pydantic import BaseModel as PyThingBaseModel
 from humps import camelize
+from lh_harness.sdk.wf_spec_schema import WFRunVariableTypeEnum
 
 
 class LHBaseModel(PyThingBaseModel):
@@ -28,27 +29,27 @@ def get_func(func_name) -> Callable:
     return globals()[func_name]
 
 
-def get_lh_var_type(original_type: Any):
+def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:
     if original_type == str:
-        return "STRING"
+        return WFRunVariableTypeEnum.STRING
     elif original_type == float:
-        return "DOUBLE"
+        return WFRunVariableTypeEnum.DOUBLE
     elif original_type == bool:
-        return "BOOLEAN"
+        return WFRunVariableTypeEnum.BOOLEAN
     elif original_type == int:
-        return "INTEGER"
+        return WFRunVariableTypeEnum.INT
     elif original_type == dict:
-        return "OBJECT"
+        return WFRunVariableTypeEnum.OBJECT
     elif original_type == list:
-        return "ARRAY"
+        return WFRunVariableTypeEnum.ARRAY
     else:
         raise RuntimeError(f"Bad class type for param: {original_type}")
 
 
-def cast_all_args(func, *args) -> dict:
+def cast_all_args(func, *splat_args) -> dict:
     sig: Signature = signature(func)
 
-    args = [thing for thing in args[0]]
+    args = [thing for thing in splat_args[0]]
     assert len(args) == len(list(sig.parameters.keys()))
 
     out = {}
@@ -71,6 +72,10 @@ def cast_all_args(func, *args) -> dict:
     return out
 
 
+def get_task_def_name(func: Callable):
+    return func.__name__
+
+
 def get_task_def(task_def_name):
     task_func = get_func(task_def_name)
     sig: Signature = signature(task_func)
@@ -83,7 +88,7 @@ def get_task_def(task_def_name):
             raise RuntimeError("You must annotate your parameters!")
 
         required_vars[param_name] = {
-            "type": get_lh_var_type(param.annotation)
+            "type": get_lh_var_type(param.annotation).value
         }
 
     bash_command = [

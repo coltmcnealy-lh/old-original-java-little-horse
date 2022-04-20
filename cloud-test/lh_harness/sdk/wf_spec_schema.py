@@ -1,7 +1,6 @@
 from enum import Enum
 import json
-from tkinter.messagebox import NO
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Optional
 
 from pydantic import Field
 
@@ -27,12 +26,12 @@ class WFRunVariableTypeEnum(Enum):
     STRING = 'STRING'
 
 
-class WFRunVariableDef(LHBaseModel):
+class WFRunVariableDefSchema(LHBaseModel):
     type: WFRunVariableTypeEnum
     default_value: Optional[Any] = None
 
 
-class InterruptDef(LHBaseModel):
+class InterruptDefSchema(LHBaseModel):
     handler_thread_name: str
 
 
@@ -44,7 +43,7 @@ class WFRunMetadataEnum(Enum):
     WF_SPEC_NAME = 'WF_SPEC_NAME'
 
 
-class VariableAssignment(LHBaseModel):
+class VariableAssignmentSchema(LHBaseModel):
     wf_run_variable_name: Optional[str] = None
     literal_value: Optional[Any] = None
     wf_run_metadata: Optional[WFRunMetadataEnum] = None
@@ -73,16 +72,16 @@ class LHComparisonEnum(Enum):
     NOT_IN = 'NOT IN'
 
 
-class EdgeCondition(LHBaseModel):
-    left_side: VariableAssignment
-    right_side: VariableAssignment
+class EdgeConditionSchema(LHBaseModel):
+    left_side: VariableAssignmentSchema
+    right_side: VariableAssignmentSchema
     comparator: LHComparisonEnum
 
 
-class Edge(LHBaseModel):
+class EdgeSchema(LHBaseModel):
     source_node_name: str
     sink_node_name: str
-    condition: Optional[EdgeCondition] = None
+    condition: Optional[EdgeConditionSchema] = None
 
 
 class VariableMutationOperation(Enum):
@@ -96,53 +95,60 @@ class VariableMutationOperation(Enum):
     REMOVE_KEY = 'REMOVE_KEY'
 
 
-class VariableMutation(LHBaseModel):
+class VariableMutationSchema(LHBaseModel):
     operation: VariableMutationOperation
     copy_directly_from_node_output: bool = False
     json_path: Optional[str] = None
     literal_value: Optional[Any] = None
-    source_variable: Optional[VariableAssignment] = None
+    source_variable: Optional[VariableAssignmentSchema] = None
 
 
-class ExceptionHandlerSpec(LHBaseModel):
+class ExceptionHandlerSpecSchema(LHBaseModel):
     handler_thread_spec_name: str
     should_resume: bool
 
 
-class Node(LHBaseModel):
-    timeout_seconds: Optional[VariableAssignment] = None
+class NodeSchema(LHBaseModel):
+    timeout_seconds: Optional[VariableAssignmentSchema] = None
     num_retries: int = 0
     node_type: NodeType = NodeType.TASK
-    outgoing_edges: List[Edge] = Field(default_factory=lambda: list([]))
+    outgoing_edges: List[EdgeSchema] = Field(default_factory=lambda: list([]))
 
-    variables: Optional[Mapping[str, VariableAssignment]] = None
+    variables: Optional[dict[str, VariableAssignmentSchema]] = None
     external_event_def_name: Optional[str] = None
     thread_wait_source_node_name: Optional[str] = None
     thread_spawn_source_node_name: Optional[str] = None
 
-    variable_mutations: Optional[Mapping[str, VariableMutation]] = None
+    variable_mutations: dict[str, VariableMutationSchema] = Field(
+        default_factory=lambda: dict([])
+    )
     task_def_name: str
 
     exception_to_throw: Optional[str] = None
-    base_exception_handler: ExceptionHandlerSpec
-    custom_exception_handlers: Mapping[str, ExceptionHandlerSpec]
+    base_exception_handler: Optional[ExceptionHandlerSpecSchema] = None
+    custom_exception_handlers: Optional[
+        dict[str, ExceptionHandlerSpecSchema]
+    ] = None
 
 
-class ThreadSpec(LHBaseModel):
+class ThreadSpecSchema(LHBaseModel):
     name: str
     entrypoint_node_name: Optional[str] = None
 
-    variable_defs: Optional[Mapping[str, WFRunVariableDef]] = None
-    interrupt_defs: Optional[Mapping[str, InterruptDef]] = None
+    variable_defs: dict[str, WFRunVariableDefSchema] = Field(
+        default_factory=lambda: dict({})
+    )
+    interrupt_defs: Optional[dict[str, InterruptDefSchema]] = None
 
-    nodes: Mapping[str, Node] = Field(default_factory=lambda: dict({}))
+    nodes: dict[str, NodeSchema] = Field(default_factory=lambda: dict({}))
+    edges: list[EdgeSchema] = Field(default_factory=lambda: list([]))
 
 
-class WFSpec(LHBaseModel):
+class WFSpecSchema(LHBaseModel):
     status: LHDeployStatus = LHDeployStatus.STOPPED
     desired_status: LHDeployStatus = LHDeployStatus.RUNNING
 
-    thread_specs: Mapping[str, ThreadSpec]
+    thread_specs: dict[str, ThreadSpecSchema]
     interrupt_events: Optional[List[str]] = None
 
     entrypoint_thread_name: str
