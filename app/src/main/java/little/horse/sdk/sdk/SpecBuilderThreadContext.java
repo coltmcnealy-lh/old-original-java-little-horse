@@ -9,6 +9,7 @@ import java.util.List;
 
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.metadata.Edge;
+import little.horse.common.objects.metadata.ExceptionHandlerSpec;
 import little.horse.common.objects.metadata.Node;
 import little.horse.common.objects.metadata.NodeType;
 import little.horse.common.objects.metadata.TaskDef;
@@ -25,6 +26,7 @@ import little.horse.lib.deployers.examples.docker.DockerWorkflowDeployer;
 import little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor;
 import little.horse.lib.worker.examples.docker.bashExecutor.BashTaskMetadata;
 import little.horse.lib.worker.examples.docker.bashExecutor.BashValidator;
+import little.horse.sdk.ExceptionHandlerThread;
 import little.horse.sdk.LHCompileException;
 import little.horse.sdk.LHTaskFunction;
 import little.horse.sdk.LHTaskOutput;
@@ -33,7 +35,7 @@ import little.horse.sdk.LHVariable;
 
 public class SpecBuilderThreadContext implements LHThreadContext {
     private WFSpec spec;
-    private ThreadSpec entrypoint;
+    public ThreadSpec entrypoint;
     private String lastNodeName;
     private ArrayList<TaskDef> taskDefs;
     private DepInjContext config;
@@ -43,7 +45,7 @@ public class SpecBuilderThreadContext implements LHThreadContext {
         this.spec.threadSpecs = new HashMap<>();
         this.spec.entrypointThreadName = "entrypoint";
         this.entrypoint = new ThreadSpec();
-//        this.spec.threadSpecs.put("entrypoint", entrypoint);
+        this.spec.threadSpecs.put("entrypoint", entrypoint);
         this.entrypoint.variableDefs = new HashMap<>();
         this.entrypoint.nodes = new HashMap<>();
         this.entrypoint.edges = new ArrayList<>();
@@ -62,10 +64,6 @@ public class SpecBuilderThreadContext implements LHThreadContext {
     }
 
     public LHTaskOutput execute(Object task, Object...args) {
-        ThreadSpec newentrypoint = new ThreadSpec();
-        newentrypoint.variableDefs = new HashMap<>();
-        newentrypoint.nodes = new HashMap<>();
-        newentrypoint.edges = new ArrayList<>();
         Method taskMethod = getTaskMethod(task);
 
         if (taskMethod == null) {
@@ -74,7 +72,6 @@ public class SpecBuilderThreadContext implements LHThreadContext {
                 "provided no methods with the LHTaskFunction annotation!"
             );
         }
-        this.spec.threadSpecs.put(taskMethod.getName()+"-Thread", newentrypoint);
 
         Node node = new Node();
         node.nodeType = NodeType.TASK;
@@ -117,10 +114,34 @@ public class SpecBuilderThreadContext implements LHThreadContext {
         // form a taskdef if necessary
         node.taskDefName = addTaskDef(task, taskMethod);
 
-        newentrypoint.nodes.put(node.name, node);
-        node.threadSpec = newentrypoint;
+        entrypoint.nodes.put(node.name, node);
+        node.threadSpec = entrypoint;
 
-        return null;
+        // TODO: return a SpecBuilderTaskOutput instead of returning null.
+        SpecBuilderTaskOutput output = new SpecBuilderTaskOutput(node.name, this);
+        return output;
+    }
+
+    public void addExceptionHandler(LHTaskOutput taskOutput, ExceptionHandlerThread thread) {
+        // TODO: implement this.
+
+        // Step 1: Create a new SpecBuilderThreadContext sbtc
+        SpecBuilderThreadContext sbtc = new SpecBuilderThreadContext(config, "exception-handler");
+
+        // Step 2: Call thread.operate(sbtc);
+        thread.operate(sbtc);
+
+        // Step 3: Get the result of sbtc
+        ThreadSpec exceptionHandler = sbtc.entrypoint;
+
+        // Step 4: Add the result of sbtc to WFSpec.threadSpecs
+        spec.threadSpecs.put("exception-handler", exceptionHandler);
+
+        // Step 5: Set taskOutput.getNode().baseExceptionHandler = <<the name>>
+        Node node = entrypoint.nodes.get(taskOutput.getNodeName());
+        node.baseExceptionhandler = new ExceptionHandlerSpec();
+        node.baseExceptionhandler.handlerThreadSpecName = "exception-handler";
+
     }
 
     private VariableAssignment assignVariable(Object arg) {
