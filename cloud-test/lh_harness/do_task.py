@@ -25,7 +25,7 @@ def execute_task(thread_run_id, task_run_number, wf_run_id, task_def_name, *args
 def et_helper(thread_run_id, task_run_number, wf_run_id, task_def_name, ses, *args):
     func: Callable = get_func(task_def_name)
 
-    new_args = cast_all_args(func, args)
+    new_args = cast_all_args(func, *args)
 
     result = None
     stderr = None

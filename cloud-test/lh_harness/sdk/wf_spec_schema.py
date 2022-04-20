@@ -97,7 +97,6 @@ class VariableMutationOperation(Enum):
 
 class VariableMutationSchema(LHBaseModel):
     operation: VariableMutationOperation
-    copy_directly_from_node_output: bool = False
     json_path: Optional[str] = None
     literal_value: Optional[Any] = None
     source_variable: Optional[VariableAssignmentSchema] = None

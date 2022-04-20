@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 This file is a concept prototype implementation that will show the seeds of a cool
 SDK for TaskDef creation from actual code.
@@ -6,11 +8,14 @@ SDK for TaskDef creation from actual code.
 from inspect import signature, Signature
 import json
 import os
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from pydantic import BaseModel as PyThingBaseModel
 from humps import camelize
-from lh_harness.sdk.wf_spec_schema import WFRunVariableTypeEnum
+
+
+if TYPE_CHECKING:
+    from lh_harness.sdk.wf_spec_schema import WFRunVariableTypeEnum
 
 
 class LHBaseModel(PyThingBaseModel):
@@ -30,6 +35,8 @@ def get_func(func_name) -> Callable:
 
 
 def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:
+    from lh_harness.sdk.wf_spec_schema import WFRunVariableTypeEnum
+
     if original_type == str:
         return WFRunVariableTypeEnum.STRING
     elif original_type == float:
@@ -49,8 +56,7 @@ def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:
 def cast_all_args(func, *splat_args) -> dict:
     sig: Signature = signature(func)
 
-    args = [thing for thing in splat_args[0]]
-    assert len(args) == len(list(sig.parameters.keys()))
+    args = list(splat_args)
 
     out = {}
     i = 0

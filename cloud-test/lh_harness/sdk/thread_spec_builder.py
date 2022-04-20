@@ -84,9 +84,10 @@ class ThreadSpecBuilder:
         node = NodeSchema(task_def_name=get_task_def_name(func))
         node.variables = {}
 
-        args = [thing for thing in splat_args[0]]
+        args = list(splat_args)
         i = 0
         for param_name in sig.parameters.keys():
+            param = sig.parameters[param_name]
             arg = args[i]
             i += 1
 
@@ -95,15 +96,24 @@ class ThreadSpecBuilder:
                 node.variables[param_name] = arg.get_schema()
                 continue
 
-            # If we got here, then we want a literal value to be assigned.
-            var_assign = VariableAssignmentSchema()
-            param = sig.parameters[param_name]
-            if param.annotation is None:
-                raise RuntimeError("You must annotate your parameters!")
+            elif isinstance(arg, WFRunVariable):
+                if get_lh_var_type(param.annotation) != arg.var_type:
+                    raise RuntimeError("mismatched var type!")
 
-            assert param.annotation == type(arg)
-            var_assign.literal_value = arg
-            node.variables[param_name] = var_assign
+                var_assign = VariableAssignmentSchema()
+                var_assign.wf_run_variable_name = arg.name
+                node.variables[param_name] = var_assign
+                continue
+
+            else:
+                # If we got here, then we want a literal value to be assigned.
+                var_assign = VariableAssignmentSchema()
+                if param.annotation is None:
+                    raise RuntimeError("You must annotate your parameters!")
+
+                assert param.annotation == type(arg)
+                var_assign.literal_value = arg
+                node.variables[param_name] = var_assign
 
         node_name = self._add_node(node)
 
@@ -184,10 +194,12 @@ class ThreadSpecBuilder:
         if self._last_node_name is None:
             raise RuntimeError("Tried to assign var before executing stuff!")
 
+        if target.node_name != self._last_node_name:
+            raise RuntimeError("Tried to assign variable out of order.")
+
         node = self._spec.nodes[self._last_node_name]
         mutation = VariableMutationSchema(operation=VariableMutationOperation.ASSIGN)
-
-        mutation.copy_directly_from_node_output = True
+        node.variable_mutations[var.name] = mutation
 
     def _assign_var_var_assign(
         self,
