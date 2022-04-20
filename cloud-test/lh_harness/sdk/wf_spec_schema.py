@@ -116,12 +116,12 @@ class NodeSchema(LHBaseModel):
     variables: Optional[dict[str, VariableAssignmentSchema]] = None
     external_event_def_name: Optional[str] = None
     thread_wait_source_node_name: Optional[str] = None
-    thread_spawn_source_node_name: Optional[str] = None
+    thread_spawn_thread_spec_name: Optional[str] = None
 
     variable_mutations: dict[str, VariableMutationSchema] = Field(
         default_factory=lambda: dict([])
     )
-    task_def_name: str
+    task_def_name: Optional[str] = None
 
     exception_to_throw: Optional[str] = None
     base_exception_handler: Optional[ExceptionHandlerSpecSchema] = None

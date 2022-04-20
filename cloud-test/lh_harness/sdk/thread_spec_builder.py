@@ -12,6 +12,7 @@ from lh_harness.sdk.utils import get_lh_var_type, get_task_def_name
 from lh_harness.sdk.wf_spec_schema import (
     EdgeSchema,
     NodeSchema,
+    NodeType,
     ThreadSpecSchema,
     VariableAssignmentSchema,
     VariableMutationOperation,
@@ -125,7 +126,28 @@ class ThreadSpecBuilder:
         return NodeOutput(node_name, output_type=output_type)
 
     def _add_node(self, node: NodeSchema) -> str:
-        node_name = f'{len(self._spec.nodes)}-{node.task_def_name}'
+        if node.node_type == NodeType.TASK:
+            node_human_name = node.task_def_name
+
+        elif node.node_type == NodeType.EXTERNAL_EVENT:
+            node_human_name = f'wait-event-{node.external_event_def_name}'
+
+        elif node.node_type == NodeType.SLEEP:
+            node_human_name = 'SLEEP'
+
+        elif node.node_type == NodeType.SPAWN_THREAD:
+            node_human_name = f'spawn-{node.thread_spawn_thread_spec_name}'
+
+        elif node.node_type == NodeType.WAIT_FOR_THREAD:
+            node_human_name = f'wait-thread-{node.thread_wait_source_node_name}'
+
+        elif node.node_type == NodeType.THROW_EXCEPTION:
+            node_human_name = f'throw-{node.exception_to_throw}'
+
+        else:
+            raise RuntimeError("Unimplemented nodetype")
+
+        node_name = f'{len(self._spec.nodes)}-{node_human_name}'
         self._spec.nodes[node_name] = node
 
         if self._last_node_name is not None:
@@ -159,6 +181,13 @@ class ThreadSpecBuilder:
             self._assign_var_node_output(var, target)
         else:
             self._assign_var_literal(var, target)
+
+    def wait_for_event(self, event_name: str) -> NodeOutput:
+        node = NodeSchema(external_event_def_name=event_name)
+        node.node_type = NodeType.EXTERNAL_EVENT
+
+        node_name = self._add_node(node)
+        return NodeOutput(node_name)
 
     def _get_def_for_var(self, var_name: str) -> WFRunVariableDefSchema:
         # TODO: Traverse a tree upwards to find variables for thread-scoping stuff

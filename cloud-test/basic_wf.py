@@ -17,12 +17,14 @@ def greet(name: str) -> str:
 
 
 def workflow(thread: ThreadSpecBuilder):
-    myvar = thread.add_variable("my_var", WFRunVariableTypeEnum.STRING)
+    my_name_var = thread.add_variable("my_name_var", WFRunVariableTypeEnum.STRING)
 
-    output = thread.execute(ask_for_name)
-    myvar.assign(output)
+    thread.execute(ask_for_name)
 
-    thread.execute(greet, myvar)
+    the_name = thread.wait_for_event("my-name")
+    my_name_var.assign(the_name)
+
+    thread.execute(greet, my_name_var)
 
 
 if __name__ == '__main__':
