@@ -8,9 +8,9 @@ from typing import (
     Optional,
     Union,
 )
-from lh_harness.sdk.utils import get_lh_var_type, get_task_def_name
+from lh_sdk.utils import get_lh_var_type, get_task_def_name
 
-from lh_harness.sdk.wf_spec_schema import (
+from lh_sdk.wf_spec_schema import (
     EdgeSchema,
     NodeSchema,
     NodeType,
@@ -250,11 +250,15 @@ class Workflow:
         self._entrypoint_func = entrypoint_function
         self._name = self._entrypoint_func.__name__
 
-        self._spec = WFSpecSchema(entrypoint_thread_name="entrypoint")
+        self._spec = WFSpecSchema(
+            entrypoint_thread_name="entrypoint",
+            name=self._name
+        )
         self._entrypoint_builder = ThreadSpecBuilder("entrypoint", self._spec)
         self._entrypoint_func(self._entrypoint_builder)
 
         self._spec.thread_specs["entrypoint"] = self._entrypoint_builder.spec
+        self._spec.name = self._name
 
     @property
     def spec(self) -> WFSpecSchema:

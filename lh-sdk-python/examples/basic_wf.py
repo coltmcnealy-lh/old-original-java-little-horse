@@ -15,7 +15,7 @@ def greet(name: str) -> str:
     return f"Hello there, {name}!"
 
 
-def workflow(thread: ThreadSpecBuilder):
+def basic_wf(thread: ThreadSpecBuilder):
     my_name_var = thread.add_variable("my_name_var", WFRunVariableTypeEnum.STRING)
 
     thread.execute(ask_for_name)
@@ -24,8 +24,3 @@ def workflow(thread: ThreadSpecBuilder):
     my_name_var.assign(the_name)
 
     thread.execute(greet, my_name_var)
-
-
-if __name__ == '__main__':
-    wf = Workflow(workflow)
-    print(wf.spec.json(by_alias=True))

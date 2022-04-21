@@ -7,3 +7,4 @@ pydantic
 pylint
 psycopg2
 pyhumps
+requests

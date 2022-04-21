@@ -11,65 +11,15 @@ from lh_harness.utils import (
     cleanup_case_name,
     get_root_dir
 )
+from lh_sdk.utils import (
+    get_taskdefs_for_wf,
+    get_external_events_for_wf,
+    add_resource,
+)
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
 
-
-def add_thing(filename, type_name, api_url):
-    with open(filename, 'r') as f:
-        data = json.loads(f.read())
-
-    response = requests.post(f"{api_url}/{type_name}", json=data)
-    try:
-        response.raise_for_status()
-    except Exception as exn:
-        print(response.content.decode())
-        raise exn
-
-    j = response.json()
-    if j['status'] != 'OK':
-        print(json.dumps(response.json()))
-    else:
-        print(f"Successfully created {type_name} {j['result']['objectId']}")
-
-
-def iter_all_nodes(wf_spec: dict):
-    threads = [wf_spec['threadSpecs'][k] for k in wf_spec['threadSpecs'].keys()]
-
-    for thread in threads:
-        for node_name in thread['nodes'].keys():
-            yield thread['nodes'][node_name]
-
-
-def get_taskdefs_for_wf(wf_spec: dict):
-    task_defs = set({})
-
-    for node in iter_all_nodes(wf_spec):
-        if node['nodeType'] == 'TASK':
-            task_defs.add(node['taskDefName'])
-    
-    return task_defs
-
-
-def get_external_events_for_wf(wf_spec: dict):
-    eevs = set({})
-
-    for node in iter_all_nodes(wf_spec):
-        if node['nodeType'] == 'EXTERNAL_EVENT':
-            eevs.add(node['externalEventDefName'])
-
-    threads = [wf_spec['threadSpecs'][k] for k in wf_spec['threadSpecs'].keys()]
-
-    for thread in threads:
-        if thread.get('interruptDefs') is None:
-            continue
-
-        idefs = thread['interruptDefs']
-        for eev_name in idefs.keys():
-            eevs.add(eev_name)
-
-    return eevs
 
 
 def get_specs_for_testcase(test_filename):
@@ -126,8 +76,10 @@ if __name__ == '__main__':
         print(f"Successfully created TaskDef {td_name}")
 
     for eev in all_eevs:
-        add_thing(
-            f'tests/external_events/{eev}.json', "ExternalEventDef", ns.api_url
+        with open(f'tests/external_events/{eev}.json', 'r') as f:
+            data = json.loads(f.read())
+        add_resource(
+            "ExternalEventDef", data, ns.api_url
         )
 
     time.sleep(0.5)

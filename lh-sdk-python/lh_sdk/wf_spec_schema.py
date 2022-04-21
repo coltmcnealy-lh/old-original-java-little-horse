@@ -3,9 +3,9 @@ import json
 from typing import Any, List, Optional
 
 from pydantic import Field
-from lh_harness.sdk.config import get_wf_deployer_class
+from lh_sdk.config import get_wf_deployer_class
 
-from lh_harness.sdk.utils import LHBaseModel
+from lh_sdk.utils import LHBaseModel
 
 
 class LHDeployStatus(Enum):
@@ -125,7 +125,7 @@ class NodeSchema(LHBaseModel):
     task_def_name: Optional[str] = None
 
     exception_to_throw: Optional[str] = None
-    base_exception_handler: Optional[ExceptionHandlerSpecSchema] = None
+    base_exceptionhandler: Optional[ExceptionHandlerSpecSchema] = None
     custom_exception_handlers: Optional[
         dict[str, ExceptionHandlerSpecSchema]
     ] = None
@@ -145,6 +145,7 @@ class ThreadSpecSchema(LHBaseModel):
 
 
 class WFSpecSchema(LHBaseModel):
+    name: str
     status: LHDeployStatus = LHDeployStatus.STOPPED
     desired_status: LHDeployStatus = LHDeployStatus.RUNNING
 

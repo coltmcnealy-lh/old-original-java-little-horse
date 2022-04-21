@@ -8,6 +8,7 @@ SDK for TaskDef creation from actual code.
 from inspect import signature, Signature
 import json
 import os
+import requests
 from typing import TYPE_CHECKING, Any, Callable
 
 from pydantic import BaseModel as PyThingBaseModel
@@ -16,6 +17,9 @@ from humps import camelize
 
 if TYPE_CHECKING:
     from lh_sdk.wf_spec_schema import WFRunVariableTypeEnum
+
+
+DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
 
 
 class LHBaseModel(PyThingBaseModel):
@@ -41,6 +45,59 @@ def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:
         return WFRunVariableTypeEnum.ARRAY
     else:
         raise RuntimeError(f"Bad class type for param: {original_type}")
+
+
+def iter_all_nodes(wf_spec: dict):
+    threads = [wf_spec['threadSpecs'][k] for k in wf_spec['threadSpecs'].keys()]
+
+    for thread in threads:
+        for node_name in thread['nodes'].keys():
+            yield thread['nodes'][node_name]
+
+
+def get_taskdefs_for_wf(wf_spec: dict):
+    task_defs = set({})
+
+    for node in iter_all_nodes(wf_spec):
+        if node['nodeType'] == 'TASK':
+            task_defs.add(node['taskDefName'])
+    
+    return task_defs
+
+
+def get_external_events_for_wf(wf_spec: dict):
+    eevs = set({})
+
+    for node in iter_all_nodes(wf_spec):
+        if node['nodeType'] == 'EXTERNAL_EVENT':
+            eevs.add(node['externalEventDefName'])
+
+    threads = [wf_spec['threadSpecs'][k] for k in wf_spec['threadSpecs'].keys()]
+
+    for thread in threads:
+        if thread.get('interruptDefs') is None:
+            continue
+
+        idefs = thread['interruptDefs']
+        for eev_name in idefs.keys():
+            eevs.add(eev_name)
+
+    return eevs
+
+
+def add_resource(type_name: str, data: dict, api_url: str):
+    response = requests.post(f"{api_url}/{type_name}", json=data)
+    try:
+        response.raise_for_status()
+    except Exception as exn:
+        print(response.content.decode())
+        raise exn
+
+    j = response.json()
+    if j['status'] != 'OK':
+        print(json.dumps(response.json()))
+    else:
+        print(f"Successfully created {type_name} {j['result']['objectId']}")
 
 
 def cast_all_args(func, *splat_args) -> dict:
