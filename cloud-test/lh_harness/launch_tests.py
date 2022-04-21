@@ -8,12 +8,12 @@ import requests
 from sqlalchemy import text
 from sqlalchemy.orm.session import Session
 
-from lh_harness.utils.test_case_schema import TestCase, TestSuite
+from lh_harness.test_case_schema import TestCase, TestSuite
 from lh_harness.db_schema import (
     TestStatus,
     WFRun,
 )
-from lh_harness.utils.utils import (
+from lh_harness.utils import (
     cleanup_case_name,
     generate_guid,
     get_session,

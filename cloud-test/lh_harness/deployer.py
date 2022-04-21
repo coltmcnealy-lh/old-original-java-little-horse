@@ -5,9 +5,12 @@ import requests
 
 import os
 
-from lh_harness.utils.test_case_schema import TestSuite
-from lh_harness.sdk.utils import get_task_def
-from lh_harness.utils.utils import cleanup_case_name, get_root_dir
+from lh_harness.test_case_schema import TestSuite
+from lh_harness.utils import (
+    get_task_def,
+    cleanup_case_name,
+    get_root_dir
+)
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")

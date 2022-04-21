@@ -9,8 +9,8 @@ import requests
 from sqlalchemy import text, func
 from lh_harness.db_schema import TaskRun, TestStatus, WFRun
 
-from lh_harness.utils.test_case_schema import TestCase, TestSuite
-from lh_harness.utils.utils import (
+from lh_harness.test_case_schema import TestCase, TestSuite
+from lh_harness.utils import (
     are_equal,
     cleanup_case_name,
     get_root_dir,

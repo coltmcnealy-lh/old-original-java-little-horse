@@ -59,7 +59,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    from lh_harness.utils.utils import POSTGRES_URI
+    from lh_harness.utils import POSTGRES_URI
     from sqlalchemy import create_engine
     engine = create_engine(POSTGRES_URI)
 

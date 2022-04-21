@@ -8,8 +8,8 @@ from typing import Callable
 from sqlalchemy import values
 from lh_harness.db_schema import TaskRun
 
-from lh_harness.sdk.utils import cast_all_args, get_func
-from lh_harness.utils.utils import get_session
+from lh_sdk.utils import cast_all_args
+from lh_harness.utils import get_session, get_func
 
 # # Make all the task implementation functions available for the voodoo we do.
 # from lh_harness.task_implementations import *
