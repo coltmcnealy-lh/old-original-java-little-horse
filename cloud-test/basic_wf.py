@@ -1,7 +1,6 @@
 from lh_harness.sdk.thread_spec_builder import (
-    NodeOutput,
     ThreadSpecBuilder,
-    WFRunVariable,
+    Workflow,
 )
 from lh_harness.sdk.wf_spec_schema import (
     WFRunVariableTypeEnum
@@ -28,6 +27,5 @@ def workflow(thread: ThreadSpecBuilder):
 
 
 if __name__ == '__main__':
-    builder = ThreadSpecBuilder("my-thread")
-    workflow(builder)
-    print(builder._spec.json(by_alias=True))
+    wf = Workflow(workflow)
+    print(wf.spec.json(by_alias=True))

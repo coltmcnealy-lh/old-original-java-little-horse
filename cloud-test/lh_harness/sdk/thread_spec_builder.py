@@ -4,6 +4,7 @@ from inspect import signature, Signature
 from typing import (
     Any,
     Callable,
+    NoReturn,
     Optional,
     Union,
 )
@@ -19,6 +20,7 @@ from lh_harness.sdk.wf_spec_schema import (
     VariableMutationSchema,
     WFRunVariableDefSchema,
     WFRunVariableTypeEnum,
+    WFSpecSchema,
 )
 
 
@@ -73,11 +75,12 @@ class WFRunVariable:
         )
 
 class ThreadSpecBuilder:
-    def __init__(self, name: str):
+    def __init__(self, name: str, wf_spec: WFSpecSchema):
         self._spec: ThreadSpecSchema = ThreadSpecSchema(name=name)
         self._spec.nodes = {}
         self._spec.edges = []
         self._last_node_name: Optional[str] = None
+        self._wf_spec = wf_spec
 
     def execute(self, func: Callable[..., Any], *splat_args):
         sig: Signature = signature(func)
@@ -236,3 +239,36 @@ class ThreadSpecBuilder:
         target: VariableAssignment
     ):
         raise NotImplementedError("Oops")
+
+    @property
+    def spec(self) -> ThreadSpecSchema:
+        return self._spec
+
+
+class Workflow:
+    def __init__(self, entrypoint_function: Callable[[ThreadSpecBuilder], None]):
+        self._entrypoint_func = entrypoint_function
+        self._name = self._entrypoint_func.__name__
+
+        self._spec = WFSpecSchema(entrypoint_thread_name="entrypoint")
+        self._entrypoint_builder = ThreadSpecBuilder("entrypoint", self._spec)
+        self._entrypoint_func(self._entrypoint_builder)
+
+        self._spec.thread_specs["entrypoint"] = self._entrypoint_builder.spec
+
+    @property
+    def spec(self) -> WFSpecSchema:
+        return self._spec
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def payload_str(self) -> str:
+        return self.spec.json(by_alias=True)
+
+    def _compile(self):
+        pass
+
+

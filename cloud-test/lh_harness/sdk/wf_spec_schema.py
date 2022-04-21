@@ -3,6 +3,7 @@ import json
 from typing import Any, List, Optional
 
 from pydantic import Field
+from lh_harness.sdk.config import get_wf_deployer_class
 
 from lh_harness.sdk.utils import LHBaseModel
 
@@ -147,12 +148,9 @@ class WFSpecSchema(LHBaseModel):
     status: LHDeployStatus = LHDeployStatus.STOPPED
     desired_status: LHDeployStatus = LHDeployStatus.RUNNING
 
-    thread_specs: dict[str, ThreadSpecSchema]
+    thread_specs: dict[str, ThreadSpecSchema] = Field(default_factory=dict)
     interrupt_events: Optional[List[str]] = None
 
     entrypoint_thread_name: str
-    wf_deployer_class_name: str
-    deploy_metadata: str
-
-    def set_deploy_metadata(self, new_meta: dict):
-        self.deploy_metadata = json.dumps(new_meta)
+    wf_deployer_class_name: str = Field(default_factory=get_wf_deployer_class)
+    deploy_metadata: Optional[str] = None
