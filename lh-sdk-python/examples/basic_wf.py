@@ -1,10 +1,5 @@
-from lh_sdk.thread_spec_builder import (
-    ThreadSpecBuilder,
-    Workflow,
-)
-from lh_sdk.wf_spec_schema import (
-    WFRunVariableTypeEnum
-)
+from lh_sdk.thread_spec_builder import ThreadSpecBuilder
+from lh_sdk.wf_spec_schema import WFRunVariableTypeEnum
 
 
 def ask_for_name() -> str:

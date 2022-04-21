@@ -7,6 +7,7 @@ import os
 import sys
 
 from examples.basic_wf import *
+from lh_sdk.thread_spec_builder import Workflow
 from lh_sdk.utils import add_resource, get_lh_var_type
 from lh_sdk.wf_spec_schema import NodeSchema, NodeType, WFSpecSchema
 
