@@ -28,6 +28,14 @@ public class BashExecutor implements DockerTaskExecutor {
         }
     }
 
+    private static String castToString(Object obj) {
+        if (obj instanceof String) {
+            return String.class.cast(obj);
+        }
+
+        return String.valueOf(obj);
+    }
+
     public Object executeTask(TaskScheduleRequest request, WorkerContext context)
     throws Exception {
         ArrayList<String> cmd = new ArrayList<>();
@@ -38,7 +46,7 @@ public class BashExecutor implements DockerTaskExecutor {
 
             if (varMatcher.matches()) {
                 String varName = arg.substring(2, arg.length() - 2);
-                cmd.add(String.class.cast(
+                cmd.add(castToString(
                     request.variableSubstitutions.get(varName)
                 ));
             } else if (metaVarMatcher.matches()) {
