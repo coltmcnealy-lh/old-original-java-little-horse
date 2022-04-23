@@ -24,9 +24,24 @@ public class BasicExceptions {
             new DepInjContext(), "basic-exceptions-sample"
         );
 
-        // The doTry() and doExcept() functions haven't been implemented yet!
+        wf.execute(
+            new TaskThatFails()
+        ).doExcept((thread) -> {
+            thread.execute(new MyOtherTask(), "some input");
 
-        /*
+        });
+        
+        /* 
+        Once we get this result working properly, we will add the ability to
+        execute multiple tasks in the same thread. We will have to add Edges.
+        */
+        // thread.execute(new MyOtherTask());
+
+        System.out.println(wf.compile().toString());
+    }
+}
+
+/* // Old stuff that doesn't work ):
         wf.doTry((w) -> {
             w.executeTask(new TaskThatFails());
 
@@ -35,7 +50,3 @@ public class BasicExceptions {
 
         });
         */
-
-        System.out.println(wf.compile().toString());
-    }
-}
