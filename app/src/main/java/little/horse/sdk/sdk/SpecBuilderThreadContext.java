@@ -9,6 +9,7 @@ import java.util.List;
 
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.metadata.Edge;
+import little.horse.common.objects.metadata.ExceptionHandlerSpec;
 import little.horse.common.objects.metadata.Node;
 import little.horse.common.objects.metadata.NodeType;
 import little.horse.common.objects.metadata.TaskDef;
@@ -25,6 +26,7 @@ import little.horse.lib.deployers.examples.docker.DockerWorkflowDeployer;
 import little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor;
 import little.horse.lib.worker.examples.docker.bashExecutor.BashTaskMetadata;
 import little.horse.lib.worker.examples.docker.bashExecutor.BashValidator;
+import little.horse.sdk.ExceptionHandlerThread;
 import little.horse.sdk.LHCompileException;
 import little.horse.sdk.LHTaskFunction;
 import little.horse.sdk.LHTaskOutput;
@@ -33,7 +35,7 @@ import little.horse.sdk.LHVariable;
 
 public class SpecBuilderThreadContext implements LHThreadContext {
     private WFSpec spec;
-    private ThreadSpec entrypoint;
+    public ThreadSpec entrypoint;
     private String lastNodeName;
     private ArrayList<TaskDef> taskDefs;
     private DepInjContext config;
@@ -115,7 +117,31 @@ public class SpecBuilderThreadContext implements LHThreadContext {
         entrypoint.nodes.put(node.name, node);
         node.threadSpec = entrypoint;
 
-        return null;
+        // TODO: return a SpecBuilderTaskOutput instead of returning null.
+        SpecBuilderTaskOutput output = new SpecBuilderTaskOutput(node.name, this);
+        return output;
+    }
+
+    public void addExceptionHandler(LHTaskOutput taskOutput, ExceptionHandlerThread thread) {
+        // TODO: implement this.
+
+        // Step 1: Create a new SpecBuilderThreadContext sbtc
+        SpecBuilderThreadContext sbtc = new SpecBuilderThreadContext(config, "exception-handler");
+
+        // Step 2: Call thread.operate(sbtc);
+        thread.operate(sbtc);
+
+        // Step 3: Get the result of sbtc
+        ThreadSpec exceptionHandler = sbtc.entrypoint;
+
+        // Step 4: Add the result of sbtc to WFSpec.threadSpecs
+        spec.threadSpecs.put("exception-handler", exceptionHandler);
+
+        // Step 5: Set taskOutput.getNode().baseExceptionHandler = <<the name>>
+        Node node = entrypoint.nodes.get(taskOutput.getNodeName());
+        node.baseExceptionhandler = new ExceptionHandlerSpec();
+        node.baseExceptionhandler.handlerThreadSpecName = "exception-handler";
+
     }
 
     private VariableAssignment assignVariable(Object arg) {

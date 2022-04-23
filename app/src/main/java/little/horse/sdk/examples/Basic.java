@@ -24,8 +24,10 @@ public class Basic {
             new MyTask(),
             "this is the input to the first execution"
         );
-
         lenVar.assign(taskOneOutput);
+
+        
+        wf.execute(new MyTask(), "another task!");
 
         System.out.println(wf.compile().toString());
     }

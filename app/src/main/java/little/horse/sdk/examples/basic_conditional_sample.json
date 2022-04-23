@@ -1,0 +1,84 @@
+{
+    "name": "basic-conditional",
+    "entrypointThreadName": "entrypointThread",
+    "threadSpecs": {
+      "entrypointThread": {
+        "variableDefs": {
+          "my_variable": {
+            "type": "INT"
+          }
+        },
+        "nodes": {
+          "one": {
+            "nodeType": "TASK",
+            "taskDefName": "dummy"
+          },
+          "two_a": {
+            "nodeType": "TASK",
+            "taskDefName": "dummy"
+          },
+          "three_a": {
+            "nodeType": "TASK",
+            "taskDefName": "dummy"
+          },
+          "two_b": {
+            "nodeType": "TASK",
+            "taskDefName": "dummy"
+          },
+          "three_b": {
+            "nodeType": "TASK",
+            "taskDefName": "dummy"
+          },
+          "four": {
+            "nodeType": "TASK",
+            "taskDefName": "dummy"
+          }
+        },
+        "edges": [
+          {
+            "sourceNodeName": "one",
+            "sinkNodeName": "two_a",
+            "condition": {
+              "leftSide": {
+                "wfRunVariableName": "my_var"
+              },
+              "comparator": "GREATER_THAN",
+              "rightSide": {
+                "literalValue": 4
+              }
+            }
+          },
+          {
+            "sourceNodeName": "one",
+            "sinkNodeName": "two_b",
+            "condition": {
+              "leftSide": {
+                "wfRunVariableName": "my_var"
+              },
+              "comparator": "LESS_THAN_EQ",
+              "rightSide": {
+                "literalValue": 4
+              }
+            }
+          },
+          {
+            "sourceNodeName": "two_a",
+            "sinkNodeName": "three_a"
+          },
+          {
+            "sourceNodeName": "two_b",
+            "sinkNodeName": "three_b"
+          },
+          {
+            "sourceNodeName": "three_a",
+            "sinkNodeName": "four"
+          },
+          {
+            "sourceNodeName": "three_b",
+            "sinkNodeName": "four"
+          }
+        ]
+      }
+    }
+  }
+  
