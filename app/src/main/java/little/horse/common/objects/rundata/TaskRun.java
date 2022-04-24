@@ -15,12 +15,12 @@ public class TaskRun extends BaseSchema {
     public ThreadRun parentThread;
 
     public int number;
-    public String wfSpecDigest;
+    public String wfSpecId;
     public String wfSpecName;
-    public int threadID;
+    public int threadId;
 
     public String nodeName;
-    public String nodeDigest;
+    public String nodeId;
 
     public String workerId;
     public Object stdin;

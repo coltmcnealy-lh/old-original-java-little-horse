@@ -8,7 +8,7 @@ import little.horse.common.DepInjContext;
  * Shows how to find the payload of an event in a WFRun's Event History (i.e. a 
  * kafka record's topic, partition, and offset).
  */
-public class WFEventID {
+public class WFEventId {
     public String topic;
     public int partition;
     public long offset;

@@ -20,7 +20,7 @@ import little.horse.api.metadata.AliasIdentifier;
 import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
-import little.horse.common.events.WFEventID;
+import little.horse.common.events.WFEventId;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequest;
@@ -63,7 +63,7 @@ public class WFRun extends CoreMetadata {
     public LHFailureReason errorCode;
     public String errorMessage;
 
-    public ArrayList<WFEventID> history;  // Event Sourcing! Yay!
+    public ArrayList<WFEventId> history;  // Event Sourcing! Yay!
 
     public HashMap<String, ArrayList<ExternalEventCorrel>> correlatedEvents;
     public Stack<String> pendingInterrupts;
@@ -118,28 +118,28 @@ public class WFRun extends CoreMetadata {
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
         if (parent != null) {
-            trun.parentThreadID = parent.id;
+            trun.parentThreadId = parent.id;
         }
 
         trun.errorMessage = "";
 
-        trun.activeInterruptThreadIDs = new ArrayList<Integer>();
-        trun.handledInterruptThreadIDs = new ArrayList<Integer>();
+        trun.activeInterruptThreadIds = new ArrayList<Integer>();
+        trun.handledInterruptThreadIds = new ArrayList<Integer>();
 
         // Now add the entrypoint taskRun
         Edge fakeEdge = new Edge();
         fakeEdge.sinkNodeName = tspec.entrypointNodeName;
         trun.addEdgeToUpNext(fakeEdge);
 
-        trun.childThreadIDs = new ArrayList<>();
+        trun.childThreadIds = new ArrayList<>();
         trun.wfRun = this;
         trun.variableLocks = new HashMap<String, Integer>();
 
         trun.haltReasons = new HashSet<>();
 
         if (parent != null) {
-            parent.childThreadIDs.add(trun.id);
-            trun.parentThreadID = parent.id;
+            parent.childThreadIds.add(trun.id);
+            trun.parentThreadId = parent.id;
 
             if (parent.status == LHExecutionStatus.HALTED ||
                 parent.status == LHExecutionStatus.HALTING
@@ -196,7 +196,7 @@ public class WFRun extends CoreMetadata {
             ExternalEventCorrel correl = new ExternalEventCorrel();
             correl.event = payload;
             correl.arrivalTime = event.timestamp;
-            correl.assignedThreadID = event.threadRunId;
+            correl.assignedThreadId = event.threadRunId;
 
             if (correlatedEvents == null) {
                 correlatedEvents = new HashMap<>();
@@ -259,6 +259,7 @@ public class WFRun extends CoreMetadata {
         }
     }
 
+    @JsonIgnore
     private void handleTimerEvent(WFEvent event) throws LHConnectionError {
         WFRunTimer timer;
         try {

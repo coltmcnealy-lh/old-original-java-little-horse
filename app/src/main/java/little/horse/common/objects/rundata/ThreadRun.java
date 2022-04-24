@@ -62,10 +62,10 @@ public class ThreadRun extends BaseSchema {
     public HashMap<String, Object> variables;
 
     public int id;
-    public Integer parentThreadID;
-    public ArrayList<Integer> childThreadIDs;
-    public ArrayList<Integer> activeInterruptThreadIDs;
-    public ArrayList<Integer> handledInterruptThreadIDs;
+    public Integer parentThreadId;
+    public ArrayList<Integer> childThreadIds;
+    public ArrayList<Integer> activeInterruptThreadIds;
+    public ArrayList<Integer> handledInterruptThreadIds;
     // public Integer exceptionHandlerThread = null;
 
     public String errorMessage;
@@ -116,8 +116,8 @@ public class ThreadRun extends BaseSchema {
         HashMap<String, Object> out = (HashMap<String, Object>) variables.clone();
 
         // Yay, recursion!
-        if (parentThreadID != null) {
-            ThreadRun parent = wfRun.threadRuns.get(parentThreadID);
+        if (parentThreadId != null) {
+            ThreadRun parent = wfRun.threadRuns.get(parentThreadId);
             out.putAll(parent.getAllVariables());
         }
 
@@ -148,8 +148,8 @@ public class ThreadRun extends BaseSchema {
             return new VariableLookupResult(varDef, this, variables.get(varName));
         }
 
-        if (parentThreadID != null) {
-            ThreadRun parent = wfRun.threadRuns.get(parentThreadID);
+        if (parentThreadId != null) {
+            ThreadRun parent = wfRun.threadRuns.get(parentThreadId);
             return parent.getVariableDefinition(varName);
         }
 
@@ -249,10 +249,10 @@ public class ThreadRun extends BaseSchema {
     throws LHConnectionError{
         TaskRun tr = new TaskRun();
         tr.status = LHExecutionStatus.RUNNING;
-        tr.threadID = id;
+        tr.threadId = id;
         tr.number = taskRuns.size();
         tr.nodeName = node.name;
-        tr.wfSpecDigest = wfRun.getWFSpec().getId();
+        tr.wfSpecId = wfRun.getWFSpec().getId();
         tr.wfSpecName = wfRun.getWFSpec().name;
         tr.attemptNumber = attemptNumber;
 
@@ -478,20 +478,20 @@ public class ThreadRun extends BaseSchema {
 
         } else if (status == LHExecutionStatus.HALTED) {
             // Check if interrupt handlers are done now (:
-            for (int i = activeInterruptThreadIDs.size() - 1; i >= 0; i--) {
-                int tid = activeInterruptThreadIDs.get(i);
+            for (int i = activeInterruptThreadIds.size() - 1; i >= 0; i--) {
+                int tid = activeInterruptThreadIds.get(i);
 
                 // WTF? Why is this here? Isn't that impossible?
                 if (tid >= wfRun.threadRuns.size()) continue;
 
                 ThreadRun intHandler = wfRun.threadRuns.get(tid);
                 if (intHandler.isCompleted()) {
-                    activeInterruptThreadIDs.remove(i);
-                    handledInterruptThreadIDs.add(intHandler.id);
+                    activeInterruptThreadIds.remove(i);
+                    handledInterruptThreadIds.add(intHandler.id);
                 }
             }
             if (haltReasons.contains(WFHaltReasonEnum.INTERRUPT)
-                && activeInterruptThreadIDs.size() == 0
+                && activeInterruptThreadIds.size() == 0
             ) {
                 removeHaltReason(WFHaltReasonEnum.INTERRUPT);
             }
@@ -512,9 +512,9 @@ public class ThreadRun extends BaseSchema {
             Integer lockingThread = variableLocks.get(variableName);
             return lockingThread != null && lockingThread != threadID;
         }
-        if (parentThreadID != null) {
+        if (parentThreadId != null) {
             return wfRun.threadRuns.get(
-                parentThreadID
+                parentThreadId
             ).isLocked(variableName, threadID);
         }
         throw new RuntimeException("Impossible to get here since it means");
@@ -523,8 +523,8 @@ public class ThreadRun extends BaseSchema {
     public void lock(String variableName, int threadID) {
         if (variables.containsKey(variableName)) {
             variableLocks.put(variableName, threadID);
-        } else if (parentThreadID != null) {
-            wfRun.threadRuns.get(parentThreadID).lock(variableName, threadID);
+        } else if (parentThreadId != null) {
+            wfRun.threadRuns.get(parentThreadId).lock(variableName, threadID);
         } else {
             throw new RuntimeException("Impossible");
         }
@@ -533,8 +533,8 @@ public class ThreadRun extends BaseSchema {
     public void unlock(String variableName) {
         if (variables.containsKey(variableName)) {
             variableLocks.remove(variableName);
-        } else if (parentThreadID != null) {
-            wfRun.threadRuns.get(parentThreadID).unlock(variableName);
+        } else if (parentThreadId != null) {
+            wfRun.threadRuns.get(parentThreadId).unlock(variableName);
         }
     }
 
@@ -909,7 +909,7 @@ public class ThreadRun extends BaseSchema {
         taskRuns.add(tr);
         correlSchema.assignedNodeName = node.name;
         correlSchema.assignedTaskRunExecutionNumber = tr.number;
-        correlSchema.assignedThreadID = tr.threadID;
+        correlSchema.assignedThreadId = tr.threadId;
 
         TaskRunResult result = new TaskRunResult(
             correlSchema.event.content.toString(), null, true, 0
@@ -953,7 +953,7 @@ public class ThreadRun extends BaseSchema {
         boolean allCompleted = true;
 
         for (ThreadRunMeta meta: awaitables) {
-            ThreadRun thread = wfRun.threadRuns.get(meta.threadID);
+            ThreadRun thread = wfRun.threadRuns.get(meta.threadId);
             if (!thread.isCompleted()) {
                 allCompleted = false;
             }
@@ -986,7 +986,7 @@ public class ThreadRun extends BaseSchema {
                 );
             }
 
-            ThreadRun thread = wfRun.threadRuns.get(awaitables.get(0).threadID);
+            ThreadRun thread = wfRun.threadRuns.get(awaitables.get(0).threadId);
             if (thread.isCompleted() || !thread.isTerminated()) {
                 throw new RuntimeException("should be impossible");
             }
@@ -1097,7 +1097,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     public ArrayList<ThreadRun> getChildren() {
         ArrayList<ThreadRun> out = new ArrayList<ThreadRun>();
-        for (int tid: childThreadIDs) {
+        for (int tid: childThreadIds) {
             out.add(wfRun.threadRuns.get(tid));
         }
         return out;
@@ -1184,7 +1184,7 @@ public class ThreadRun extends BaseSchema {
         trun.isInterruptThread = true;
         wfRun.threadRuns.add(trun);
 
-        activeInterruptThreadIDs.add(trun.id);
+        activeInterruptThreadIds.add(trun.id);
         // Now we call halt.
         halt(
             WFHaltReasonEnum.INTERRUPT,

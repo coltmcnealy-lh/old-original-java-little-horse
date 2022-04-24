@@ -8,6 +8,6 @@ public class ExternalEventCorrel extends BaseSchema {
     public ExternalEventPayload event;
     public int assignedTaskRunExecutionNumber;
     public String assignedNodeName;
-    public int assignedThreadID;
+    public int assignedThreadId;
     public Date arrivalTime;
 }
