@@ -139,7 +139,7 @@ class GETHandler:
 
         rt_schema = RESOURCE_TYPES[rt_name]
 
-        response: LHRPCResponseSchema[rt_schema] = client.get_resource_by_id(
+        response: LHRPCResponseSchema[rt_schema] = client.get_resource_by_name_or_id(
             rt_schema,
             resource_id,
         )
