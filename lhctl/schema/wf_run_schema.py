@@ -1,8 +1,9 @@
 from datetime import datetime
 from enum import Enum
 
-from typing import Any, List, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Union
 from lh_sdk.utils import LHBaseModel
+from lhctl.schema.wf_spec_schema import EdgeSchema
 
 
 VALID_VARIABLE_TYPE = Union[int, str, bool, float, list, dict]
@@ -23,10 +24,6 @@ class NodeTypeEnum(Enum):
     WAIT_FOR_THREAD = "WAIT_FOR_THREAD"
     SLEEP = "SLEEP"
     THROW_EXCEPTION = "THROW_EXCEPTION"
-
-
-class EdgeSchema(LHBaseModel):
-    pass
 
 
 class UpNextPair(LHBaseModel):

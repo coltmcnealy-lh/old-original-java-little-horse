@@ -1,22 +1,83 @@
+from abc import ABC, abstractmethod
 from argparse import _SubParsersAction, ArgumentParser, Namespace
 import json
-from typing import Any, Mapping
+from typing import Any, Generic, Mapping, TypeVar
+from lhctl.utils.printer import Printer
 
 from lhctl.client import LHClient
 from lhctl.schema import RESOURCE_TYPES
 from lhctl.schema.lh_rpc_response_schema import LHRPCResponseSchema
+from lhctl.schema.wf_run_schema import ThreadRunSchema, WFRunSchema
+from lhctl.schema.wf_spec_schema import WFSpecSchema
 
 
-class GETWFRun:
-    pass
-
-class GetWFSpec:
-    pass
+T = TypeVar('T')
 
 
-GETTABLE_RESOURCES: Mapping[str, Any] = {
+class GettableResource(ABC, Generic[T]):
+    @abstractmethod
+    def print_resource(self, response: LHRPCResponseSchema[T]):
+        pass
+
+
+class GETWFRun(GettableResource[WFRunSchema]):
+    def print_resource(self, response: LHRPCResponseSchema[WFRunSchema]):
+        wf_run = response.result
+        printer = Printer()
+        if wf_run is None:
+            printer.print("No resources found!")
+            return
+        printer.print("WFRun Status:", wf_run.status.value)
+        printer.print("Threads:")
+        printer.indent()
+        for trun in wf_run.thread_runs:
+            self._print_thread_run(printer, trun)
+    
+    def _print_thread_run(self, printer: Printer, trun: ThreadRunSchema):
+        print("--->>")
+        printer.print("Id: ", trun.id)
+        if trun.is_interrupt_thread:
+            printer.print("Interrupt thread!")
+        printer.print("Status: ", trun.status.value)
+
+        printer.print("Tasks:")
+        printer.indent()
+
+        for task in trun.task_runs:
+            if task.stdout is None:
+                adjusted_stdout = None
+            else:
+                adjusted_stdout = task.stdout.rstrip("\n")
+
+            if task.stderr is not None:
+                adjusted_stdout = str(adjusted_stdout) + ' ||| Stderr:' + task.stderr
+
+            printer.print(f"{task.node_name}: {adjusted_stdout}")
+        printer.unindent()
+
+        up_next = trun.up_next
+        if len(up_next) > 0:
+            next_edge = up_next[0]
+            printer.print(f"Waiting on node {next_edge.edge.sink_node_name}")
+
+        if trun.variables is not None and len(trun.variables) > 0:
+            printer.print("Variables:")
+        printer.indent()
+        for varname in (trun.variables or {}).keys():
+            assert trun.variables is not None
+            printer.print(varname, ": ", json.dumps(trun.variables[varname]))
+        printer.unindent()
+
+
+class GETWFSpec(GettableResource[WFSpecSchema]):
+    def print_resource(self, response: LHRPCResponseSchema[WFSpecSchema]):
+        pass
+
+
+
+GETTABLE_RESOURCES: Mapping[str, GettableResource] = {
     "WFRun": GETWFRun(),
-    "WFSpec": GetWFSpec(),
+    "WFSpec": GETWFSpec(),
 }
 
 
@@ -40,6 +101,11 @@ class GETHandler:
             "resource_id",
             help="Specific Id or Name of resource to get."
         )
+        parser.add_argument(
+            "--raw-json", "-r",
+            action="store_true",
+            help="Print out raw JSON response. If this flag is false: Print summary.",
+        )
 
         parser.set_defaults(func=self.get_resource)
 
@@ -54,4 +120,7 @@ class GETHandler:
             resource_id,
         )
 
-        print(response.json(by_alias=True))
+        if ns.raw_json:
+            print(response.json(by_alias=True))
+        else:
+            GETTABLE_RESOURCES[rt_name].print_resource(response)

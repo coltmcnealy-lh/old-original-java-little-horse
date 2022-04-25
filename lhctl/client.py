@@ -43,7 +43,7 @@ class LHClient:
 
     def get_resource_by_name_or_id(
         self,
-        resource_type: str,
+        resource_type: type[T],
         resource_id: str,
     ) -> LHRPCResponseSchema[T]:
         raise NotImplemented()
