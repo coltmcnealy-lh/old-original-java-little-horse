@@ -8,16 +8,31 @@ from lhctl.client import LHClient
 from lhctl.schema import RESOURCE_TYPES
 from lhctl.schema.lh_rpc_response_schema import LHRPCResponseSchema
 from lhctl.schema.wf_run_schema import ThreadRunSchema, WFRunSchema
-from lhctl.schema.wf_spec_schema import WFSpecSchema
+from lhctl.schema.wf_spec_schema import (
+    WFSpecSchema, 
+    ExternalEventDefSchema,
+    TaskDefSchema,
+)
 
 
 T = TypeVar('T')
 
 
-class GettableResource(ABC, Generic[T]):
+class GettableResource(Generic[T]):
     @abstractmethod
     def print_resource(self, response: LHRPCResponseSchema[T]):
-        pass
+        print(f"Resource Id: \t\t{response.object_id}")
+        print(f"Response Status: \t{response.status}")
+        print(f"Response Message: \t{response.message}")
+
+        if response.result is None:
+            return
+
+        r = response.result
+        if hasattr(r, "status"):
+            print(f"Resource Status: \t{r.status}") # type: ignore
+        if hasattr(r, "name"):
+            print(f"Resource Name: \t\t{r.name}") # type: ignore
 
 
 class GETWFRun(GettableResource[WFRunSchema]):
@@ -70,14 +85,23 @@ class GETWFRun(GettableResource[WFRunSchema]):
 
 
 class GETWFSpec(GettableResource[WFSpecSchema]):
-    def print_resource(self, response: LHRPCResponseSchema[WFSpecSchema]):
-        pass
+    pass
+
+
+class GETTaskDef(GettableResource[TaskDefSchema]):
+    pass
+
+
+class GETExternalEventDef(GettableResource[ExternalEventDefSchema]):
+    pass
 
 
 
 GETTABLE_RESOURCES: Mapping[str, GettableResource] = {
     "WFRun": GETWFRun(),
     "WFSpec": GETWFSpec(),
+    "TaskDef": GETTaskDef(),
+    "ExternalEventDef": GETExternalEventDef(),
 }
 
 

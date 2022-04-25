@@ -1,6 +1,5 @@
 from enum import Enum
-import json
-from typing import Any, List, Optional
+from typing import Any, List, Mapping, Optional
 
 from pydantic import Field
 from lh_sdk.config import get_wf_deployer_class
@@ -155,3 +154,31 @@ class WFSpecSchema(LHBaseModel):
     entrypoint_thread_name: str
     wf_deployer_class_name: str = Field(default_factory=get_wf_deployer_class)
     deploy_metadata: Optional[str] = None
+
+
+class TaskDefSchema(LHBaseModel):
+    required_vars: Optional[Mapping[str, WFRunVariableDefSchema]] = None
+    partitions: Optional[int] = None
+    name: str
+    status: LHDeployStatus = LHDeployStatus.RUNNING
+
+    task_deployer_class_name: str
+    deploy_metadata: str
+
+
+    @property
+    def kafka_topic(self) -> str:
+        return self.name
+
+    @property
+    def id(self) -> str:
+        return self.name
+
+
+class ExternalEventDefSchema(LHBaseModel):
+    name: str
+    status: LHDeployStatus = LHDeployStatus.RUNNING
+
+    @property
+    def id(self) -> str:
+        return self.name
