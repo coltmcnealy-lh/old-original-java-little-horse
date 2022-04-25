@@ -161,8 +161,8 @@ class TaskDefSchema(LHBaseModel):
     name: str
     status: LHDeployStatus = LHDeployStatus.RUNNING
 
-    task_deployer_class_name: str
-    deploy_metadata: str
+    task_deployer_class_name: Optional[str] = None
+    deploy_metadata: Optional[str] = None
 
 
     @property

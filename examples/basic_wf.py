@@ -2,7 +2,7 @@ from lh_sdk.thread_spec_builder import (
     ThreadSpecBuilder,
     Workflow,
 )
-from lh_sdk.wf_spec_schema import (
+from lh_lib.schema.wf_spec_schema import (
     WFRunVariableTypeEnum
 )
 

@@ -10,7 +10,7 @@ from typing import (
 )
 from lh_sdk.utils import get_lh_var_type, get_task_def_name
 
-from lh_sdk.wf_spec_schema import (
+from lh_lib.schema.wf_spec_schema import (
     EdgeSchema,
     NodeSchema,
     NodeType,
@@ -246,7 +246,11 @@ class ThreadSpecBuilder:
 
 
 class Workflow:
-    def __init__(self, entrypoint_function: Callable[[ThreadSpecBuilder], None]):
+    def __init__(
+        self,
+        entrypoint_function: Callable[[ThreadSpecBuilder],None],
+        module_dict: dict
+    ):
         self._entrypoint_func = entrypoint_function
         self._name = self._entrypoint_func.__name__
 
@@ -260,6 +264,12 @@ class Workflow:
         self._spec.thread_specs["entrypoint"] = self._entrypoint_builder.spec
         self._spec.name = self._name
 
+        self._module_dict = module_dict
+
+    @property
+    def module_dict(self) -> dict:
+        return self._module_dict
+
     @property
     def spec(self) -> WFSpecSchema:
         return self._spec
@@ -271,8 +281,3 @@ class Workflow:
     @property
     def payload_str(self) -> str:
         return self.spec.json(by_alias=True)
-
-    def _compile(self):
-        pass
-
-

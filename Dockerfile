@@ -27,7 +27,7 @@ RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -
 
 
 # Install the python dependencies
-COPY lh-sdk-python/requirements.txt /requirements.txt
+COPY lhctl/requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
 
 
@@ -36,8 +36,8 @@ COPY app/build/libs/app-all.jar /littleHorse.jar
 
 
 # Copy in the SDK and set the pythonpath so that it's usable.
-COPY lh-sdk-python /lh-sdk-python
-ENV PYTHONPATH /lh-sdk-python/
+COPY lhctl /lhctl
+ENV PYTHONPATH /lhctl/
 
 
 # Bring some dummy tasks (used for demo purposes only)

@@ -5,6 +5,7 @@ from typing import Iterable, List, Set
 
 import os
 from humps import camelize
+from pydantic import Field
 
 from lh_sdk.thread_spec_builder import Workflow
 from lh_sdk.utils import LHBaseModel, add_resource, get_lh_var_type
@@ -58,8 +59,8 @@ def create_external_event_def(name: str) -> dict:
 
 
 # TODO: This should return a BaseModel, not a raw dict
-def create_task_def(task_def_name: str) -> dict:
-    task_func = globals()[task_def_name]
+def create_task_def(task_def_name: str, wf: Workflow) -> dict:
+    task_func = wf.module_dict[task_def_name]
 
     sig: Signature = signature(task_func)
 
@@ -109,10 +110,12 @@ def _spec_result_alias_generator(s: str) -> str:
 
 
 class SpecsResult(LHBaseModel):
-    external_event_def: List[ExternalEventDefSchema]
-    task_def: List[TaskDefSchema]
-    wf_spec: List[WFSpecSchema]
-    dockerfile: List[str]
+    external_event_def: List[ExternalEventDefSchema] = Field(
+        default_factory=lambda: list([])
+    )
+    task_def: List[TaskDefSchema] = Field(default_factory=lambda: list([]))
+    wf_spec: List[WFSpecSchema] = Field(default_factory=lambda: list([]))
+    dockerfile: List[str] = Field(default_factory=lambda: list([]))
 
     class Config:
         alias_generator = _spec_result_alias_generator
@@ -124,6 +127,6 @@ def get_specs(wf: Workflow):
 
     return SpecsResult(**{
         'ExternalEventDef': [create_external_event_def(e) for e in events],
-        'TaskDef': [create_task_def(t) for t in task_def_names],
+        'TaskDef': [create_task_def(t, wf) for t in task_def_names],
         'WFSpec': [json.loads(wf.spec.json(by_alias=True))]
     })

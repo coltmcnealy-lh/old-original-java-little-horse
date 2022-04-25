@@ -1,0 +1,10 @@
+sqlalchemy
+alembic
+flake8
+flask
+flask-sqlalchemy
+pydantic
+pylint
+psycopg2
+pyhumps
+requests

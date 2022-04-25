@@ -29,12 +29,12 @@ class COMPILEHandler():
 
     def compile(self, ns: Namespace, client: LHClient):
         # First, import the relevant module so that we have access to the functions.
-        importlib.import_module(ns.module)
+        mod = importlib.import_module(ns.module)
 
         # This should work because we should have imported the function in the line
         # above
-        wf_func: Callable[[ThreadSpecBuilder], Any] = globals()[ns.wf_func]
-        wf = Workflow(wf_func)
+        wf_func: Callable[[ThreadSpecBuilder], Any] = mod.__dict__[ns.wf_func]
+        wf = Workflow(wf_func, mod.__dict__)
         specs = get_specs(wf)
 
         print(specs.json(by_alias=True))

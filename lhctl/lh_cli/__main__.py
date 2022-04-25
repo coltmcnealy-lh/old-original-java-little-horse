@@ -1,8 +1,8 @@
 import argparse
 from lh_lib.client import LHClient
 
-from lhctl.config import DEFAULT_API_URL
-from lhctl.verbs import HANDLERS
+from lh_lib.config import DEFAULT_API_URL
+from lh_cli.verbs import HANDLERS
 
 
 if __name__ == '__main__':
