@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any, List, Mapping, Optional
 
 from pydantic import Field
-from lh_sdk.config import get_wf_deployer_class
 
 from lh_sdk.utils import LHBaseModel
 
@@ -152,7 +151,7 @@ class WFSpecSchema(LHBaseModel):
     interrupt_events: Optional[List[str]] = None
 
     entrypoint_thread_name: str
-    wf_deployer_class_name: str = Field(default_factory=get_wf_deployer_class)
+    wf_deployer_class_name: Optional[str] = None
     deploy_metadata: Optional[str] = None
 
 

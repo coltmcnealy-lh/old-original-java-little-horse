@@ -1,15 +1,20 @@
 from inspect import signature, Signature
 import json
 import time
-from typing import Iterable, Set
+from typing import Iterable, List, Set
 
 import os
-import sys
+from humps import camelize
 
-from examples.basic_wf import *
 from lh_sdk.thread_spec_builder import Workflow
-from lh_sdk.utils import add_resource, get_lh_var_type
-from lh_sdk.wf_spec_schema import NodeSchema, NodeType, WFSpecSchema
+from lh_sdk.utils import LHBaseModel, add_resource, get_lh_var_type
+from lh_lib.schema.wf_spec_schema import (
+    ExternalEventDefSchema,
+    TaskDefSchema,
+    WFSpecSchema,
+    NodeSchema,
+    NodeType,
+)
 
 
 DEFAULT_API_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
@@ -93,31 +98,32 @@ def create_task_def(task_def_name: str) -> dict:
     return task_def
 
 
+def _spec_result_alias_generator(s: str) -> str:
+    return {
+        'externalEventDef': "ExternalEventDef",
+        'taskDef': "TaskDef",
+        'wfRun': "WFRun",
+        "wfSpec": "WFSpec",
+        "dockerfile": "Dockerfile"
+    }.get(camelize(s), camelize(s))
+
+
+class SpecsResult(LHBaseModel):
+    external_event_def: List[ExternalEventDefSchema]
+    task_def: List[TaskDefSchema]
+    wf_spec: List[WFSpecSchema]
+    dockerfile: List[str]
+
+    class Config:
+        alias_generator = _spec_result_alias_generator
+
+
 def get_specs(wf: Workflow):
     task_def_names = get_task_defs_for_wf(wf.spec)
     events = get_external_events_for_wf(wf.spec)
 
-    return {
+    return SpecsResult(**{
         'ExternalEventDef': [create_external_event_def(e) for e in events],
         'TaskDef': [create_task_def(t) for t in task_def_names],
         'WFSpec': [json.loads(wf.spec.json(by_alias=True))]
-    }
-
-
-if __name__ == '__main__':
-    wf = Workflow(basic_wf)
-    if len(sys.argv) > 1 and sys.argv[1] == '--dry-run':
-        print(json.dumps(get_specs(wf)))
-        exit(0)
-
-    specs = get_specs(wf)
-    for event in specs['ExternalEventDef']:
-        add_resource('ExternalEventDef', event, DEFAULT_API_URL)
-
-    for task_def in specs['TaskDef']:
-        add_resource('TaskDef', task_def, DEFAULT_API_URL)
-
-    time.sleep(0.5)
-
-    for wf in specs['WFSpec']:
-        add_resource('WFSpec', wf, DEFAULT_API_URL)
+    })

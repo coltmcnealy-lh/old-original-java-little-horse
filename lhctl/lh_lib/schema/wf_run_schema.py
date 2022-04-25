@@ -3,7 +3,7 @@ from enum import Enum
 
 from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Union
 from lh_sdk.utils import LHBaseModel
-from lhctl.schema.wf_spec_schema import EdgeSchema
+from lh_lib.schema.wf_spec_schema import EdgeSchema
 
 
 VALID_VARIABLE_TYPE = Union[int, str, bool, float, list, dict]

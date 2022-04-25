@@ -16,7 +16,7 @@ from humps import camelize
 
 
 if TYPE_CHECKING:
-    from lh_sdk.wf_spec_schema import WFRunVariableTypeEnum
+    from lh_lib.schema.wf_spec_schema import WFRunVariableTypeEnum
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
@@ -29,7 +29,7 @@ class LHBaseModel(PyThingBaseModel):
 
 
 def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:
-    from lh_sdk.wf_spec_schema import WFRunVariableTypeEnum
+    from lh_lib.schema.wf_spec_schema import WFRunVariableTypeEnum
 
     if original_type == str:
         return WFRunVariableTypeEnum.STRING

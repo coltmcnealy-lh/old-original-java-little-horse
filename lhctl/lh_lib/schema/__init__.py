@@ -1,5 +1,5 @@
-from lhctl.schema.wf_run_schema import WFRunSchema
-from lhctl.schema.wf_spec_schema import WFSpecSchema
+from lh_lib.schema.wf_run_schema import WFRunSchema
+from lh_lib.schema.wf_spec_schema import WFSpecSchema
 
 
 RESOURCE_TYPES = {

@@ -3,10 +3,10 @@ import requests
 from lh_sdk.utils import LHBaseModel
 
 from lhctl.config import DEFAULT_API_URL
-from lhctl.schema import RESOURCE_TYPES_INV, wf_run_schema
-from lhctl.schema.lh_rpc_response_schema import LHRPCResponseSchema
+from lh_lib.schema import RESOURCE_TYPES_INV, wf_run_schema
+from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
 
-from lhctl.schema import *
+from lh_lib.schema import *
 
 T = TypeVar("T")
 

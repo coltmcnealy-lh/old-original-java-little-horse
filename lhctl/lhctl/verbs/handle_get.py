@@ -2,17 +2,17 @@ from abc import ABC, abstractmethod
 from argparse import _SubParsersAction, ArgumentParser, Namespace
 import json
 from typing import Any, Generic, Mapping, TypeVar
-from lhctl.utils.printer import Printer
 
-from lhctl.client import LHClient
-from lhctl.schema import RESOURCE_TYPES
-from lhctl.schema.lh_rpc_response_schema import LHRPCResponseSchema
-from lhctl.schema.wf_run_schema import ThreadRunSchema, WFRunSchema
-from lhctl.schema.wf_spec_schema import (
+from lh_lib.client import LHClient
+from lh_lib.schema import RESOURCE_TYPES
+from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
+from lh_lib.schema.wf_run_schema import ThreadRunSchema, WFRunSchema
+from lh_lib.schema.wf_spec_schema import (
     WFSpecSchema, 
     ExternalEventDefSchema,
     TaskDefSchema,
 )
+from lh_lib.utils.printer import Printer
 
 
 T = TypeVar('T')
@@ -85,16 +85,18 @@ class GETWFRun(GettableResource[WFRunSchema]):
 
 
 class GETWFSpec(GettableResource[WFSpecSchema]):
+    # Just print basic stuff for now
     pass
 
 
 class GETTaskDef(GettableResource[TaskDefSchema]):
+    # Just print basic stuff for now
     pass
 
 
 class GETExternalEventDef(GettableResource[ExternalEventDefSchema]):
+    # Just print basic stuff for now
     pass
-
 
 
 GETTABLE_RESOURCES: Mapping[str, GettableResource] = {

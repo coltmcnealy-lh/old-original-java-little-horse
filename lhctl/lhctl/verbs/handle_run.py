@@ -2,7 +2,7 @@ from argparse import ArgumentParser, _SubParsersAction, Namespace
 import json
 import sys
 
-from lhctl.client import LHClient
+from lh_lib.client import LHClient
 
 
 class RUNHandler:

@@ -1,5 +1,5 @@
 import argparse
-from lhctl.client import LHClient
+from lh_lib.client import LHClient
 
 from lhctl.config import DEFAULT_API_URL
 from lhctl.verbs import HANDLERS
