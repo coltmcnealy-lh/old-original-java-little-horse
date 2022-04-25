@@ -101,7 +101,7 @@ class LHClient:
         wf_spec_id_or_name: str,
         vars: Optional[dict] = None,
         wf_run_id: Optional[str] = None,
-    ):
+    ) -> LHRPCResponseSchema[WFRunSchema]:
         wf_run_request = {
             "wfSpecId": wf_spec_id_or_name,
             "variables": vars,
@@ -117,4 +117,4 @@ class LHClient:
         if intermediate.result is not None:
             intermediate.result = WFRunSchema(**intermediate.result)
 
-        return intermediate.result
+        return intermediate

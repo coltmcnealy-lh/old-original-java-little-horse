@@ -33,13 +33,21 @@ class RUNHandler:
 
     def run_wf(self, ns: Namespace, client: LHClient):
         try:
-            vars: dict = json.loads(ns.variables or {})
+            vars: dict = json.loads(ns.variables or '{}')
         except Exception as exn:
             print(
-                "If providing variables, please format them with proper json!",
+                "If providing variables, please format them with proper json:",
                 file=sys.stderr
             )
-            print(exn, file=sys.stderr)
+            print(f'\t{str(exn)}', file=sys.stderr)
+            exit(1)
 
-        
+        run_wf_response = client.run_wf(
+            ns.wf_spec,
+            vars=vars,
+            wf_run_id=ns.wf_run_id
+        )
+
+        print(run_wf_response.json())
+
 
