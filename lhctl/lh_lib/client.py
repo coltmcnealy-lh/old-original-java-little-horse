@@ -1,7 +1,13 @@
+import json
+import subprocess
+import time
 from typing import List, Optional, TypeVar
-import requests
-from lh_sdk.utils import LHBaseModel
 
+import requests
+
+from lh_lib.schema.wf_spec_schema import ExternalEventDefSchema, TaskDefSchema
+from lh_sdk.compile import SpecsResult
+from lh_sdk.utils import LHBaseModel
 from lh_lib.config import DEFAULT_API_URL
 from lh_lib.schema import RESOURCE_TYPES_INV, wf_run_schema
 from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
@@ -118,3 +124,51 @@ class LHClient:
             intermediate.result = WFRunSchema(**intermediate.result)
 
         return intermediate
+
+    def deploy_specs(self, specs: SpecsResult, skip_build=False):
+        if not skip_build:
+            for task_def_name in specs.dockerfile:
+                self.build_docker(
+                    specs.dockerfile[task_def_name],
+                    task_def_name,
+                )
+
+        for task_def in specs.task_def:
+            print("adding task def")
+            breakpoint()
+            self.add_task_def(task_def)
+
+        for external_event in specs.external_event_def:
+            self.add_external_event_def(external_event)
+    
+        time.sleep(0.5)
+
+        for wf_spec in specs.wf_spec:
+            self.add_wf_spec(wf_spec)
+
+    def build_docker(
+        self,
+        dockerfile: str,
+        task_def_name: str,
+    ):
+        tag = f'lh-task-{task_def_name}:latest'
+        cmd = ['docker', 'build', '-f', '-', '-t', tag, '.']
+        subprocess.run(cmd, input=dockerfile, text=True)
+
+    def add_external_event_def(self, ee: ExternalEventDefSchema):
+        url = f'{self.url}/ExternalEventDef'
+        requests.post(
+            url, json=json.loads(ee.json(by_alias=True))
+        ).raise_for_status()
+
+    def add_wf_spec(self, wf: WFSpecSchema):
+        url = f'{self.url}/WFSpec'
+        requests.post(
+            url, json=json.loads(wf.json(by_alias=True))
+        ).raise_for_status()
+
+    def add_task_def(self, td: TaskDefSchema):
+        url = f'{self.url}/TaskDef'
+        requests.post(
+            url, json=json.loads(td.json(by_alias=True))
+        ).raise_for_status()

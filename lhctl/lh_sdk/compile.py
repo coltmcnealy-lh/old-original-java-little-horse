@@ -1,7 +1,7 @@
 from inspect import signature, Signature
 import json
 import time
-from typing import Iterable, List, Set
+from typing import Iterable, List, Mapping, Set
 
 import os
 from humps import camelize
@@ -76,9 +76,9 @@ def create_task_def(task_def_name: str, wf: Workflow) -> dict:
         }
 
     bash_command = [
-        "python",
-        "/lh-sdk-python/execute_task.py",
-        task_def_name,
+        "python", "-m", "executor",
+        task_func.__module__,
+        task_func.__name__,
     ]
 
     for varname in required_vars.keys():
@@ -87,7 +87,7 @@ def create_task_def(task_def_name: str, wf: Workflow) -> dict:
     task_def = {
         "name": task_def_name,
         "deployMetadata": json.dumps({
-            "dockerImage": DEFAULT_DOCKER_IMAGE,
+            "dockerImage": f"lh-task-{task_def_name}:latest",
             "metadata": json.dumps({
                 "bashCommand": bash_command,
             }),
@@ -115,10 +115,34 @@ class SpecsResult(LHBaseModel):
     )
     task_def: List[TaskDefSchema] = Field(default_factory=lambda: list([]))
     wf_spec: List[WFSpecSchema] = Field(default_factory=lambda: list([]))
-    dockerfile: List[str] = Field(default_factory=lambda: list([]))
+    dockerfile: Mapping[str, str] = Field(default_factory=lambda: dict({}))
 
     class Config:
         alias_generator = _spec_result_alias_generator
+
+
+def get_dockerfile(task_def_name: str) -> str:
+    os.system("touch pre-install.sh && chmod +x pre-install.sh")
+    os.system("touch pre-launch.sh && chmod +x pre-launch.sh")
+    os.system("touch requirements.txt")
+    return f"""
+FROM little-horse-api:latest
+
+COPY pre-install.sh /pre-install.sh
+RUN /pre-install.sh
+
+COPY requirements.txt /task-requirements.txt
+RUN pip install -r /task-requirements.txt
+
+COPY . .
+
+CMD [ \
+    './pre-launch.sh',\
+    '&&',\
+    'java', '-cp', '/littleHorse.jar',\
+    'little.horse.lib.deployers.examples.docker.DockerTaskWorker'\
+]\
+    """
 
 
 def get_specs(wf: Workflow):
@@ -127,6 +151,9 @@ def get_specs(wf: Workflow):
 
     return SpecsResult(**{
         'ExternalEventDef': [create_external_event_def(e) for e in events],
+        'WFSpec': [json.loads(wf.spec.json(by_alias=True))],
+        'Dockerfile': {
+            tdn: get_dockerfile(tdn) for tdn in task_def_names
+        },
         'TaskDef': [create_task_def(t, wf) for t in task_def_names],
-        'WFSpec': [json.loads(wf.spec.json(by_alias=True))]
     })

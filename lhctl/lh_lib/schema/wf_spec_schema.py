@@ -157,13 +157,12 @@ class WFSpecSchema(LHBaseModel):
 
 class TaskDefSchema(LHBaseModel):
     required_vars: Optional[Mapping[str, WFRunVariableDefSchema]] = None
-    partitions: Optional[int] = None
+    partitions: int = 3
     name: str
     status: LHDeployStatus = LHDeployStatus.RUNNING
 
     task_deployer_class_name: Optional[str] = None
     deploy_metadata: Optional[str] = None
-
 
     @property
     def kafka_topic(self) -> str:
