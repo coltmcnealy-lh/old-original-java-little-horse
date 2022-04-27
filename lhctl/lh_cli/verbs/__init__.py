@@ -4,6 +4,7 @@ from lh_cli.verbs.handle_run import RUNHandler
 from lh_cli.verbs.handle_compile import COMPILEHandler
 from lh_cli.verbs.handle_deploy import DEPLOYHandler
 from lh_cli.verbs.handle_send_event import SENDEVENTHandler
+from lh_cli.verbs.handle_search import SEARCHHandler
 
 
 HANDLERS = {
@@ -13,4 +14,5 @@ HANDLERS = {
     "deploy": DEPLOYHandler(),
     "delete": DELETEHandler(),
     "send-event": SENDEVENTHandler(),
+    "search": SEARCHHandler(),
 }

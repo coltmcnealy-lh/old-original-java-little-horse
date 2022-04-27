@@ -118,7 +118,7 @@ class GETHandler:
         parser.add_argument(
             "resource_type",
             choices=[k for k in GETTABLE_RESOURCES.keys()],
-            help="Resource Type to List, Get, or Search."
+            help="Resource Type to Get."
         )
 
         parser.add_argument(
