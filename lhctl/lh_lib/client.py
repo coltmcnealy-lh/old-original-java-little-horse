@@ -10,7 +10,7 @@ from lh_sdk.compile import SpecsResult
 from lh_sdk.utils import LHBaseModel
 from lh_lib.config import DEFAULT_API_URL
 from lh_lib.schema import RESOURCE_TYPES_INV, wf_run_schema
-from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
+from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema, ResponseStatusEnum
 
 from lh_lib.schema import *
 
@@ -153,7 +153,6 @@ class LHClient:
 
         for task_def in specs.task_def:
             print("adding task def")
-            breakpoint()
             self.add_task_def(task_def)
 
         for external_event in specs.external_event_def:
@@ -190,3 +189,23 @@ class LHClient:
         requests.post(
             url, json=json.loads(td.json(by_alias=True))
         ).raise_for_status()
+
+    def send_event_by_name_or_id(
+        self,
+        name_or_id: str,
+        wf_run_id: str,
+        payload: str,
+    ):
+        query = self.get_resource_by_name_or_id(
+            ExternalEventDefSchema,
+            name_or_id,
+        )
+
+        assert query.result is not None, "Provided ExternalEventDef not found!"
+
+        send_response = requests.post(
+            f'{self.url}/externalEvent/{query.result.id}/{wf_run_id}',
+            data=payload,
+        )
+        send_response.raise_for_status()
+        return query.result.id

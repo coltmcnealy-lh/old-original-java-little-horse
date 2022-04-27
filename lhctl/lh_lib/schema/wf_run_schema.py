@@ -47,7 +47,7 @@ class TaskRunSchema(LHBaseModel):
 
     node_name: str
 
-    worker_id: str
+    worker_id: Optional[str] = None
     stdin: Optional[str] = None
     stdout: Optional[str] = None
     stderr: Optional[str] = None
@@ -102,7 +102,7 @@ class ExternalEventPayloadSchema(LHBaseModel):
     external_event_def_id: str
     external_event_def_name: str
     content: Any
-    timestamp: datetime
+    timestamp: Optional[datetime] = None
 
 
 class ExternalEventCorrelSchema(LHBaseModel):
