@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from argparse import _SubParsersAction, ArgumentParser, Namespace
 import json
 from typing import Any, Generic, Mapping, TypeVar
@@ -19,7 +18,6 @@ T = TypeVar('T')
 
 
 class GettableResource(Generic[T]):
-    @abstractmethod
     def print_resource(self, response: LHRPCResponseSchema[T]):
         print(f"Resource Id: \t\t{response.object_id}")
         print(f"Response Status: \t{response.status}")

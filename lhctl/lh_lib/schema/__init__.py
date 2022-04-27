@@ -1,10 +1,12 @@
 from lh_lib.schema.wf_run_schema import WFRunSchema
-from lh_lib.schema.wf_spec_schema import WFSpecSchema
+from lh_lib.schema.wf_spec_schema import ExternalEventDefSchema, TaskDefSchema, WFSpecSchema
 
 
 RESOURCE_TYPES = {
     "WFRun": WFRunSchema,
     "WFSpec": WFSpecSchema,
+    "TaskDef": TaskDefSchema,
+    "ExternalEventDef": ExternalEventDefSchema,
 }
 
 RESOURCE_TYPES_INV = {

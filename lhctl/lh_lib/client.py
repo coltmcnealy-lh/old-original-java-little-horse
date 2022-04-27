@@ -5,7 +5,7 @@ from typing import List, Optional, TypeVar
 
 import requests
 
-from lh_lib.schema.wf_spec_schema import ExternalEventDefSchema, TaskDefSchema
+from lh_lib.schema.wf_spec_schema import ExternalEventDefSchema, LHDeployStatus, TaskDefSchema
 from lh_sdk.compile import SpecsResult
 from lh_sdk.utils import LHBaseModel
 from lh_lib.config import DEFAULT_API_URL
@@ -82,6 +82,24 @@ class LHClient:
             return self.get_resource_by_id(resource_type, new_id)
 
         return first_try  # an empty one ):
+
+    def delete_resource_by_id(
+        self,
+        resource_type: type[T],
+        resource_id: str,
+    ) -> LHRPCResponseSchema[T]:
+        resource_type_name = RESOURCE_TYPES_INV[resource_type]
+        url = f'{self.url}/{resource_type_name}/{resource_id}'
+
+        response = requests.delete(url)
+        response.raise_for_status()
+
+        out = LHRPCResponseSchema(**response.json())
+        if out.result is not None:
+            t_constructor = globals()[resource_type.__name__]
+            out.result = t_constructor(**out.result)
+
+        return out
 
     def search_for_alias(
         self,
