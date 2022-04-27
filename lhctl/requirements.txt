@@ -8,3 +8,4 @@ pylint
 psycopg2
 pyhumps
 requests
+confluent-kafka

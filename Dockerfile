@@ -27,6 +27,7 @@ RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -
 
 
 # Install the python dependencies
+RUN apt-get install -y librdkafka-dev
 COPY lhctl/requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
 

@@ -3,8 +3,8 @@
 - [LittleHorse Runtime](#littlehorse-runtime)
   - [Development](#development)
     - [Dependencies](#dependencies)
-    - [Building LittleHorse](#building-littlehorse)
-      - [Temporary CLI Dependencies](#temporary-cli-dependencies)
+    - [Building LittleHorse Java Code](#building-littlehorse-java-code)
+    - [Installing `lhctl`](#installing-lhctl)
   - [Understanding the Code](#understanding-the-code)
     - [Repository Structure](#repository-structure)
     - [Where the Logic Is](#where-the-logic-is)
@@ -14,7 +14,6 @@
     - [Install in Docker Compose](#install-in-docker-compose)
     - [Run a Workflow](#run-a-workflow)
     - [Cleanup](#cleanup)
-      - [Aside: How the Tasks Work](#aside-how-the-tasks-work)
 
 This repository contains code for the LittleHorse Runtime.
 
@@ -31,20 +30,43 @@ The following software is needed to develop LittleHorse:
 * `anaconda3`
 * Optional: `kubectl` version 16 or later.
 * Optional: `kind` version `v0.11.1` or later.
+* Optional, Not Recommended: `pip`
 
-### Building LittleHorse
+### Building LittleHorse Java Code
 Running the script `./build.sh` should build LittleHorse, creating an all-in-one docker image tagged `little-horse-api:latest`.
 
 To simply build the Java binary (but not the docker image), run `gradle build` in the root of the repository. This will allow you to run an arbitrary class using the command `java -cp "./app/bin/main:./app/build/libs/app-all.jar" little.horse.SomeClass` from the root of the repository.
 
-#### Temporary CLI Dependencies
-Currently, LittleHorse has a temporary stand-in CLI implemented in Python. We plan to build a more robust version of it (most likely in Java); however, for now you need to install python (I recommend through [anaconda](https://docs.anaconda.com/anaconda/install/index.html)).
+### Installing `lhctl`
+LittleHorse comes with the `lhctl` python package, which provides an SDK/Interpreter for developing workflows and a CLI for managing and running workflows. In order to install `lhctl`, you must install python (I recommend doing so through [anaconda](https://docs.anaconda.com/anaconda/install/index.html)).
 
-You can create your conda environment by navigating to the root of the repo, then running:
+In order to install `lhctl`, you must do three things:
+1. Create and activate a `conda` environment with the necessary dependencies.
+2. Add `/path/to/little-horse/lhctl` to your `PYTHONPATH`.
+3. Alias `lhctl` to `python -m lh_cli`.
+
+To create the conda environment, I suggest just using the `environment.dev.yml` file rather than wrestling with `pip` and all of your system dependencies:
+
 ```
--> conda env update -f environment.yml
-...
--> conda activate little-horse
+conda env update -f environment.dev.yml
+conda activate little-horse
+```
+
+To add `lhctl` to your `PYTHONPATH`, do the following (substitute out `/path/to`):
+```
+export PYTHONPATH=$PYTHONPATH:/path/to/little-horse/lhctl/
+```
+
+To "install" `lhctl`, do the following:
+```
+alias lhctl='python -m lh_cli'
+```
+
+*Optional: I recommend adding the following to your `.bashrc` or `.bash_profile`:*
+```
+export PYTHONPATH=$PYTHONPATH:/path/to/little-horse/lhctl # Remember to sub /path/to
+conda activate little-horse
+alias lhctl='python -m lh_cli'
 ```
 
 ## Understanding the Code
@@ -116,100 +138,106 @@ There is one container for the core API server, a kafka broker, and zookeeper (u
 
 ### Run a Workflow
 
-Let's run the `demo` workflow. The `demo` workflow is quite simple. It consists of three Node's:
+Let's run the `basic_wf` workflow. The `basic_wf` workflow is quite simple. It consists of three Node's:
 
 1. The `ask_for_name` Node executes the `whats-your-name` task.
 2. The `wait_for_name` Node waits for the `my-name` External Event to come in, and updates the `person_name` variable to be the value provided in the External Event.
 3. The `greet` Node executes the `hell-there` Task, providing `person_name` as an input variable.
 
-Before we can run it, we gotta deploy the workflow (Make sure you've activated the `little-horse` conda environment):
+Look at the code in `examples/workflows/basic_wf.py`. It should be pretty self-explanatory given all the comments ;)
+
+The `my_workflow()` function in `basic_wf.py` defines the `WFSpec`. The other functions become `TaskDef`'s (both `WFSpec` and `TaskDef` are JSON in their true form). To see the raw JSON Spec output, navigate to the `examples` directory and then run the following:
 
 ```
--> python examples/apply.py examples/specs/demo/*
-Successfully created TaskDef hello-there
-Successfully created ExternalEventDef my-name
-Successfully created TaskDef whats-your-name
-Successfully created WFSpec 3aa42d2038442e4297
+lhctl compile workflows.basic_wf my_workflow
+```
+*NOTE: try piping the above command to `| jq .` to format it, or paste it to an online json pretty printer.*
+
+You can see that there are `TaskDef`, `WFSpec`, `ExternalEventDef`, and `Dockerfile` entries. The `Dockerfile`'s build images that run the `TaskDef`'s (it's a mild but pretty cool hack in `lhctl`).
+
+Now let's build and deploy the workflow:
+```
+lhctl deploy --wf-func workflows.basic_wf.my_workflow
 ```
 
-You should see the following via `docker ps`:
+This will build the docker task workers, deploy the `TaskDef`'s and `ExternalEventDef`'s for the workflow, and finally deploy the `WFSpec`.
+
+You should see something like the following via `docker ps`:
 ```
 ->docker ps
 CONTAINER ID   IMAGE                             COMMAND                  CREATED          STATUS          PORTS     NAMES
-5cf78303fc9e   little-horse-api:latest           "java -cp /littleHor…"   3 seconds ago    Up 2 seconds              demo-3aa42d20
-242b3fbc7e5f   little-horse-api:latest           "java -cp /littleHor…"   3 seconds ago    Up 2 seconds              lh-task-whats-your-name
-6bc65e081168   little-horse-api:latest           "java -cp /littleHor…"   4 seconds ago    Up 3 seconds              lh-task-hello-there
-6b6cdc451942   little-horse-api:latest           "java -cp /littleHor…"   58 seconds ago   Up 56 seconds             little-horse-api
-70376d2e206e   confluentinc/cp-kafka:6.2.0       "/etc/confluent/dock…"   58 seconds ago   Up 57 seconds             broker
-80019d5e14b4   confluentinc/cp-zookeeper:6.2.0   "/etc/confluent/dock…"   58 seconds ago   Up 57 seconds             zookeeper
+126232f0153b   little-horse-api:latest           "java -cp /littleHor…"   28 seconds ago   Up 28 seconds             my-workflow-9f22faaa
+7ffff8f705fb   lh-task-greet:latest              "java -cp /littleHor…"   29 seconds ago   Up 29 seconds             lh-task-greet
+66d685caa40e   lh-task-ask_for_name:latest       "java -cp /littleHor…"   30 seconds ago   Up 29 seconds             lh-task-ask_for_name
+e359c918ccd1   little-horse-api:latest           "java -cp /littleHor…"   2 hours ago      Up 2 hours                little-horse-api
+9aef4923f2d0   confluentinc/cp-kafka:6.2.0       "/etc/confluent/dock…"   2 hours ago      Up 2 hours                broker
+ee0c8816dfea   confluentinc/cp-zookeeper:6.2.0   "/etc/confluent/dock…"   2 hours ago      Up 2 hours                zookeeper
 
 ```
-The `demo-3aa42d20` is the Workflow Scheduler; the `lh-task-whats-your-name` is the Task Worker for the `whats-your-name` task; and the `lh-task-hello-there` is the Task Worker for the `hello-there` task.
+
+The `my-workflow-9f22faaa` is the Workflow Scheduler; the `lh-task-ask_for_name` is the Task Worker for the `ask_for_name` task function; and the `lh-task-greet` is the Task Worker for the `greet` task function.
 
 
 To run the workflow, do the following:
 ```
--> python examples/run_wf.py demo
-9cdbadb4-6c86-454e-80c9-932e3729b3ff
+-> lhctl run my_workflow
+{"message": null, "status": "OK", "object_id": "e58811dd-38bb-4229-a83d-a9607239423c", "result": null}
 
 ```
 The long guid thing is the ID of the Workflow Run you've just created. You can check its status via:
 
 ```
--> python examples/wfrun_status.py 9cdbadb4-6c86-454e-80c9-932e3729b3ff
- WFRun Status:RUNNING
+-> lhctl get WFRun e58811dd-38bb-4229-a83d-a9607239423c
+WFRun Status:RUNNING
  Threads:
 --->>
 	 Id: 0
 	 Status: RUNNING
 	 Tasks:
-		 ask_for_name: What's your name?
-	 Waiting on node wait_for_name
+		 0-ask_for_name: Hey what's your name?
+	 Waiting on node 1-wait-event-my-name
 	 Variables:
-		 my_name: null
+		 my_name_var: null
+```
+The WFRun is stuck waiting on the node `wait-event-my-name`, which means it's waiting for an External Event. Perfect! That's what's supposed to happen. Let's send an External Event to get things moving again:
 
 ```
-The WFRun is stuck waiting on the node `wait_for_name`, which means it's waiting for an External Event. Perfect! That's what's supposed to happen. Let's send an External Event to get things moving again:
-
-```
--> python examples/send_event.py 9cdbadb4-6c86-454e-80c9-932e3729b3ff my-name Obi-Wan
-{"message":null,"status":null,"objectId":null,"result":null}
-
+->lhctl send-event e58811dd-38bb-4229-a83d-a9607239423c my-name Obi-Wan
+Successfully sent ExternalEvent with ExternalEventDefId my-name.
 ```
 
 And let's look at the workflow status to make sure it's completed:
 
 ```
--> python examples/wfrun_status.py 9cdbadb4-6c86-454e-80c9-932e3729b3ff
+-> lhctl get WFRun e58811dd-38bb-4229-a83d-a9607239423c
  WFRun Status:COMPLETED
  Threads:
 --->>
 	 Id: 0
 	 Status: COMPLETED
 	 Tasks:
-		 ask_for_name: What's your name?
-		 wait_for_name: Obi-Wan
-		 greet: Hello there, Obi-Wan!
+		 0-ask_for_name: Hey what's your name?
+		 1-wait-event-my-name: Obi-Wan
+		 2-greet: Hello there, name!
 	 Variables:
-		 my_name: "Obi-Wan"
+		 my_name_var: "Obi-Wan"
 
 ```
 You can see that the External Event was saved to the `my_name` variable, and the Workflow Run has completed. Great!!
 
+You can search for workflows by their variables. For example:
+```
+->lhctl search WFRun my_name_var foobar
+[]
+
+->lhctl search WFRun my_name_var Obi-Wan
+["e58811dd-38bb-4229-a83d-a9607239423c"]
+
+```
+
 ### Cleanup
 
-To clean up the docker containers created via the `python examples/apply.py examples/specs/demo/*` command above, you can:
-
-```
--> python examples/delete.py examples/specs/demo/*
-```
-
-To clean up the LittleHorse Core API and Kafka containers, you can:
+To clean up the LittleHorse Core API and Kafka containers and delete everything in the workflow you just ran, you can:
 ```
 -> ./docker/cleanup.sh
 ```
-
-#### Aside: How the Tasks Work
-Look at the `*_task.json` files in `examples/specs/demo/` to see how the `TaskDef`'s are formed. Essentially, they use the `BashExecutor` class as the executor for the `DockerTaskWorker`, and you can see the bash command in the doubly-encoded Json string if you look close enough.
-
-Next, peek at the `Dockerfile` in the root of the repo. There you can see that for debugging we copy all of the `examples/tasks` into the `little-horse-api` docker image so that we can run them with the `BashExecutor`. This is going to be removed by the time we have our production release, but for now, it is convenient to be able to easily put a python file in `/examples/tasks` and use it for developing workflows.
