@@ -1,9 +1,0 @@
-{
-  "name": "random",
-  "deployMetadata": "{\"dockerImage\": \"little-horse-api:latest\", \"metadata\": \"{\\\"bashCommand\\\": [\\\"python3\\\", \\\"/starwarstasks/random_int.py\\\"]}\", \"secondaryValidatorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashValidator\", \"taskExecutorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor\"}",
-  "requiredVars": {
-    "person_name": {
-      "type": "INT"
-    }
-  }
-}

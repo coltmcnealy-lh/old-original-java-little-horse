@@ -1,4 +1,0 @@
-{
-  "name": "walk_into_room",
-  "deployMetadata": "{\"dockerImage\": \"little-horse-api:latest\", \"metadata\": \"{\\\"bashCommand\\\": [\\\"python3\\\", \\\"/starwarstasks/walk_into_room.py\\\"]}\", \"secondaryValidatorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashValidator\", \"taskExecutorClassName\": \"little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor\"}"
-}

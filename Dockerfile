@@ -40,9 +40,6 @@ COPY lhctl /lhctl
 ENV PYTHONPATH /lhctl/
 
 
-# Bring some dummy tasks (used for demo purposes only)
-COPY examples/tasks /starwarstasks
-
 # This command just prints a message and exits. In other words, it should
 # be overriden by whatever is in charge of running the app.
 CMD ["java", "-cp", "/littleHorse.jar", "little.horse.App"]
