@@ -35,11 +35,15 @@ def iter_nodes(wf: WFSpecSchema) -> Iterable[NodeSchema]:
             yield node
 
 
-def get_task_defs_for_wf(spec: WFSpecSchema) -> Set[str]:
+def get_task_defs_to_build(wf: Workflow) -> Set[str]:
+    spec = wf.spec
     out = set({})
     for node in iter_nodes(spec):
         if node.node_type != NodeType.TASK:
             continue
+        if wf.should_skip_build(node):
+            continue
+
         out.add(node.task_def_name)
     return out
 
@@ -146,7 +150,7 @@ CMD [ \
 
 
 def get_specs(wf: Workflow):
-    task_def_names = get_task_defs_for_wf(wf.spec)
+    task_def_names = get_task_defs_to_build(wf)
     events = get_external_events_for_wf(wf.spec)
 
     return SpecsResult(**{

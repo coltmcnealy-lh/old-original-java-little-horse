@@ -6,6 +6,7 @@ from typing import (
     Callable,
     NoReturn,
     Optional,
+    Set,
     Union,
 )
 from lh_sdk.utils import get_lh_var_type, get_task_def_name
@@ -75,14 +76,52 @@ class WFRunVariable:
         )
 
 class ThreadSpecBuilder:
-    def __init__(self, name: str, wf_spec: WFSpecSchema):
+    def __init__(self, name: str, wf_spec: WFSpecSchema, wf: Workflow):
         self._spec: ThreadSpecSchema = ThreadSpecSchema(name=name)
         self._spec.nodes = {}
         self._spec.edges = []
         self._last_node_name: Optional[str] = None
         self._wf_spec = wf_spec
+        self._wf = wf
 
-    def execute(self, func: Callable[..., Any], *splat_args):
+    def execute(self, task: Union[str, Callable[..., Any]], *splat_args, **kwargs):
+        if isinstance(task, Callable):
+            self.execute_task_func(task, *splat_args)
+        else:
+            assert isinstance(task, str)
+            self.execute_task_def_name(task, **kwargs)
+
+    def execute_task_def_name(self, td_name, **kwargs):
+        # TODO: Add ability to validate the thing by making a request to look up
+        # the actual task def and seeing if it is valid
+        node = NodeSchema(task_def_name=td_name)
+        node.variables = {}
+        for param_name in kwargs:
+            arg = kwargs[param_name]
+            if isinstance(arg, VariableAssignment):
+                # TODO: Validate that type is correct.
+                node.variables[param_name] = arg.get_schema()
+                continue
+
+            elif isinstance(arg, WFRunVariable):
+                var_assign = VariableAssignmentSchema()
+                var_assign.wf_run_variable_name = arg.name
+                node.variables[param_name] = var_assign
+                continue
+
+            else:
+                # If we got here, then we want a literal value to be assigned.
+                var_assign = VariableAssignmentSchema()
+                var_assign.literal_value = arg
+                node.variables[param_name] = var_assign
+
+        node_name = self._add_node(node)
+        # TODO: Add OutputType to TaskDef and lookup via api to validate it here.
+        
+        self._wf.mark_task_def_for_skip_build(node)
+        return NodeOutput(node_name)
+
+    def execute_task_func(self, func: Callable[..., Any], *splat_args):
         sig: Signature = signature(func)
 
         node = NodeSchema(task_def_name=get_task_def_name(func))
@@ -251,6 +290,7 @@ class Workflow:
         entrypoint_function: Callable[[ThreadSpecBuilder],None],
         module_dict: dict
     ):
+        self._task_def_names_to_skip: Set[str] = set({})
         self._entrypoint_func = entrypoint_function
         self._name = self._entrypoint_func.__name__
 
@@ -258,13 +298,17 @@ class Workflow:
             entrypoint_thread_name="entrypoint",
             name=self._name
         )
-        self._entrypoint_builder = ThreadSpecBuilder("entrypoint", self._spec)
-        self._entrypoint_func(self._entrypoint_builder)
+        self._module_dict = module_dict
 
-        self._spec.thread_specs["entrypoint"] = self._entrypoint_builder.spec
         self._spec.name = self._name
 
-        self._module_dict = module_dict
+        self._entrypoint_builder = ThreadSpecBuilder(
+            "entrypoint",
+            self._spec,
+            self,
+        )
+        self._spec.thread_specs["entrypoint"] = self._entrypoint_builder.spec
+        self._entrypoint_func(self._entrypoint_builder)
 
     @property
     def module_dict(self) -> dict:
@@ -281,3 +325,10 @@ class Workflow:
     @property
     def payload_str(self) -> str:
         return self.spec.json(by_alias=True)
+
+    def mark_task_def_for_skip_build(self, node: NodeSchema):
+        assert node.task_def_name is not None
+        self._task_def_names_to_skip.add(node.task_def_name)
+
+    def should_skip_build(self, node: NodeSchema) -> bool:
+        return node.task_def_name in self._task_def_names_to_skip
