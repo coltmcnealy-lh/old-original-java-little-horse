@@ -9,7 +9,7 @@ from inspect import signature, Signature
 import json
 import os
 import requests
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Tuple
 
 from pydantic import BaseModel as PyThingBaseModel
 from humps import camelize
@@ -126,4 +126,8 @@ def cast_all_args(func, *splat_args) -> dict:
 
 
 def get_task_def_name(func: Callable):
-    return func.__name__
+    return f"{func.__module__.replace('.', '-')}-{func.__name__}"
+
+
+def parse_task_def_name(td_name: str) -> Tuple[str, str]:
+    return '.'.join(td_name.split('-')[:-1]), td_name.split('-')[-1]

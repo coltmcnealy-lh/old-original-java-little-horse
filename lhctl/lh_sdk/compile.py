@@ -8,7 +8,7 @@ from humps import camelize
 from pydantic import Field
 
 from lh_sdk.thread_spec_builder import Workflow
-from lh_sdk.utils import LHBaseModel, add_resource, get_lh_var_type
+from lh_sdk.utils import LHBaseModel, add_resource, get_lh_var_type, get_task_def_name, parse_task_def_name
 from lh_lib.schema.wf_spec_schema import (
     ExternalEventDefSchema,
     TaskDefSchema,
@@ -64,7 +64,8 @@ def create_external_event_def(name: str) -> dict:
 
 # TODO: This should return a BaseModel, not a raw dict
 def create_task_def(task_def_name: str, wf: Workflow) -> dict:
-    task_func = wf.module_dict[task_def_name]
+    _, func_name = parse_task_def_name(task_def_name)
+    task_func = wf.module_dict[func_name]
 
     sig: Signature = signature(task_func)
 
@@ -81,8 +82,7 @@ def create_task_def(task_def_name: str, wf: Workflow) -> dict:
 
     bash_command = [
         "python", "-m", "executor",
-        task_func.__module__,
-        task_func.__name__,
+        get_task_def_name(task_func)
     ]
 
     for varname in required_vars.keys():
@@ -126,10 +126,13 @@ class SpecsResult(LHBaseModel):
 
 
 def get_dockerfile(task_def_name: str) -> str:
-    os.system("touch pre-install.sh && chmod +x pre-install.sh")
-    os.system("touch pre-launch.sh && chmod +x pre-launch.sh")
-    os.system("touch requirements.txt")
-    return f"""
+    os.system(
+        "test ! -e pre-install.sh && >pre-install.sh && chmod +x pre-install.sh"
+    )
+    os.system("test ! -e pre-launch.sh && >pre-launch.sh chmod +x pre-launch.sh")
+    os.system("test ! -e requirements.txt && >requirements.txt")
+
+    return """
 FROM little-horse-api:latest
 
 COPY pre-install.sh /pre-install.sh
