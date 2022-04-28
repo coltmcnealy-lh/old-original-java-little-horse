@@ -4,7 +4,6 @@ import os
 from typing import Callable
 import uuid
 
-from lh_sdk.utils import get_lh_var_type
 from lh_lib.schema.wf_spec_schema import (
     TaskDefSchema,
 )

@@ -7,10 +7,10 @@ from statistics import variance
 from typing import Callable
 
 from sqlalchemy import values
-from test_harness.db_schema import TaskRun
+from lh_test_harness.db_schema import TaskRun
 
 from lh_sdk.utils import cast_all_args, parse_task_def_name
-from test_harness.test_utils import get_session
+from lh_test_harness.test_utils import get_session
 
 # # Make all the task implementation functions available for the voodoo we do.
 # from lh_harness.task_implementations import *
