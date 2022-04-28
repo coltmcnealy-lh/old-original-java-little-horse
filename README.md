@@ -106,7 +106,7 @@ The repository has the following components:
     * `WorkflowDeployer.java` is the interface for deploying a workflow.
         * `DockerWorkflowDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
     * `TaskDeployer.java` is the interface for deploying tasks.
-        * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
+        * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `DockerTaskWorker.java` class, see the K8s entrypoint and the Docker command.
 
 ### Entrypoint Classes
 * `LittleHorseAPI.java` is run for the core API.
