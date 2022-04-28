@@ -64,7 +64,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         ).withEnv(envList).withName(
             "lh-task-" + spec.getId()
         ).withCmd(
-            "java", "-cp", "/littleHorse.jar",
+            "java", "-cp", "/javaInclude:/littleHorse.jar",
             DockerTaskWorker.class.getCanonicalName()
         ).withLabels(labels);
 

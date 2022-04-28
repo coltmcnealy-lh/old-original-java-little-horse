@@ -1,0 +1,13 @@
+{
+  "TaskDef": [
+    {
+      "requiredVars": {
+        "myInputVar": {
+          "type": "STRING"
+        }
+      },
+      "name": "my-java-task",
+      "deployMetadata": "{\"taskExecutorClassName\": \"MyTask\", \"dockerImage\": \"lh-myjavatask:latest\"}"
+    }
+  ]
+}

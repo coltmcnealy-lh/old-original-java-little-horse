@@ -69,7 +69,7 @@ public class K8sTaskDeployer implements TaskDeployer {
         container.image = meta.dockerImage;
         container.imagePullPolicy = "IfNotPresent";
         container.command = Arrays.asList(
-            "java", "-cp", "/littleHorse.jar",
+            "java", "-cp", "/javaInclude:/littleHorse.jar",
             DockerTaskWorker.class.getCanonicalName()
         );
 

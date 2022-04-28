@@ -1,0 +1,3 @@
+FROM little-horse-api:latest
+
+COPY MyTask.class /javaInclude
