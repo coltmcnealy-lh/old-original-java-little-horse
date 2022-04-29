@@ -40,6 +40,10 @@ def generate_guid() -> str:
     return uuid.uuid4().hex
 
 
+def get_test_module_name(test_name: str) -> str:
+    return f"lh_test_harness.tests.{test_name}"
+
+
 def get_root_dir():
     this_file = getsourcefile(lambda: 0)
     assert this_file is not None

@@ -19,3 +19,8 @@ cloud-test/alembic/versions/*.py
 
 # Python cache stuff
 *__pycache__*
+
+# Don't pollute stuff with `lhctl compile`.
+*requirements.txt*
+*pre-install.sh*
+*pre-launch.sh*

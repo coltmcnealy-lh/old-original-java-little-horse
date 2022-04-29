@@ -19,7 +19,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from lh_harness.db_schema import BaseOrm
+from lh_test_harness.db_schema import BaseOrm
 target_metadata = BaseOrm.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -59,7 +59,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    from lh_harness.utils import POSTGRES_URI
+    from lh_test_harness.test_utils import POSTGRES_URI
     from sqlalchemy import create_engine
     engine = create_engine(POSTGRES_URI)
 

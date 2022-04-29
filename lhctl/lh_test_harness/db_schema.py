@@ -85,6 +85,13 @@ class WFRun(BaseOrm):
         Boolean, nullable=False, default=False
     )  # type: ignore
 
+    check_func_name: str = Column(
+        String, nullable=False
+    ) # type: ignore
+    check_func_module: str = Column(
+        String, nullable=False,
+    ) # type: ignore
+
     num_mis_reported: int = Column(Integer, nullable=True)  # type: ignore
     num_orphans: int = Column(Integer, nullable=True)  # type: ignore
 

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 1e1a050fd587
+Revision ID: 67a7dddd3c01
 Revises: 
-Create Date: 2022-04-27 17:18:45.782805
+Create Date: 2022-04-29 10:26:54.269022
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '1e1a050fd587'
+revision = '67a7dddd3c01'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,8 +28,10 @@ def upgrade():
     sa.Column('wf_run_id', sa.String(), nullable=False),
     sa.Column('message', sa.String(), nullable=True),
     sa.Column('status', sa.Enum('LAUNCHING', 'LAUNCHED', 'FAILED_LAUNCH', 'SUCCEEDED', 'FALIED_ACCEPTABLE', 'FAILED_UNACCEPTABLE', name='teststatus'), nullable=False),
-    sa.Column('harness_worker_partition', sa.Integer(), nullable=False),
+    sa.Column('harness_worker_partition', sa.Integer(), nullable=True),
     sa.Column('already_graded', sa.Boolean(), nullable=False),
+    sa.Column('check_func_name', sa.String(), nullable=False),
+    sa.Column('check_func_module', sa.String(), nullable=False),
     sa.Column('num_mis_reported', sa.Integer(), nullable=True),
     sa.Column('num_orphans', sa.Integer(), nullable=True),
     sa.PrimaryKeyConstraint('wf_run_id')

@@ -5,7 +5,7 @@ cd ${SCRIPT_DIR}
 
 set -e
 
-../../../docker/setup.sh
+../../../../docker/setup.sh
 
 docker-compose -p docker-test-harness -f docker-compose.pg.yml up -d
 

@@ -4,6 +4,7 @@ This class defines a client that can be used in the test harness functions.
 
 from contextlib import closing
 import logging
+from typing import Callable
 from lh_lib.client import LHClient
 from lh_test_harness.test_utils import generate_guid, get_session
 from lh_test_harness.db_schema import (
@@ -16,7 +17,7 @@ class TestClient:
     def __init__(self, client: LHClient):
         self._client = client
 
-    def run_wf(self, wf_spec_id: str, **kwargs):
+    def run_wf(self, wf_spec_id: str, check_func: Callable, **kwargs):
         wf_run_id = generate_guid()
 
         wf_run = WFRun(
@@ -24,6 +25,8 @@ class TestClient:
             wf_spec_id=wf_spec_id,
             variables=kwargs,
             status=TestStatus.LAUNCHING,
+            check_func_name=check_func.__name__,
+            check_func_module=check_func.__module__,
         )
         with closing(get_session()) as ses:
             ses.add(wf_run)
