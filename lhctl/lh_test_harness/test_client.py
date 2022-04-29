@@ -4,8 +4,11 @@ This class defines a client that can be used in the test harness functions.
 
 from contextlib import closing
 import logging
-from typing import Callable
+from typing import Callable, Iterable, Tuple
+
+from sqlalchemy.orm import Session
 from lh_lib.client import LHClient
+from lh_lib.schema.wf_run_schema import WFRunSchema
 from lh_test_harness.test_utils import generate_guid, get_session
 from lh_test_harness.db_schema import (
     TestStatus,
@@ -51,3 +54,28 @@ class TestClient:
             ses.merge(wf_run)
             ses.commit()
         return wf_run_id
+
+    def iter_test_runs(
+        self, test_name: str, ses: Session
+    ) -> Iterable[Tuple[WFRun, WFRunSchema]]:
+
+        result = ses.query(WFRun).filter(
+            WFRun.status == TestStatus.LAUNCHED
+        ).filter(
+            WFRun.wf_spec_id == test_name
+        ).all()
+
+        for row in result:
+            wf_run_schema = self._client.get_resource_by_id(
+                WFRunSchema,
+                row.wf_run_id,
+            ).result
+
+            if wf_run_schema is None:
+                row.status = TestStatus.FAILED_UNACCEPTABLE
+                row.message = "WFRun was not found in API!"
+                ses.merge(row)
+                ses.flush()
+                continue
+
+            yield row, wf_run_schema
