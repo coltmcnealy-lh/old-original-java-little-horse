@@ -186,9 +186,14 @@ class LHClient:
 
     def add_task_def(self, td: TaskDefSchema):
         url = f'{self.url}/TaskDef'
-        requests.post(
+        response = requests.post(
             url, json=json.loads(td.json(by_alias=True))
-        ).raise_for_status()
+        )
+        try:
+            response.raise_for_status()
+        except Exception as exn:
+            print(response.content.decode())
+            raise exn
 
     def send_event_by_name_or_id(
         self,

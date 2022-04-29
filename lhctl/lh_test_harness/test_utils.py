@@ -106,10 +106,10 @@ def are_equal(var1, var2):
     return True
 
 
-def modify_task_def(task_def: TaskDefSchema):
+def inject_test_to_taskdef(task_def: TaskDefSchema):
     old_deploy_meta = json.loads(task_def.deploy_metadata or '{}')
     old_deploy_meta_meta = json.loads(old_deploy_meta['metadata'])
-    old_bash_command = old_deploy_meta_meta['bash_command']
+    old_bash_command = old_deploy_meta_meta['bashCommand']
 
     assert old_bash_command[0] == 'python'
     assert old_bash_command[1] == '-m'
@@ -119,14 +119,14 @@ def modify_task_def(task_def: TaskDefSchema):
     new_prefix = [
         "python",
         "-m",
-        "test_harness.test_executor",
+        "lh_test_harness.test_executor",
         "---THREAD_RUN_ID---",
         "---TASK_RUN_NUMBER---",
         "---WF_RUN_ID---",
         task_def.name,
     ]
 
-    old_deploy_meta_meta['bash_command'] = new_prefix + old_bash_command[4:]
+    old_deploy_meta_meta['bashCommand'] = new_prefix + old_bash_command[4:]
 
     old_deploy_meta['metadata'] = json.dumps(old_deploy_meta_meta)
     task_def.deploy_metadata = json.dumps(old_deploy_meta)

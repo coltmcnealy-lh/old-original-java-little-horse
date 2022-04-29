@@ -1,0 +1,63 @@
+'''
+TODO: This probably shouldn't be a part of the production `lhctl` binary.
+'''
+
+from argparse import ArgumentParser, _SubParsersAction, Namespace
+import json
+import os
+import sys
+
+from lh_lib.client import LHClient
+from lh_test_harness.harness.deploy_test import deploy_test
+from lh_test_harness.harness.launch_test import launch_test
+from lh_test_harness.test_client import TestClient
+
+
+class TESTHandler:
+    def __init__(self):
+        pass
+
+    def init_subparsers(self, base_subparsers: _SubParsersAction):
+        parser: ArgumentParser = base_subparsers.add_parser(
+            "test",
+            help="[Prototype] Run LittleHorse integration tests."
+        )
+        parser.add_argument(
+            "--deploy",
+            action="store_true",
+            help="Whether to deploy the specified test workflows."
+        )
+        parser.add_argument(
+            "--requests", "-r",
+            help="Number of requests to run for each test case.",
+            type=int,
+            default=1,
+        )
+        parser.add_argument(
+            "cases", nargs='?', default=[],
+            help="Names of test cases to run. If left blank, default to all cases.",
+        )
+        parser.set_defaults(func=self.handle_test)
+
+    def handle_test(self, ns: Namespace, client: LHClient):
+        if ns.cases is None or len(ns.cases) == 0:
+            cases = [
+                file[:-3] for file in os.listdir(
+                    '/' + os.path.join(
+                        *(__file__.split('/')[:-1]),
+                        "../../lh_test_harness/tests/"
+                    )
+                ) if '__' not in file and file.endswith('.py')
+            ]
+        else:
+            cases = ns.cases
+
+        test_client = TestClient(client)
+
+        if ns.deploy:
+            for case in cases:
+                deploy_test(client, case)
+
+        for _ in range(ns.requests):
+            for case in cases:
+                launch_test(case, test_client)
