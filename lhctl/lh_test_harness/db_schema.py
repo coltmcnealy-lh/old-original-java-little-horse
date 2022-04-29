@@ -76,7 +76,9 @@ class WFRun(BaseOrm):
     status: TestStatus = Column(
         Enum(TestStatus), default=TestStatus.LAUNCHING, nullable=False
     )  # type: ignore
-    harness_worker_partition: int = Column(Integer, nullable=False) # type: ignore
+    harness_worker_partition: Optional[int] = Column(
+        Integer, nullable=True
+    ) # type: ignore
 
     task_runs: List[TaskRun] = relationship('TaskRun')
     already_graded: bool = Column(
