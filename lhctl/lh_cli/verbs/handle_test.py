@@ -6,6 +6,7 @@ from argparse import ArgumentParser, _SubParsersAction, Namespace
 import json
 import os
 import sys
+import time
 
 from lh_lib.client import LHClient
 from lh_test_harness.harness.deploy_test import deploy_test
@@ -61,6 +62,8 @@ class TESTHandler:
         for _ in range(ns.requests):
             for case in cases:
                 launch_test(case, test_client)
+
+        time.sleep(5)
 
         for case in cases:
             check_all_tests(case, test_client)
