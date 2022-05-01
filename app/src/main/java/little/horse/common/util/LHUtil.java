@@ -191,6 +191,14 @@ public class LHUtil {
 
     public static String stringify(Object thing) {
         if (thing == null) return "null";
+        if (thing instanceof Map) {
+            try {
+                return new ObjectMapper().writeValueAsString(thing);
+            } catch (Exception exn) {
+                exn.printStackTrace();
+                return null;
+            }
+        }
         return thing.toString();
     }
 

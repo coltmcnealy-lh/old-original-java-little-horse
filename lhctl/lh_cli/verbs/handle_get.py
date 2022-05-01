@@ -65,6 +65,10 @@ class GETWFRun(GettableResource[WFRunSchema]):
             if task.stderr is not None:
                 adjusted_stdout = str(adjusted_stdout) + ' ||| Stderr:' + task.stderr
 
+            if task.failure_message is not None:
+                adjusted_stdout = adjusted_stdout or ''
+                adjusted_stdout += "|||ERROR MESSAGE: " + task.failure_message
+
             printer.print(f"{task.node_name}: {adjusted_stdout}")
         printer.unindent()
 

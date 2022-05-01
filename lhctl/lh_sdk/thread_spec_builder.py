@@ -4,7 +4,7 @@ from inspect import signature, Signature
 from typing import (
     Any,
     Callable,
-    NoReturn,
+    Mapping,
     Optional,
     Set,
     Union,
@@ -26,20 +26,63 @@ from lh_lib.schema.wf_spec_schema import (
 
 
 ACCEPTABLE_TYPES = Union[str, list, dict, int, bool, float]
+TYPE_TO_ENUM: Mapping[type[ACCEPTABLE_TYPES], WFRunVariableTypeEnum]= {
+    str: WFRunVariableTypeEnum.STRING,
+    list: WFRunVariableTypeEnum.ARRAY,
+    dict: WFRunVariableTypeEnum.OBJECT,
+    bool: WFRunVariableTypeEnum.BOOLEAN,
+    float: WFRunVariableTypeEnum.DOUBLE,
+    int: WFRunVariableTypeEnum.INT,
+}
 
 
-class VariableAssignment:
-    def __init__(self):
-        pass
+class VariableJsonpath:
+    def __init__(
+        self,
+        schema: VariableAssignmentSchema,
+        node_name: str,
+    ):
+        self._node_name = node_name
+        self._schema = schema
 
-    def get_schema(self) -> VariableAssignmentSchema:
-        raise NotImplementedError()
+    @property
+    def schema(self) -> VariableAssignmentSchema:
+        return self._schema
+
+    @property
+    def node_name(self) -> str:
+        return self._node_name
+
+
+class NodeJsonpath:
+    def __init__(
+        self,
+        schema: VariableAssignmentSchema,
+        node_name: str,
+    ):
+        self._node_name = node_name
+        self._schema = schema
+
+    @property
+    def schema(self) -> VariableAssignmentSchema:
+        return self._schema
+
+    @property
+    def node_name(self) -> str:
+        return self._node_name
+
 
 
 class NodeOutput:
-    def __init__(self, node_name, output_type: Optional[Any] = None):
+    def __init__(
+        self,
+        node_name,
+        output_type: Optional[Any] = None,
+        jsonpath: Optional[str] = None,
+    ):
         self._node_name = node_name
         self._output_type = output_type
+        self._jsonpath = jsonpath
 
     @property
     def output_type(self) -> Any:
@@ -49,17 +92,33 @@ class NodeOutput:
     def node_name(self) -> str:
         return self._node_name
 
+    def jsonpath(self, path: str) -> NodeOutput:
+        if self._jsonpath is not None:
+            raise RuntimeError(
+                "Cannot double-up the jsonpath!"
+            )
+        return NodeOutput(
+            self.node_name,
+            output_type=self.output_type,
+            jsonpath=path,
+        )
+
+    def get_jsonpath(self) -> Optional[str]:
+        return self._jsonpath
+
 
 class WFRunVariable:
     def __init__(
         self,
         name: str,
         var_type: WFRunVariableTypeEnum,
-        thread: ThreadSpecBuilder
+        thread: ThreadSpecBuilder,
+        jsonpath: Optional[str] = None,
     ):
         self._name = name
         self._var_type = var_type
         self._thread = thread
+        self._jsonpath = jsonpath
 
     @property
     def var_type(self) -> WFRunVariableTypeEnum:
@@ -69,11 +128,77 @@ class WFRunVariable:
     def name(self) -> str:
         return self._name
 
-    def assign(self, target: Union[ACCEPTABLE_TYPES, VariableAssignment, NodeOutput]):
-        self._thread.assign_var(
-            self,
-            target,
+    def jsonpath(self, path: str) -> WFRunVariable:
+        return WFRunVariable(
+            self.name,
+            self.var_type,
+            self._thread,
+            path,
         )
+
+    def get_jsonpath(self) -> Optional[str]:
+        return self._jsonpath
+
+    def _create_mutation(
+        self,
+        op: VariableMutationOperation,
+        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
+    ) -> VariableMutationSchema:
+        out = VariableMutationSchema(
+            operation=op,
+        )
+
+        if isinstance(target, ACCEPTABLE_TYPES):
+            out.literal_value = target
+        elif isinstance(target, WFRunVariable):
+            out.source_variable = VariableAssignmentSchema(
+                wf_run_variable_name=target.name,
+                json_path=target.get_jsonpath(),
+            )
+        else:
+            assert isinstance(target, NodeOutput)
+            out.json_path = target.get_jsonpath()
+
+        return out
+
+    def _mutate(
+        self,
+        op: VariableMutationOperation,
+        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
+    ):
+        mutation = self._create_mutation(op, target)
+        self._thread.mutate(self.name, mutation)
+
+
+    def assign(
+        self,
+        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]
+    ):
+        self._mutate(VariableMutationOperation.ASSIGN, target)
+
+    def add(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.ADD, target)
+
+    def subtract(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.SUBTRACT, target)
+
+    def multiply(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.MULTIPLY, target)
+
+    def divide(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.DIVIDE, target)
+
+    def remove_if_present(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]
+    ):
+        self._mutate(VariableMutationOperation.REMOVE_IF_PRESENT, target)
+
+    def remove_idx(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.REMOVE_INDEX, target)
+
+    def remove_key(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.REMOVE_KEY, target)
+
 
 class ThreadSpecBuilder:
     def __init__(self, name: str, wf_spec: WFSpecSchema, wf: Workflow):
@@ -84,23 +209,28 @@ class ThreadSpecBuilder:
         self._wf_spec = wf_spec
         self._wf = wf
 
-    def execute(self, task: Union[str, Callable[..., Any]], *splat_args, **kwargs):
+    def execute(
+        self,
+        task: Union[str, Callable[..., Any]],
+        *splat_args,
+        **kwargs
+    ) -> NodeOutput:
         if isinstance(task, Callable):
-            self.execute_task_func(task, *splat_args)
+            return self.execute_task_func(task, *splat_args)
         else:
             assert isinstance(task, str)
-            self.execute_task_def_name(task, **kwargs)
+            return self.execute_task_def_name(task, **kwargs)
 
-    def execute_task_def_name(self, td_name, **kwargs):
+    def execute_task_def_name(self, td_name, **kwargs) -> NodeOutput:
         # TODO: Add ability to validate the thing by making a request to look up
         # the actual task def and seeing if it is valid
         node = NodeSchema(task_def_name=td_name)
         node.variables = {}
         for param_name in kwargs:
             arg = kwargs[param_name]
-            if isinstance(arg, VariableAssignment):
+            if isinstance(arg, VariableJsonpath):
                 # TODO: Validate that type is correct.
-                node.variables[param_name] = arg.get_schema()
+                node.variables[param_name] = arg.schema
                 continue
 
             elif isinstance(arg, WFRunVariable):
@@ -121,7 +251,7 @@ class ThreadSpecBuilder:
         self._wf.mark_task_def_for_skip_build(node)
         return NodeOutput(node_name)
 
-    def execute_task_func(self, func: Callable[..., Any], *splat_args):
+    def execute_task_func(self, func: Callable[..., Any], *splat_args) -> NodeOutput:
         sig: Signature = signature(func)
 
         node = NodeSchema(task_def_name=get_task_def_name(func))
@@ -134,9 +264,9 @@ class ThreadSpecBuilder:
             arg = args[i]
             i += 1
 
-            if isinstance(arg, VariableAssignment):
+            if isinstance(arg, VariableJsonpath):
                 # TODO: Validate that type is correct.
-                node.variables[param_name] = arg.get_schema()
+                node.variables[param_name] = arg.schema
                 continue
 
             elif isinstance(arg, WFRunVariable):
@@ -204,25 +334,21 @@ class ThreadSpecBuilder:
     def add_variable(
         self,
         name: str,
-        var_type: WFRunVariableTypeEnum,
+        var_type: Union[WFRunVariableTypeEnum, type[ACCEPTABLE_TYPES]],
         default_val: Optional[Any] = None
     ) -> WFRunVariable:
+
+        if not isinstance(var_type, WFRunVariableTypeEnum):
+            var_type = TYPE_TO_ENUM[var_type]
 
         var_def = WFRunVariableDefSchema(type=var_type, default_value=default_val)
         self._spec.variable_defs[name] = var_def
         return WFRunVariable(name, var_type, self)
 
-    def assign_var(
-        self,
-        var: WFRunVariable,
-        target: Union[ACCEPTABLE_TYPES, VariableAssignment, NodeOutput],
-    ):
-        if isinstance(target, VariableAssignment):
-            self._assign_var_var_assign(var, target)
-        elif isinstance(target, NodeOutput):
-            self._assign_var_node_output(var, target)
-        else:
-            self._assign_var_literal(var, target)
+    def mutate(self, var_name: str, mutation: VariableMutationSchema):
+        assert self._last_node_name is not None, "Execute task before mutating vars!"
+        node = self._spec.nodes[self._last_node_name]
+        node.variable_mutations[var_name] = mutation
 
     def wait_for_event(self, event_name: str) -> NodeOutput:
         node = NodeSchema(external_event_def_name=event_name)
@@ -235,49 +361,6 @@ class ThreadSpecBuilder:
         # TODO: Traverse a tree upwards to find variables for thread-scoping stuff
         # once we add that into the SDK.
         return self._spec.variable_defs[var_name]
-
-    def _assign_var_literal(
-        self,
-        var: WFRunVariable,
-        target: ACCEPTABLE_TYPES
-    ):
-        if self._last_node_name is None:
-            raise RuntimeError("Tried to assign var before executing stuff!")
-
-        node = self._spec.nodes[self._last_node_name]
-        mutation = VariableMutationSchema(operation=VariableMutationOperation.ASSIGN)
-
-        # Need to validate that we aren't breaking any type ruling here.
-        needed_type = self._get_def_for_var(var.name).type
-        if get_lh_var_type(target) != needed_type:
-            raise RuntimeError(
-                f"Tried to assign {var.name} to wrong type, needed {needed_type}!"
-            )
-
-        mutation.literal_value = target
-        node.variable_mutations[var.name] = mutation
-
-    def _assign_var_node_output(
-        self,
-        var: WFRunVariable,
-        target: NodeOutput,
-    ):
-        if self._last_node_name is None:
-            raise RuntimeError("Tried to assign var before executing stuff!")
-
-        if target.node_name != self._last_node_name:
-            raise RuntimeError("Tried to assign variable out of order.")
-
-        node = self._spec.nodes[self._last_node_name]
-        mutation = VariableMutationSchema(operation=VariableMutationOperation.ASSIGN)
-        node.variable_mutations[var.name] = mutation
-
-    def _assign_var_var_assign(
-        self,
-        var: WFRunVariable,
-        target: VariableAssignment
-    ):
-        raise NotImplementedError("Oops")
 
     @property
     def spec(self) -> ThreadSpecSchema:

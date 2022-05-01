@@ -3,6 +3,8 @@ import importlib
 from types import ModuleType
 from typing import Callable, Iterable, List, Optional, Tuple
 
+from sqlalchemy import func
+
 from lh_lib.schema.wf_run_schema import (
     LHExecutionStatusEnum,
     NodeTypeEnum,
@@ -146,3 +148,7 @@ def get_and_print_summary():
 
         for row in result.all():
             print(row[0], "---", row[1])
+
+        result = session.query(WFRun).filter(WFRun.message is not None).all()
+        for row in result:
+            print(row.message)

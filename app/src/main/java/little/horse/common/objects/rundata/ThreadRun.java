@@ -190,7 +190,8 @@ public class ThreadRun extends BaseSchema {
             if (result == null) {
                 throw new VarSubOrzDash(
                     null,
-                    "No variable named " + var.wfRunVariableName + " in context."
+                    "No variable named " + var.wfRunVariableName + " in context or " +
+                    var.wfRunVariableName + " was null at time of access."
                 );
             }
             dataToParse = result;
@@ -219,11 +220,12 @@ public class ThreadRun extends BaseSchema {
         }
 
         try {
-            return LHUtil.jsonPath(dataToParse.toString(), var.jsonPath);
+            return LHUtil.jsonPath(LHUtil.stringify(dataToParse), var.jsonPath);
         } catch(Exception exn) {
             throw new VarSubOrzDash(
                 exn,
-                "Specified jsonpath " + var.jsonPath + " failed to resolve on " + dataToParse
+                "Specified jsonpath " + var.jsonPath + " failed to resolve on "
+                + dataToParse + ":\n" + exn.getMessage()
             );
         }
     }

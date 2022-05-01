@@ -10,7 +10,11 @@ import time
 
 from lh_lib.client import LHClient
 from lh_test_harness.harness.deploy_test import deploy_test
-from lh_test_harness.harness.logic import check_all_tests, launch_test
+from lh_test_harness.harness.logic import (
+    check_all_tests,
+    get_and_print_summary,
+    launch_test,
+)
 from lh_test_harness.test_client import TestClient
 
 
@@ -59,11 +63,15 @@ class TESTHandler:
             for case in cases:
                 deploy_test(client, case)
 
+            time.sleep(5)
+
         for _ in range(ns.requests):
             for case in cases:
                 launch_test(case, test_client)
 
-        time.sleep(5)
+        time.sleep(2)
 
         for case in cases:
             check_all_tests(case, test_client)
+
+        get_and_print_summary()

@@ -78,6 +78,11 @@ def are_equal(var1, var2):
     if var2 is not None and var1 is None:
         return False
 
+    if (type(var1) == bool and type(var2) in [bool, int] or\
+        type(var2) == bool and type(var1) in [bool, int]
+    ):
+        return bool(var1) == bool(var2)
+
     if type(var1) != type(var2):
         return False
 
@@ -93,10 +98,14 @@ def are_equal(var1, var2):
                 return False
         return True
 
+    print("got here")
+
     assert type(var1) == dict
 
     if len(list(var1.keys())) != len(list(var2.keys())):
         return False
+
+    breakpoint()
 
     for k in var1.keys():
         if k not in var2:
