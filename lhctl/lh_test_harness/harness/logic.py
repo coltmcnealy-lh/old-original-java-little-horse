@@ -114,7 +114,6 @@ def check_all_tests(test_name: str, client: TestClient):
     # First, verify that the LittleHorse API reporting and the test db reporting
     # match.
     with closing(get_session()) as ses:
-        print("Hi")
         for wf_run_orm, wf_run in client.iter_test_runs(test_name, ses):
             new_status, message = check_for_consistency(wf_run_orm, wf_run)
 
@@ -149,6 +148,15 @@ def get_and_print_summary():
         for row in result.all():
             print(row[0], "---", row[1])
 
-        result = session.query(WFRun).filter(WFRun.message is not None).all()
+        printed = False
+        result = session.query(
+            WFRun.message, func.count(WFRun.message) # type: ignore
+        ).group_by(
+            WFRun.message
+        )
         for row in result:
-            print(row.message)
+            if row[0] != None:
+                if not printed:
+                    printed = True
+                    print("\n\nError Messages:")
+                print(row[0], "---", row[1])

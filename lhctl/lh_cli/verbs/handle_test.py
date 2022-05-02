@@ -63,14 +63,13 @@ class TESTHandler:
             for case in cases:
                 deploy_test(client, case)
 
-            time.sleep(5)
+            time.sleep(8)
 
         for _ in range(ns.requests):
             for case in cases:
-                print(case)
                 launch_test(case, test_client)
 
-        time.sleep(2)
+        time.sleep(3)
 
         for case in cases:
             check_all_tests(case, test_client)

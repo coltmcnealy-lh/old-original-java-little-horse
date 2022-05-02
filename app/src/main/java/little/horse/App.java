@@ -3,18 +3,19 @@
  */
 package little.horse;
 
-import java.util.Date;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("TODO: run some experiment for funsies.");
         System.out.println("This class does nothing, all the logic is elsewhere.");
 
-        long foo = 1;
-        System.out.println(String.valueOf(foo));
-        System.out.println(
-            String.format(Locale.US, "%020d", new Date().getTime())
-        );
+        Double dub = 2.5;
+        Map<String, Object> m = new HashMap<>();
+        m.put("foo", dub);
+        System.out.println(new ObjectMapper().writeValueAsString(m));
     }
 }

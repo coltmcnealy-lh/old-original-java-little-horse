@@ -26,6 +26,7 @@ class LHBaseModel(PyThingBaseModel):
     class Config:
         alias_generator = camelize
         allow_population_by_field_name = True
+        smart_union = True
 
 
 def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:

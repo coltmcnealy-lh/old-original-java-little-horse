@@ -6,7 +6,7 @@ from lh_sdk.utils import LHBaseModel
 from lh_lib.schema.wf_spec_schema import EdgeSchema
 
 
-VALID_VARIABLE_TYPE = Union[int, str, bool, float, list, dict]
+VALID_VARIABLE_TYPE = Union[float, int, str, bool, list, dict]
 
 
 class LHFailureReasonEnum(Enum):
