@@ -67,11 +67,9 @@ def check_launch_var_assign_jsonpath_happy_1(wf_run: WFRunSchema):
     assert are_equal(vars['my_list'], big_blob['some_list']), "My list"
     assert are_equal(vars['my_int'], 1), "my int"
     assert are_equal(vars['my_bool'], False), "my bool"
-    try:
-        assert are_equal(vars['my_obj'], big_blob), "my obj"
-    except Exception as exn:
-        breakpoint()
-        print("hi")
+    assert are_equal(vars['my_obj'], big_blob), "my obj"
     assert are_equal(vars['my_second_obj'], big_blob["some_blob"]), "my second obj"
+
+    breakpoint()
     assert are_equal(vars['my_str'], str_result), "my str"
     assert are_equal(vars['my_float'], 2.5), "my float"

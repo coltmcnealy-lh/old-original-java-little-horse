@@ -67,6 +67,7 @@ class TESTHandler:
 
         for _ in range(ns.requests):
             for case in cases:
+                print(case)
                 launch_test(case, test_client)
 
         time.sleep(2)

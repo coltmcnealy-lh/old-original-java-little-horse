@@ -15,6 +15,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
+import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
@@ -312,8 +313,8 @@ public class ThreadRun extends BaseSchema {
         String stderr = result.stderr;
         int returnCode = result.returncode;
         task.endTime = endTime;
-        task.stdout = LHUtil.jsonifyIfPossible(stdout, config);
-        task.stderr = LHUtil.jsonifyIfPossible(stderr, config);
+        task.stdout = LHUtil.unjsonify(stdout, config);
+        task.stderr = LHUtil.unjsonify(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 
@@ -384,7 +385,9 @@ public class ThreadRun extends BaseSchema {
 
             // Ok, if we got this far, then we know that the RHS and LHS both exist,
             // but are LHS + operation + RHS valid?
-            Mutation mut = new Mutation(lhs, rhs, op, thread, varDef, varName);
+            Mutation mut = new Mutation(
+                lhs, rhs, op, thread, varDef, varName, config
+            );
             mut.execute(true);  // validate by call with dryRun==true
             mutations.add(mut);
         }
@@ -1234,10 +1237,11 @@ class Mutation {
     public ThreadRun tr;
     public WFRunVariableDef varDef;
     public String varName;
+    public DepInjContext config;
 
     public Mutation(
         Object lhs, Object rhs, VariableMutationOperation op, ThreadRun tr,
-        WFRunVariableDef varDef, String varName
+        WFRunVariableDef varDef, String varName, DepInjContext config
     ) {
         this.lhs = lhs;
         this.rhs = rhs;
@@ -1245,6 +1249,7 @@ class Mutation {
         this.tr = tr;
         this.varDef = varDef;
         this.varName = varName;
+        this.config = config;
     }
 
     public void execute(boolean dryRun) throws VarSubOrzDash {
@@ -1280,6 +1285,12 @@ class Mutation {
                     defTypeCls.getName() + " to " + rhs.toString() + ", which is " +
                     " of type " + rhs.getClass().getName()
                 );
+            }
+            if (defTypeCls == Object.class) {
+                // Then the thing needs to either be a Map or be loadable.
+                if (String.class.isInstance(rhs)) {
+                    rhs = LHUtil.unjsonify((String) rhs, config);
+                }
             }
             if (!dryRun) {
                 tr.variables.put(varName, rhs);

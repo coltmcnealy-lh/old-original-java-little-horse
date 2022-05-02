@@ -119,7 +119,7 @@ public class LHUtil {
                 return (Map<String, Object>) Map.class.cast(obj);
             }
 
-            HashMap<String, Object> tmp = (HashMap<String, Object>) jsonifyIfPossible(
+            HashMap<String, Object> tmp = (HashMap<String, Object>) unjsonify(
                 obj.toString(), cfg
             );
 
@@ -155,7 +155,7 @@ public class LHUtil {
         }
     }
 
-    public static Object jsonifyIfPossible(String data, DepInjContext cfg) {
+    public static Object unjsonify(String data, DepInjContext cfg) {
         try {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
@@ -177,17 +177,17 @@ public class LHUtil {
         }
     }
 
-    public static String unjsonify(Object json, DepInjContext cfg)
-    throws VarSubOrzDash {
-        try {
-            return LHUtil.getObjectMapper(cfg).writeValueAsString(json);
-        } catch (Exception exn) {
-            throw new VarSubOrzDash(
-                exn,
-                "Failed unjsonning: " + exn.getMessage()
-            );
-        }
-    }
+    // public static String unjsonify(Object json, DepInjContext cfg)
+    // throws VarSubOrzDash {
+    //     try {
+    //         return LHUtil.getObjectMapper(cfg).writeValueAsString(json);
+    //     } catch (Exception exn) {
+    //         throw new VarSubOrzDash(
+    //             exn,
+    //             "Failed unjsonning: " + exn.getMessage()
+    //         );
+    //     }
+    // }
 
     public static String stringify(Object thing) {
         if (thing == null) return "null";

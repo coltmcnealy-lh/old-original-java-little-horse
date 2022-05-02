@@ -98,14 +98,10 @@ def are_equal(var1, var2):
                 return False
         return True
 
-    print("got here")
-
     assert type(var1) == dict
 
     if len(list(var1.keys())) != len(list(var2.keys())):
         return False
-
-    breakpoint()
 
     for k in var1.keys():
         if k not in var2:
