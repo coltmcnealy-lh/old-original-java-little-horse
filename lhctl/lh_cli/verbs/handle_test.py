@@ -40,6 +40,7 @@ class TESTHandler:
         )
         parser.add_argument(
             "cases", nargs='?', default=[],
+            action='append',
             help="Names of test cases to run. If left blank, default to all cases.",
         )
         parser.set_defaults(func=self.handle_test)
