@@ -35,7 +35,7 @@ def get_lh_var_type(original_type: Any) -> WFRunVariableTypeEnum:
     if original_type == str:
         return WFRunVariableTypeEnum.STRING
     elif original_type == float:
-        return WFRunVariableTypeEnum.DOUBLE
+        return WFRunVariableTypeEnum.FLOAT
     elif original_type == bool:
         return WFRunVariableTypeEnum.BOOLEAN
     elif original_type == int:

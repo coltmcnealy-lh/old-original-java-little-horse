@@ -4,7 +4,7 @@ public enum WFRunVariableTypeEnum {
     OBJECT,
     ARRAY,
     INT,
-    DOUBLE,
+    FLOAT,
     BOOLEAN,
     STRING;
 }

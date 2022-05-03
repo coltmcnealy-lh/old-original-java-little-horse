@@ -31,7 +31,7 @@ TYPE_TO_ENUM: Mapping[type[ACCEPTABLE_TYPES], WFRunVariableTypeEnum]= {
     list: WFRunVariableTypeEnum.ARRAY,
     dict: WFRunVariableTypeEnum.OBJECT,
     bool: WFRunVariableTypeEnum.BOOLEAN,
-    float: WFRunVariableTypeEnum.DOUBLE,
+    float: WFRunVariableTypeEnum.FLOAT,
     int: WFRunVariableTypeEnum.INT,
 }
 

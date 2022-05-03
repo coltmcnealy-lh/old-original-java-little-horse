@@ -85,10 +85,10 @@ If a specified value is of the wrong type, or a `jsonpath` expression fails, the
 ### Mutating Variables: `VariableMutation`
 Just as you assign new values to variables in programming, you may mutate a `WFRunVariable` in LittleHorse. A `VariableMutation` mutates a `WFRunVariable` with a RHS (discussed below) in any of the following ways:
 * `ASSIGN` the variable to the value of the RHS (all types).
-* `ADD` the RHS to the variable (Integer or Double).
-* `SUBTRACT` the RHS from the variable (Integer or Double).
-* `DIVIDE` the variable by the RHS (Integer or Double).
-* `MULTIPLY` the variable by the RHS (Integer or Double).
+* `ADD` the RHS to the variable (Integer or Float).
+* `SUBTRACT` the RHS from the variable (Integer or Float).
+* `DIVIDE` the variable by the RHS (Integer or Float).
+* `MULTIPLY` the variable by the RHS (Integer or Float).
 * `APPEND` the RHS to the variable (Array or String).
 * `REMOVE_IF_PRESENT` the RHS from the variable (Array or Object).
 * `REMOVE_INDEX` removes the object at provided index (Array).

@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -177,18 +178,6 @@ public class LHUtil {
         }
     }
 
-    // public static String unjsonify(Object json, DepInjContext cfg)
-    // throws VarSubOrzDash {
-    //     try {
-    //         return LHUtil.getObjectMapper(cfg).writeValueAsString(json);
-    //     } catch (Exception exn) {
-    //         throw new VarSubOrzDash(
-    //             exn,
-    //             "Failed unjsonning: " + exn.getMessage()
-    //         );
-    //     }
-    // }
-
     public static String stringify(Object thing) {
         if (thing == null) return "null";
         if (thing instanceof Map) {
@@ -200,6 +189,36 @@ public class LHUtil {
             }
         }
         return thing.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Object lhCopy(Object o) {
+        if (o instanceof Integer) {
+            return Integer.valueOf((Integer) o);
+        } else if (o instanceof Float) {
+            return Float.valueOf((Float) o);
+        } else if (o instanceof Boolean) {
+            return Boolean.valueOf((Boolean) o);
+        } else if (o instanceof String) {
+            return new String((String) o);
+        } else if (o instanceof List) {
+            ArrayList<Object> out = new ArrayList<>();
+            for (Object obj : (List<Object>) o) {
+                out.add(LHUtil.lhCopy(obj));
+            }
+            return out;
+        } else if (o instanceof Map) {
+            Map<Object, Object> m = new HashMap<>();
+            Map<Object, Object> oMap = (Map<Object, Object>) o;
+            for (Object k: oMap.keySet()) {
+                m.put(LHUtil.lhCopy(k), LHUtil.lhCopy(oMap.get(k)));
+            }
+            return m;
+        } else if (o == null) {
+            return null;
+        } else {
+            throw new RuntimeException("Invalid type for LHCopy!");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -251,7 +270,7 @@ public class LHUtil {
         switch (vardef.type) {
             case STRING:    return String.class;
             case INT:       return Integer.class;
-            case DOUBLE:    return Double.class;
+            case FLOAT:    return Float.class;
             case ARRAY:     return List.class;
             case OBJECT:    return Object.class;
             case BOOLEAN:   return Boolean.class;

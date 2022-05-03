@@ -20,7 +20,7 @@ class WFRunVariableTypeEnum(Enum):
     OBJECT = 'OBJECT'
     ARRAY = 'ARRAY'
     INT = 'INT'
-    DOUBLE = 'DOUBLE'
+    FLOAT = 'FLOAT'
     BOOLEAN = 'BOOLEAN'
     STRING = 'STRING'
 

@@ -71,5 +71,5 @@ def check_var_adds_2(wf_run: WFRunSchema):
     vars = wf_run.thread_runs[0].variables
     assert vars is not None, "has variables"
 
-    assert are_equal(vars['arr'], [1, 2, 3]), "arr"
-    assert are_equal(vars['counter'], 4), "counter"
+    assert are_equal(vars['arr'], [5, 3, 2, 1, 2, 3]), "arr"
+    assert are_equal(vars['counter'], 3), "counter"

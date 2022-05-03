@@ -230,7 +230,7 @@ public class SpecBuilderThreadContext implements LHThreadContext {
 
         if (cls == Integer.class) def.type = WFRunVariableTypeEnum.INT;
         else if (cls == List.class) def.type = WFRunVariableTypeEnum.ARRAY;
-        else if (cls == Double.class) def.type = WFRunVariableTypeEnum.DOUBLE;
+        else if (cls == Float.class) def.type = WFRunVariableTypeEnum.FLOAT;
         else if (cls == Boolean.class) def.type = WFRunVariableTypeEnum.BOOLEAN;
         else if (cls == String.class) def.type = WFRunVariableTypeEnum.STRING;
         else def.type = WFRunVariableTypeEnum.OBJECT;

@@ -2,7 +2,6 @@ package little.horse.common.objects.rundata;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +14,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.TaskRunEndedEvent;
@@ -38,7 +36,6 @@ import little.horse.common.objects.metadata.VariableAssignment;
 import little.horse.common.objects.metadata.VariableMutationOperation;
 import little.horse.common.objects.metadata.VariableMutation;
 import little.horse.common.objects.metadata.WFRunVariableDef;
-import little.horse.common.objects.metadata.WFRunVariableTypeEnum;
 import little.horse.common.objects.metadata.WFSpec;
 
 import little.horse.common.util.LHUtil;
@@ -368,8 +365,16 @@ public class ThreadRun extends BaseSchema {
         // failure, none of the variables get mutated at all. Therefore we compute
         // all of the new values first and then assign them later once we're sure
         // there are no VarSubOrzDash's.
-        ArrayList<Mutation> mutations = new ArrayList<Mutation>();
+        mutateVariablesHelper(tr, true);
 
+        // If the first call succeeded without throwing a VarSubOrzdash, we know
+        // that all the mutations are valid, so we can go from here (:
+        mutateVariablesHelper(tr, false);
+    }
+
+    @JsonIgnore
+    private void mutateVariablesHelper(TaskRun tr, boolean dryRun) 
+    throws VarSubOrzDash, LHConnectionError {
         for (Map.Entry<String, VariableMutation> pair:
             tr.getNode().variableMutations.entrySet())
         {
@@ -388,17 +393,10 @@ public class ThreadRun extends BaseSchema {
             Mutation mut = new Mutation(
                 lhs, rhs, op, thread, varDef, varName, config
             );
-            mut.execute(true);  // validate by call with dryRun==true
-            mutations.add(mut);
-        }
-
-        // If we've gotten this far, then we know (if I coded everything properly)
-        // that we aren't going to have an error when we finally apply the
-        // mutations.
-        for (Mutation mutation: mutations) {
-            mutation.execute(false);
+            mut.execute(dryRun);  // validate by call with dryRun==true
         }
     }
+
 
     @JsonIgnore
     private void handleException(
@@ -444,8 +442,6 @@ public class ThreadRun extends BaseSchema {
             );
         }
     }
-
-    
 
     @JsonIgnore
     boolean evaluateEdge(EdgeCondition condition)
@@ -1230,223 +1226,3 @@ public class ThreadRun extends BaseSchema {
 }
 
 
-class Mutation {
-    public Object lhs;
-    public Object rhs;
-    public VariableMutationOperation op;
-    public ThreadRun tr;
-    public WFRunVariableDef varDef;
-    public String varName;
-    public DepInjContext config;
-
-    public Mutation(
-        Object lhs, Object rhs, VariableMutationOperation op, ThreadRun tr,
-        WFRunVariableDef varDef, String varName, DepInjContext config
-    ) {
-        this.lhs = lhs;
-        this.rhs = rhs;
-        this.op = op;
-        this.tr = tr;
-        this.varDef = varDef;
-        this.varName = varName;
-        this.config = config;
-    }
-
-    public void execute(boolean dryRun) throws VarSubOrzDash {
-        try {
-            doExecuteHelper(dryRun);
-        } catch (VarSubOrzDash vsod) {
-            throw vsod;
-        } catch (Exception exn) {
-            exn.printStackTrace();
-            throw new VarSubOrzDash(
-                exn,
-                "Had an unexpected error mutating variable " + varName +
-                ", lhs: " + LHUtil.stringify(lhs) + ", rhs: " + 
-                LHUtil.stringify(rhs) + ":\n" + exn.getMessage()
-            );
-        }
-    }
-
-    private void doExecuteHelper(boolean dryRun) throws VarSubOrzDash {
-        // Can't rely upon the WFRunVariableDefSchema because if, for example, the
-        // LHS variable is an OBJECT, and there is a jsonpath, we could index from
-        // the object to an Integer, in which case the LHS is not of the same type
-        // as the varDef.type; but we will get more fancy once we add jsonschema
-        // validation.
-        Class<?> defTypeCls = LHUtil.getNeededClass(varDef);
-
-        // Now we handle every operation that's legal. Because I'm lazy, there's
-        // only two so far.
-        if (op == VariableMutationOperation.ASSIGN) {
-            if (rhs != null && !defTypeCls.isInstance(rhs)) {
-                throw new VarSubOrzDash(null,
-                    "Tried to set var " + varName + ", which is of type " +
-                    defTypeCls.getName() + " to " + rhs.toString() + ", which is " +
-                    " of type " + rhs.getClass().getName()
-                );
-            }
-            if (defTypeCls == Object.class) {
-                // Then the thing needs to either be a Map or be loadable.
-                if (String.class.isInstance(rhs)) {
-                    rhs = LHUtil.unjsonify((String) rhs, config);
-                }
-            }
-            if (!dryRun) {
-                tr.variables.put(varName, rhs);
-            }
-
-        } else if (op == VariableMutationOperation.ADD) {
-            if (varDef.type == WFRunVariableTypeEnum.BOOLEAN ||
-                varDef.type == WFRunVariableTypeEnum.OBJECT
-            ) {
-                throw new VarSubOrzDash(
-                    null,
-                    "had an invalid wfspec. Tried to add a boolean or object."
-                );
-            }
-
-            try {
-                // Just try to cast the right hand side to what it's supposed to be
-                // in order to verify that it'll work.
-                if (varDef.type == WFRunVariableTypeEnum.INT) {
-                    Integer result = (Integer) rhs + (Integer) lhs;
-                    if (!dryRun) {
-                        tr.variables.put(varName, result);
-                    }
-                } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
-                    String result = (String) lhs + (String) rhs;
-                    if (!dryRun) {
-                        tr.variables.put(varName, result);
-                    }
-                } else if (varDef.type == WFRunVariableTypeEnum.ARRAY) {
-                    // nothing to verify here until we start enforcing json schemas
-                    // within arrays
-                    @SuppressWarnings("unchecked")
-                    ArrayList<Object> lhsArr = (ArrayList<Object>) lhs;
-                    if (!dryRun) {
-                        lhsArr.add(rhs);
-                    }
-                } else if (varDef.type == WFRunVariableTypeEnum.DOUBLE) {
-                    Double result = (Double) lhs + (Double) rhs;
-                    if (!dryRun) {
-                        tr.variables.put(varName, result);
-                    }
-                }
-            } catch(Exception exn) {
-                throw new VarSubOrzDash(exn,
-                    "Failed casting the value " + rhs.toString() + " to a " +
-                    defTypeCls.getName()
-                );
-            }
-        } else if (op == VariableMutationOperation.EXTEND) {
-            if (varDef.type != WFRunVariableTypeEnum.ARRAY ||
-                !(rhs instanceof List)
-            ) {
-                throw new VarSubOrzDash(null,
-                    "Can only EXTEND two array's."
-                );
-            }
-
-            @SuppressWarnings("unchecked")
-            List<Object> lhsArr = (List<Object>) lhs;
-
-            @SuppressWarnings("unchecked")
-            List<Object> rlist = (List<Object>) rhs;
-            if (!dryRun) {
-                for (Object o : rlist) {
-                    lhsArr.add(o);
-                }
-            }
-        } else if (op == VariableMutationOperation.DIVIDE) {
-            if (varDef.type != WFRunVariableTypeEnum.INT &&
-                varDef.type != WFRunVariableTypeEnum.DOUBLE
-            ) {
-                throw new VarSubOrzDash(
-                    null,
-                    "LHS for DIVIDE needs to be INT or DOUBLE, but got" +
-                    varDef.type
-                );
-            }
-
-            if (lhs == null) {
-                throw new VarSubOrzDash(null, "tried to DIVIDE with null lhs");
-            }
-
-            if (rhs == null) {
-                throw new VarSubOrzDash(null, "tried to DIVIDE with null rhs");
-            }
-
-            if (!(rhs instanceof Integer) && !(rhs instanceof Double)) {
-                throw new VarSubOrzDash(
-                    null,
-                    "RHS for divide needs to be INT or DOUBLE but got " +
-                    rhs.getClass().getCanonicalName()
-                );
-            }
-
-            Double lhdouble = (Double) lhs;
-            Double rhdouble = (Double) rhs;
-
-            if (rhdouble == 0) {
-                throw new VarSubOrzDash(null, "tried to DIVIDE by zero!");
-            }
-
-            Double out = lhdouble / rhdouble;
-            if (varDef.type == WFRunVariableTypeEnum.DOUBLE) {
-                if (!dryRun) {
-                    tr.variables.put(varName, out);
-                }
-            } else {
-                int outInt = (int) out.doubleValue();
-                if (!dryRun) {
-                    tr.variables.put(varName, outInt);
-                }
-            }
-        }
-    }
-
-    /**
-     * Used to evaluate Workflow Conditional Branching Expressions. The Left is an
-     * object of some sort, and the right is another. Returns true if the Left
-     * has the Right inside it.
-     * @param left haystack
-     * @param right needle
-     * @return true if haystack has the needle in it.
-     * @throws VarSubOrzDash if we can't cast the left to a container of objects,
-     * or if we get an exception while comparing the equality of two things inside
-     * right.
-     */
-    @SuppressWarnings("all")
-    public static boolean contains(Object left, Object right) throws VarSubOrzDash {
-        try {
-            Collection<Object> collection = (Collection<Object>) left;
-            for (Object thing : collection) {
-                if (thing.equals(right)) {
-                    return true;
-                }
-            }
-        } catch (Exception exn) {
-            exn.printStackTrace();
-            throw new VarSubOrzDash(
-                exn,
-                "Failed determing whether the left contains the right: " +
-                LHUtil.stringify(left) + " , " + LHUtil.stringify(right)
-            );
-        }
-        return false;
-
-    }
-
-    @SuppressWarnings("all") // lol
-    public static int compare(Object left, Object right) throws VarSubOrzDash {
-
-        try {
-            int result = ((Comparable) left).compareTo((Comparable) right);
-            return result;
-        } catch(Exception exn) {
-            LHUtil.logError(exn.getMessage());
-            throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
-        }
-    }
-}
