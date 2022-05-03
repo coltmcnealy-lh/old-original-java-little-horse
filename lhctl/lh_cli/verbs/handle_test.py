@@ -39,14 +39,14 @@ class TESTHandler:
             default=1,
         )
         parser.add_argument(
-            "cases", nargs='?', default=[],
+            "cases", nargs='?',
             action='append',
             help="Names of test cases to run. If left blank, default to all cases.",
         )
         parser.set_defaults(func=self.handle_test)
 
     def handle_test(self, ns: Namespace, client: LHClient):
-        if ns.cases is None or len(ns.cases) == 0:
+        if ns.cases is None or len(ns.cases) == 0 or (ns.cases[0] is None):
             cases = [
                 file[:-3] for file in os.listdir(
                     '/' + os.path.join(

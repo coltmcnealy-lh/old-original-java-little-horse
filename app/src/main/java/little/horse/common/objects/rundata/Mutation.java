@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.metadata.VariableMutationOperation;
 import little.horse.common.objects.metadata.WFRunVariableDef;
@@ -96,20 +99,91 @@ public class Mutation {
             );
         }
 
+        newOut = newOut == null ? null : coerceBackToType(newOut);
+
         if (!dryRun) tr.variables.put(varName, newOut);
     }
 
-    public static boolean isInTypes(
-        WFRunVariableTypeEnum needle,
-        WFRunVariableTypeEnum... haystack
-    ) {
-        for (WFRunVariableTypeEnum hay : haystack) {
-            if (needle == hay) return true;
+    private Object coerceBackToType(Object o) throws VarSubOrzDash {
+        // Class<?> defTypeCls = LHUtil.getNeededClass(varDef);
+        if (varDef.type == WFRunVariableTypeEnum.INT) {
+            return toInt(o);
+        } else if (varDef.type == WFRunVariableTypeEnum.ARRAY) {
+            return toArray(o);
+        } else if (varDef.type == WFRunVariableTypeEnum.OBJECT) {
+            return toMap(o);
+        } else if (varDef.type == WFRunVariableTypeEnum.FLOAT) {
+            return toDouble(o);
+        } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
+            return toStr(o);
+        } else if (varDef.type == WFRunVariableTypeEnum.BOOLEAN) {
+            return toBool(o);
+        } else {
+            throw new VarSubOrzDash(null, "Impossible to get here");
         }
-        return false;
+    }
+
+    private Integer toInt(Object o) {
+        if (o instanceof Double) {
+            return ((Double)o).intValue();
+        } else if (o instanceof String) {
+            return Integer.valueOf((String) o);
+        } else if (o instanceof Integer) {
+            return (Integer) o;
+        }
+        return Integer.class.cast(o);
+    }
+
+    private Boolean toBool(Object o) {
+        if (o instanceof Boolean) {
+            return (Boolean) o;
+        } else if (o instanceof String) {
+            return Boolean.valueOf((String) o);
+        }
+        return Boolean.class.cast(o);
+    }
+
+    private String toStr(Object o) {
+        if (o == null) return "";
+        // Someday this might get more sophisticated...
+        return String.valueOf(o);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> toArray(Object o) throws VarSubOrzDash {
+        if (o instanceof List) {
+            return (List<Object>) o;
+        } else if (o instanceof String) {
+            try {
+                return new ObjectMapper().readValue(
+                    (String) o, List.class
+                );
+            } catch (JsonProcessingException exn) {
+                throw new VarSubOrzDash(exn, "Failed to convert string to list!");
+            }
+        }
+        return List.class.cast(o);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Object, Object> toMap(Object o) throws VarSubOrzDash {
+        if (o instanceof Map) {
+            return (Map<Object, Object>) o;
+        } else if (o instanceof String) {
+            try {
+                return new ObjectMapper().readValue(
+                    (String) o, Map.class
+                );
+            } catch (JsonProcessingException exn) {
+                throw new VarSubOrzDash(exn, "Failed to convert string to list!");
+            }
+        }
+        return Map.class.cast(o);
     }
 
     private Object handleAssign() throws VarSubOrzDash {
+        return rhs;
+        /*
         Object out = rhs;
         Class<?> defTypeCls = LHUtil.getNeededClass(varDef);
         if (out != null && !defTypeCls.isInstance(out)) {
@@ -128,6 +202,18 @@ public class Mutation {
         }
 
         return out;
+        */
+    }
+
+    private Double toDouble(Object o) {
+        if (o instanceof Double) {
+            return (Double) o;
+        } else if (o instanceof String) {
+            return Double.valueOf((String) o);
+        } else if (o instanceof Integer) {
+            return Double.valueOf((Integer) o);
+        }
+        return Double.class.cast(o);
     }
 
     private Object handleAdd() throws VarSubOrzDash {
@@ -146,7 +232,7 @@ public class Mutation {
             return (Integer) rhs + (Integer) lhs;
 
         } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
-            return (String) lhs + (String) rhs;
+            return toStr(lhs) + toStr(rhs);
 
         } else if (varDef.type == WFRunVariableTypeEnum.ARRAY) {
             // nothing to verify here until we start enforcing json schemas
@@ -158,7 +244,7 @@ public class Mutation {
 
         } else {
             assert (varDef.type == WFRunVariableTypeEnum.FLOAT);
-            return (Float) lhs + (Float) rhs;
+            return toDouble(lhs) + toDouble(rhs);
         }
     }
 
@@ -183,33 +269,32 @@ public class Mutation {
     }
 
     private Object handleDivide() throws VarSubOrzDash {
-        checkAreArithmeticable();
-        Float lfloat = (Float) lhs;
-        Float rfloat = (Float) rhs;
+        Double lfloat = toDouble(lhs);
+        Double rfloat = toDouble(rhs);
 
         if (rfloat == 0) {
             throw new VarSubOrzDash(null, "tried to DIVIDE by zero!");
         }
 
-        Float out = lfloat / rfloat;
+        Double out = lfloat / rfloat;
         return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
     }
 
     private Object handleSubtract() throws VarSubOrzDash {
-        checkAreArithmeticable();
-        Float lfloat = (Float) lhs;
-        Float rfloat = (Float) rhs;
+        Double lfloat = toDouble(lhs);
+        Double rfloat = toDouble(rhs);
+        Double out = lfloat - rfloat;
 
-        Float out = lfloat - rfloat;
+        LHUtil.log("\n\n\n\n", out, "\n\n\n\n");
+
         return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
     }
 
     private Object handleMultiply() throws VarSubOrzDash {
-        checkAreArithmeticable();
-        Float lfloat = (Float) lhs;
-        Float rfloat = (Float) rhs;
+        Double lfloat = toDouble(lhs);
+        Double rfloat = toDouble(rhs);
 
-        Float out = lfloat * rfloat;
+        Double out = lfloat * rfloat;
         return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
     
     }
@@ -277,34 +362,5 @@ public class Mutation {
             LHUtil.logError(exn.getMessage());
             throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
         }
-    }
-
-    private void checkAreArithmeticable() throws VarSubOrzDash {
-        if (varDef.type != WFRunVariableTypeEnum.INT &&
-            varDef.type != WFRunVariableTypeEnum.FLOAT
-        ) {
-            throw new VarSubOrzDash(
-                null,
-                "LHS for DIVIDE needs to be INT or FLOAT, but got" +
-                varDef.type
-            );
-        }
-
-        if (lhs == null) {
-            throw new VarSubOrzDash(null, "tried to DIVIDE with null lhs");
-        }
-
-        if (rhs == null) {
-            throw new VarSubOrzDash(null, "tried to DIVIDE with null rhs");
-        }
-
-        if (!(rhs instanceof Integer) && !(rhs instanceof Float)) {
-            throw new VarSubOrzDash(
-                null,
-                "RHS for divide needs to be INT or FLOAT but got " +
-                rhs.getClass().getCanonicalName()
-            );
-        }
-
     }
 }

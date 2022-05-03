@@ -195,8 +195,8 @@ public class LHUtil {
     public static Object lhCopy(Object o) {
         if (o instanceof Integer) {
             return Integer.valueOf((Integer) o);
-        } else if (o instanceof Float) {
-            return Float.valueOf((Float) o);
+        } else if (o instanceof Double) {
+            return Double.valueOf((Double) o);
         } else if (o instanceof Boolean) {
             return Boolean.valueOf((Boolean) o);
         } else if (o instanceof String) {
@@ -217,6 +217,7 @@ public class LHUtil {
         } else if (o == null) {
             return null;
         } else {
+            LHUtil.log(o, o.getClass());
             throw new RuntimeException("Invalid type for LHCopy!");
         }
     }
@@ -270,7 +271,7 @@ public class LHUtil {
         switch (vardef.type) {
             case STRING:    return String.class;
             case INT:       return Integer.class;
-            case FLOAT:    return Float.class;
+            case FLOAT:    return Double.class;
             case ARRAY:     return List.class;
             case OBJECT:    return Object.class;
             case BOOLEAN:   return Boolean.class;
