@@ -64,7 +64,7 @@ class TESTHandler:
             for case in cases:
                 deploy_test(client, case)
 
-            time.sleep(8)
+            time.sleep(16)
 
         for _ in range(ns.requests):
             for case in cases:

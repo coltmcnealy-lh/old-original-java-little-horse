@@ -1,4 +1,4 @@
-from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, WFRunSchema
+from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, LHFailureReasonEnum, WFRunSchema
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_utils import are_equal
@@ -71,7 +71,7 @@ def launch_var_mutations_1(client: TestClient, wf_spec_id: str):
     print(f"Ran wf_run_id {wf_run_id} on var_mutations case 1")
 
 
-# This one checks the 
+# This one checks the happy path
 def check_var_mutations_1(wf_run: WFRunSchema):
     assert len(wf_run.thread_runs) == 1, "only one thread"
     assert wf_run.status == LHExecutionStatusEnum.COMPLETED, "wf run completed"
@@ -85,3 +85,62 @@ def check_var_mutations_1(wf_run: WFRunSchema):
     assert are_equal(vars['my_str'], dummy()), "my_str"
     assert 1234 not in vars['my_obj'], "deleted 1234"  # type: ignore
     assert are_equal(vars['my_float'], 3.2 - 2.5), "my_float"
+
+# Should VarSubOrzDash if jsonpath isn't present
+def launch_var_mutations_2(client: TestClient, wf_spec_id: str):
+    wf_run_id = client.run_wf(
+        wf_spec_id,
+        check_var_mutations_2,
+        my_obj={
+            "some_thing": [1, 2, 3],
+            "my_bool": True,
+            1234: "not in the thing"
+        },
+        my_list=[],
+        my_float=3.2
+    )
+    print(f"Ran wf_run_id {wf_run_id} on var_mutations case 2")
+
+
+def check_var_mutations_2(wf_run: WFRunSchema):
+    assert len(wf_run.thread_runs) == 1, "only one thread"
+    assert wf_run.status == LHExecutionStatusEnum.HALTED, "wf run failed"
+
+    thr = wf_run.thread_runs[0]
+    assert thr.error_message is not None, "has error message"
+    assert 'jsonpath' in thr.error_message, "error msg due to jsonpath"
+    
+    tr = thr.task_runs[0]
+    assert tr.status == LHExecutionStatusEnum.HALTED, "task failed"
+
+    assert tr.failure_reason == LHFailureReasonEnum.VARIABLE_LOOKUP_ERROR,\
+        "Get VarSubOrzDash"
+
+
+# Should VarSubOrzDash if things are of the wrong type.
+def launch_var_mutations_3(client: TestClient, wf_spec_id: str):
+    wf_run_id = client.run_wf(
+        wf_spec_id,
+        check_var_mutations_3,
+        my_obj={
+            "my_int": "not a real int"
+        },
+        my_list=[],
+        my_float=3.2
+    )
+    print(f"Ran wf_run_id {wf_run_id} on var_mutations case 3")
+
+
+def check_var_mutations_3(wf_run: WFRunSchema):
+    assert len(wf_run.thread_runs) == 1, "only one thread"
+    assert wf_run.status == LHExecutionStatusEnum.HALTED, "wf run failed"
+
+    thr = wf_run.thread_runs[0]
+    assert thr.error_message is not None, "has error message"
+    assert 'my_int' in thr.error_message, "should mention the name of failed variable"
+    
+    tr = thr.task_runs[0]
+    assert tr.status == LHExecutionStatusEnum.HALTED, "task failed"
+
+    assert tr.failure_reason == LHFailureReasonEnum.VARIABLE_LOOKUP_ERROR,\
+        "Get VarSubOrzDash"
