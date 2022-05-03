@@ -3,6 +3,7 @@ package little.horse.common.objects.metadata;
 public enum VariableMutationOperation {
     ASSIGN,
     ADD,
+    EXTEND,
     SUBTRACT,
     MULTIPLY,
     DIVIDE,

@@ -179,6 +179,9 @@ class WFRunVariable:
     def add(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
         self._mutate(VariableMutationOperation.ADD, target)
 
+    def extend(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
+        self._mutate(VariableMutationOperation.EXTEND, target)
+
     def subtract(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
         self._mutate(VariableMutationOperation.SUBTRACT, target)
 

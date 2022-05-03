@@ -86,6 +86,7 @@ class EdgeSchema(LHBaseModel):
 class VariableMutationOperation(Enum):
     ASSIGN = 'ASSIGN'
     ADD = 'ADD'
+    EXTEND = 'EXTEND'
     SUBTRACT = 'SUBTRACT'
     MULTIPLY = 'MULTIPLY'
     DIVIDE = 'DIVIDE'

@@ -1339,6 +1339,70 @@ class Mutation {
                     defTypeCls.getName()
                 );
             }
+        } else if (op == VariableMutationOperation.EXTEND) {
+            if (varDef.type != WFRunVariableTypeEnum.ARRAY ||
+                !(rhs instanceof List)
+            ) {
+                throw new VarSubOrzDash(null,
+                    "Can only EXTEND two array's."
+                );
+            }
+
+            @SuppressWarnings("unchecked")
+            List<Object> lhsArr = (List<Object>) lhs;
+
+            @SuppressWarnings("unchecked")
+            List<Object> rlist = (List<Object>) rhs;
+            if (!dryRun) {
+                for (Object o : rlist) {
+                    lhsArr.add(o);
+                }
+            }
+        } else if (op == VariableMutationOperation.DIVIDE) {
+            if (varDef.type != WFRunVariableTypeEnum.INT &&
+                varDef.type != WFRunVariableTypeEnum.DOUBLE
+            ) {
+                throw new VarSubOrzDash(
+                    null,
+                    "LHS for DIVIDE needs to be INT or DOUBLE, but got" +
+                    varDef.type
+                );
+            }
+
+            if (lhs == null) {
+                throw new VarSubOrzDash(null, "tried to DIVIDE with null lhs");
+            }
+
+            if (rhs == null) {
+                throw new VarSubOrzDash(null, "tried to DIVIDE with null rhs");
+            }
+
+            if (!(rhs instanceof Integer) && !(rhs instanceof Double)) {
+                throw new VarSubOrzDash(
+                    null,
+                    "RHS for divide needs to be INT or DOUBLE but got " +
+                    rhs.getClass().getCanonicalName()
+                );
+            }
+
+            Double lhdouble = (Double) lhs;
+            Double rhdouble = (Double) rhs;
+
+            if (rhdouble == 0) {
+                throw new VarSubOrzDash(null, "tried to DIVIDE by zero!");
+            }
+
+            Double out = lhdouble / rhdouble;
+            if (varDef.type == WFRunVariableTypeEnum.DOUBLE) {
+                if (!dryRun) {
+                    tr.variables.put(varName, out);
+                }
+            } else {
+                int outInt = (int) out.doubleValue();
+                if (!dryRun) {
+                    tr.variables.put(varName, outInt);
+                }
+            }
         }
     }
 
