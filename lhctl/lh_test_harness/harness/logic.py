@@ -46,9 +46,14 @@ def launch_test(test_name: str, client: TestClient, num_requests: int):
     launch_funcs = get_launch_funcs(test_name, mod)
     executor = get_executor()
 
-    for f in launch_funcs:
-        for _ in range(num_requests):
-            executor.submit(f, client, test_name)
+    futures = [
+        executor.submit(f, client, test_name)
+        for f in launch_funcs
+        for _ in range(num_requests)
+    ]
+
+    for f in futures:
+        f.result()
 
 
 def iter_all_task_runs(wf_run: WFRunSchema) -> Iterable[Tuple[int, TaskRunSchema]]:

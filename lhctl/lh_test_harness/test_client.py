@@ -79,3 +79,6 @@ class TestClient:
                 continue
 
             yield row, wf_run_schema
+
+    def send_event(self, name, wf_run_id, payload: str):
+        self._client.send_event_by_name_or_id(name, wf_run_id, payload)
