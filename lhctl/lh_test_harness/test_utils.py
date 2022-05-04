@@ -1,7 +1,8 @@
 from inspect import getsourcefile, signature, Signature
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
-from typing import Callable
+from typing import Optional
 import uuid
 
 from lh_lib.schema.wf_spec_schema import (
@@ -34,6 +35,17 @@ def get_session() -> Session:
 
 DEFAULT_API_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
 DOCKER_IMAGE = os.getenv("LHORSE_TEST_DOCKER_IMAGE", "little-horse-test:latest")
+
+
+_executor: Optional[ThreadPoolExecutor] = None
+
+
+def get_executor():
+    global _executor
+    if _executor is None:
+        _executor = ThreadPoolExecutor()
+    
+    return _executor
 
 
 def generate_guid() -> str:

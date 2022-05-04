@@ -66,9 +66,8 @@ class TESTHandler:
 
             time.sleep(16)
 
-        for _ in range(ns.requests):
-            for case in cases:
-                launch_test(case, test_client)
+        for case in cases:
+            launch_test(case, test_client, ns.requests)
 
         time.sleep(3)
 

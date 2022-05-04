@@ -15,6 +15,7 @@ from lh_lib.schema.wf_run_schema import (
 from lh_test_harness.test_client import TestClient
 from lh_test_harness.test_utils import (
     are_equal,
+    get_executor,
     get_session,
     get_test_module_name,
 )
@@ -38,14 +39,16 @@ def get_launch_funcs(
     return out
 
 
-def launch_test(test_name: str, client: TestClient):
+def launch_test(test_name: str, client: TestClient, num_requests: int):
     test_module_name = get_test_module_name(test_name)
     mod: ModuleType = importlib.import_module(test_module_name)
 
     launch_funcs = get_launch_funcs(test_name, mod)
+    executor = get_executor()
 
     for f in launch_funcs:
-        f(client, test_name)
+        for _ in range(num_requests):
+            executor.submit(f, client, test_name)
 
 
 def iter_all_task_runs(wf_run: WFRunSchema) -> Iterable[Tuple[int, TaskRunSchema]]:
