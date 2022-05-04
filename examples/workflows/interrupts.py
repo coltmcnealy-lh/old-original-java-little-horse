@@ -14,7 +14,7 @@ def interrupt_handler_thread(thread: ThreadSpecBuilder):
 # This is a Workflow Function. It is used by the `lhctl` interpreter to automagically
 # generate WFSpec, TaskDef, and Dockerfile specs needed to deploy a workflow.
 def my_workflow(thread: ThreadSpecBuilder):
-    # thread.handle_interrupt("some-event", interrupt_handler_thread)
+    thread.handle_interrupt("some-event", interrupt_handler_thread)
 
     thread.execute(hello_there, "General Kenobi")
     thread.sleep_for(20)

@@ -54,6 +54,10 @@ def get_external_events_for_wf(spec: WFSpecSchema) -> Set[str]:
         if node.node_type != NodeType.EXTERNAL_EVENT:
             continue
         out.add(node.external_event_def_name)
+
+    for tspec in spec.thread_specs.values():
+        for eev_name in (tspec.interrupt_defs or []):
+            out.add(eev_name)
     return out
 
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 
 from inspect import signature, Signature
 from typing import (
@@ -13,6 +14,7 @@ from lh_sdk.utils import get_lh_var_type, get_task_def_name
 
 from lh_lib.schema.wf_spec_schema import (
     EdgeSchema,
+    InterruptDefSchema,
     NodeSchema,
     NodeType,
     ThreadSpecSchema,
@@ -332,7 +334,8 @@ class ThreadSpecBuilder:
         else:
             raise RuntimeError("Unimplemented nodetype")
 
-        node_name = f'{len(self._spec.nodes)}-{node_human_name}'
+        tag = hashlib.sha256(self._spec.name.encode()).hexdigest()[:5]
+        node_name = f'{len(self._spec.nodes)}-{node_human_name}-{tag}'
         self._spec.nodes[node_name] = node
 
         if self._last_node_name is not None:
@@ -374,6 +377,26 @@ class ThreadSpecBuilder:
         # TODO: Traverse a tree upwards to find variables for thread-scoping stuff
         # once we add that into the SDK.
         return self._spec.variable_defs[var_name]
+
+    def handle_interrupt(
+        self, event_name: str, handler: Callable[[ThreadSpecBuilder], None]
+    ):
+        # First, we need to create the ThreadSpec somehow.
+        tspec_name = handler.__name__
+        handler_builder = ThreadSpecBuilder(
+            tspec_name,
+            self._wf_spec,
+            self._wf
+        )
+
+        self._wf_spec.thread_specs[tspec_name] = handler_builder.spec
+        handler(handler_builder)
+
+        # Ok, now the threadspec is created, so let's set the handler.
+        self.spec.interrupt_defs = self.spec.interrupt_defs or {}
+        self.spec.interrupt_defs[event_name] = InterruptDefSchema(
+            handler_thread_name=tspec_name
+        )
 
     @property
     def spec(self) -> ThreadSpecSchema:

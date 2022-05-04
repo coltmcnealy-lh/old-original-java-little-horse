@@ -66,26 +66,6 @@ def get_taskdefs_for_wf(wf_spec: dict):
     return task_defs
 
 
-def get_external_events_for_wf(wf_spec: dict):
-    eevs = set({})
-
-    for node in iter_all_nodes(wf_spec):
-        if node['nodeType'] == 'EXTERNAL_EVENT':
-            eevs.add(node['externalEventDefName'])
-
-    threads = [wf_spec['threadSpecs'][k] for k in wf_spec['threadSpecs'].keys()]
-
-    for thread in threads:
-        if thread.get('interruptDefs') is None:
-            continue
-
-        idefs = thread['interruptDefs']
-        for eev_name in idefs.keys():
-            eevs.add(eev_name)
-
-    return eevs
-
-
 def add_resource(type_name: str, data: dict, api_url: str):
     response = requests.post(f"{api_url}/{type_name}", json=data)
     try:
