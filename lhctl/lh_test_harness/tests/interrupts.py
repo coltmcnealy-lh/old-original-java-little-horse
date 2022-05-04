@@ -80,3 +80,41 @@ def check_interrupts_1(wf_run: WFRunSchema):
     tr = thr.task_runs[0]
     assert tr.status == LHExecutionStatusEnum.COMPLETED
     assert are_equal(tr.stdout, hello_there("from the interrupt thread"))
+
+# TODO: Andrew: This test fails. Can you figure out why?
+# # Check that when we send multiple interrupts, things don't break
+# def launch_interrupts_2(client: TestClient, wf_spec_id: str):
+#     wf_run_id = client.run_wf(wf_spec_id, check_interrupts_2)
+#     print(f"Launched test {wf_run_id} on interupts.py.")
+#     time.sleep(1)
+#     client.send_event("some-event", wf_run_id, PAYLOAD)
+#     client.send_event("some-event", wf_run_id, PAYLOAD)
+#     time.sleep(4)
+
+
+# def check_interrupts_2(wf_run: WFRunSchema):
+#     assert len(wf_run.thread_runs) == 3
+#     thr = wf_run.thread_runs[0]
+
+#     assert wf_run.status == LHExecutionStatusEnum.COMPLETED
+
+#     assert len(thr.task_runs) == 3
+#     assert are_equal(thr.task_runs[0].stdout, hello_there(OBI))
+#     assert are_equal(thr.task_runs[2].stdout, hello_there(R2))
+
+#     for task_run in thr.task_runs:
+#         assert task_run.status == LHExecutionStatusEnum.COMPLETED
+
+#     thr = wf_run.thread_runs[1]
+#     assert thr.status == LHExecutionStatusEnum.COMPLETED
+#     assert len(thr.task_runs) == 1
+#     tr = thr.task_runs[0]
+#     assert tr.status == LHExecutionStatusEnum.COMPLETED
+#     assert are_equal(tr.stdout, hello_there("from the interrupt thread"))
+
+#     thr = wf_run.thread_runs[2]
+#     assert thr.status == LHExecutionStatusEnum.COMPLETED
+#     assert len(thr.task_runs) == 1
+#     tr = thr.task_runs[0]
+#     assert tr.status == LHExecutionStatusEnum.COMPLETED
+#     assert are_equal(tr.stdout, hello_there("from the interrupt thread"))
