@@ -222,31 +222,61 @@ class ThreadSpecBuilder:
             return self.execute_task_func(task, *splat_args)
         else:
             assert isinstance(task, str)
-            return self.execute_task_def_name(task, **kwargs)
+            return self._execute_task_def_name(task, **kwargs)
 
-    def execute_task_def_name(self, td_name, **kwargs) -> NodeOutput:
+    def sleep_for(
+        self,
+        sleep_time: Union[int, VariableJsonpath, WFRunVariable]
+    ) -> None:
+        node = NodeSchema(node_type=NodeType.SLEEP)
+        node.timeout_seconds = self._construct_var_assign(
+            sleep_time, required_type=int
+        )
+        self._add_node(node)
+
+    def _construct_var_assign(
+        self,
+        entity: Union[VariableJsonpath, WFRunVariable, ACCEPTABLE_TYPES],
+        required_type=None,
+    ):
+        if isinstance(entity, VariableJsonpath):
+            # TODO: Figure out json schema so we can validate types here. Maybe
+            # have Andrew do that?
+            return entity.schema
+
+        elif isinstance(entity, WFRunVariable):
+            if required_type is not None:
+                assert isinstance(required_type, type)
+                assert required_type in [list, str, float, dict, bool, int]
+                if get_lh_var_type(required_type) != entity.var_type:
+                    raise RuntimeError("mismatched var type!")
+
+            var_assign = VariableAssignmentSchema()
+            var_assign.wf_run_variable_name = entity.name
+            return var_assign
+
+        else:
+            assert isinstance(entity, ACCEPTABLE_TYPES)
+            # If we got here, then we want a literal value to be assigned.
+            var_assign = VariableAssignmentSchema()
+
+            if required_type is not None:
+                assert required_type == type(entity)
+            var_assign.literal_value = entity
+            return var_assign
+
+    def _execute_task_def_name(self, td_name, **kwargs) -> NodeOutput:
         # TODO: Add ability to validate the thing by making a request to look up
         # the actual task def and seeing if it is valid
         node = NodeSchema(task_def_name=td_name)
         node.variables = {}
+
         for param_name in kwargs:
+            # TODO: Maybe store JsonSchema info for variables and TaskDef's in the
+            # API somewhere, and make an API call to check that. Maybe Andrew does
+            # this?
             arg = kwargs[param_name]
-            if isinstance(arg, VariableJsonpath):
-                # TODO: Validate that type is correct.
-                node.variables[param_name] = arg.schema
-                continue
-
-            elif isinstance(arg, WFRunVariable):
-                var_assign = VariableAssignmentSchema()
-                var_assign.wf_run_variable_name = arg.name
-                node.variables[param_name] = var_assign
-                continue
-
-            else:
-                # If we got here, then we want a literal value to be assigned.
-                var_assign = VariableAssignmentSchema()
-                var_assign.literal_value = arg
-                node.variables[param_name] = var_assign
+            node.variables[param_name] = self._construct_var_assign(arg)
 
         node_name = self._add_node(node)
         # TODO: Add OutputType to TaskDef and lookup via api to validate it here.
@@ -266,38 +296,18 @@ class ThreadSpecBuilder:
             param = sig.parameters[param_name]
             arg = args[i]
             i += 1
+            if param.annotation is None:
+                raise RuntimeError("You must annotate your parameters!")
 
-            if isinstance(arg, VariableJsonpath):
-                # TODO: Validate that type is correct.
-                node.variables[param_name] = arg.schema
-                continue
-
-            elif isinstance(arg, WFRunVariable):
-                if get_lh_var_type(param.annotation) != arg.var_type:
-                    raise RuntimeError("mismatched var type!")
-
-                var_assign = VariableAssignmentSchema()
-                var_assign.wf_run_variable_name = arg.name
-                node.variables[param_name] = var_assign
-                continue
-
-            else:
-                # If we got here, then we want a literal value to be assigned.
-                var_assign = VariableAssignmentSchema()
-                if param.annotation is None:
-                    raise RuntimeError("You must annotate your parameters!")
-
-                assert param.annotation == type(arg)
-                var_assign.literal_value = arg
-                node.variables[param_name] = var_assign
+            node.variables[param_name] = self._construct_var_assign(
+                arg, required_type=param.annotation
+            )
 
         node_name = self._add_node(node)
-
         if sig.return_annotation == Signature.empty:
             output_type = None
         else:
             output_type = sig.return_annotation
-
         return NodeOutput(node_name, output_type=output_type)
 
     def _add_node(self, node: NodeSchema) -> str:
