@@ -19,7 +19,7 @@ func = module.__dict__[func_name]
 
 new_args = cast_all_args(func, *unknown)
 
-result = func(*new_args)
+result = func(**new_args)
 
 if isinstance(result, list) or isinstance(result, dict):
     result = json.dumps(result)

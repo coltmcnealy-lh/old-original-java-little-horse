@@ -17,5 +17,5 @@ def my_workflow(thread: ThreadSpecBuilder):
     thread.handle_interrupt("some-event", interrupt_handler_thread)
 
     thread.execute(hello_there, "General Kenobi")
-    thread.sleep_for(20)
+    thread.sleep_for(10)
     thread.execute(hello_there, "R2-D2")

@@ -310,8 +310,8 @@ public class ThreadRun extends BaseSchema {
         String stderr = result.stderr;
         int returnCode = result.returncode;
         task.endTime = endTime;
-        task.stdout = LHUtil.unjsonify(stdout, config);
-        task.stderr = LHUtil.unjsonify(stderr, config);
+        task.stdout = LHUtil.fromStringToObj(stdout, config);
+        task.stderr = LHUtil.fromStringToObj(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 

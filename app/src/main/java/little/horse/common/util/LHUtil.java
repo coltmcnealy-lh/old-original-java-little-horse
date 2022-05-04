@@ -120,7 +120,7 @@ public class LHUtil {
                 return (Map<String, Object>) Map.class.cast(obj);
             }
 
-            HashMap<String, Object> tmp = (HashMap<String, Object>) unjsonify(
+            HashMap<String, Object> tmp = (HashMap<String, Object>) fromStringToObj(
                 obj.toString(), cfg
             );
 
@@ -147,7 +147,7 @@ public class LHUtil {
         return out.toString();
     }
 
-    public static String jsonify(Object thing, DepInjContext cfg) {
+    public static String toJsonString(Object thing, DepInjContext cfg) {
         try {
             return getObjectMapper(cfg).writeValueAsString(thing);
         } catch(JsonProcessingException exn) {
@@ -156,12 +156,15 @@ public class LHUtil {
         }
     }
 
-    public static Object unjsonify(String data, DepInjContext cfg) {
+    public static Object fromStringToObj(String data, DepInjContext cfg) {
         try {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
-            LHUtil.log("Caught exception", exn.getMessage());
+            LHUtil.logBack(
+                1,
+                "LHUtil.fromStringToObj() caught exception", exn.getMessage()
+            );
             return data;
         }
     }

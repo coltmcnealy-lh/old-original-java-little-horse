@@ -62,7 +62,7 @@ def get_taskdefs_for_wf(wf_spec: dict):
     for node in iter_all_nodes(wf_spec):
         if node['nodeType'] == 'TASK':
             task_defs.add(node['taskDefName'])
-    
+
     return task_defs
 
 

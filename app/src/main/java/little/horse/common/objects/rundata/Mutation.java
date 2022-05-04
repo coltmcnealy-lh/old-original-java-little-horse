@@ -183,26 +183,7 @@ public class Mutation {
 
     private Object handleAssign() throws VarSubOrzDash {
         return rhs;
-        /*
-        Object out = rhs;
-        Class<?> defTypeCls = LHUtil.getNeededClass(varDef);
-        if (out != null && !defTypeCls.isInstance(out)) {
-            throw new VarSubOrzDash(null,
-                "Tried to set var " + varName + ", which is of type " +
-                defTypeCls.getName() + " to " + out.toString() + ", which is " +
-                " of type " + out.getClass().getName()
-            );
-        }
 
-        if (defTypeCls == Object.class) {
-            // Then the thing needs to either be a Map or be loadable.
-            if (String.class.isInstance(out)) {
-                out = LHUtil.unjsonify((String) out, config);
-            }
-        }
-
-        return out;
-        */
     }
 
     private Double toDouble(Object o) {

@@ -78,7 +78,7 @@ class EdgeConditionSchema(LHBaseModel):
 
 
 class EdgeSchema(LHBaseModel):
-    source_node_name: str
+    source_node_name: Optional[str]
     sink_node_name: str
     condition: Optional[EdgeConditionSchema] = None
 
