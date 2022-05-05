@@ -5,11 +5,9 @@ from inspect import signature, Signature
 from typing import (
     Any,
     Callable,
-    List,
     Mapping,
     Optional,
     Set,
-    Tuple,
     Union,
 )
 from lh_sdk.utils import get_lh_var_type, get_task_def_name
@@ -77,7 +75,6 @@ class NodeJsonpath:
     @property
     def node_name(self) -> str:
         return self._node_name
-
 
 
 class NodeOutput:
@@ -189,20 +186,22 @@ class ConditionContext:
 
     def __enter__(self):
         new_condition = self.condition_schema
+
         for node_name in self._thread._feeder_nodes:
-            cond = self._thread._feeder_nodes[node_name]
-            if cond is not None:
-                raise NotImplementedError(
-                    "Cannot yet do back-to-back if() without an execute() in between."
-                )
+            if self._thread._feeder_nodes[node_name] is not None:
+                self.thread.add_nop_node()  # Just to make things work
+                break
+
+        for node_name in self.thread._feeder_nodes:
             self._thread._feeder_nodes[node_name] = new_condition
 
         self._feeder_nodes.update(self.thread._feeder_nodes)
 
         if self.thread._last_node_name is None:
-            raise NotImplementedError(
-                "Cannot yet have an if() before the first execute() of the workflow"
-            )
+            assert len(self.thread._feeder_nodes) == 0
+            self.thread.add_nop_node()
+            assert self.thread._last_node_name is not None
+
         self._feeder_nodes[self.thread._last_node_name] = self.reverse_condition
 
     def __exit__(self, exc_type, exc_value, tb):
@@ -490,6 +489,11 @@ class ThreadSpecBuilder:
             output_type = sig.return_annotation
         return NodeOutput(node_name, self, output_type=output_type)
 
+    def add_nop_node(self):
+        self._add_node(NodeSchema(
+            node_type=NodeType.NOP,
+        ))
+
     def _add_node(self, node: NodeSchema) -> str:
         if node.node_type == NodeType.TASK:
             node_human_name = node.task_def_name
@@ -508,6 +512,9 @@ class ThreadSpecBuilder:
 
         elif node.node_type == NodeType.THROW_EXCEPTION:
             node_human_name = f'THROW-{node.exception_to_throw}'
+
+        elif node.node_type == NodeType.NOP:
+            node_human_name = "NOP"
 
         else:
             raise RuntimeError("Unimplemented nodetype")

@@ -658,8 +658,22 @@ public class ThreadRun extends BaseSchema {
         } else if (node.nodeType == NodeType.SLEEP) {
             return activateSleepNode(node, event, toSchedule, timers, attemptNumber);
 
+        } else if (node.nodeType == NodeType.NOP) {
+            return activateNopNode(node, event, toSchedule, timers, attemptNumber);
+
         }
         throw new RuntimeException("invalid node type: " + node.nodeType);
+    }
+
+    private boolean activateNopNode(
+        Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
+        List<WFRunTimer> timers, int attemptNumber
+    ) throws LHConnectionError {
+        upNext = new ArrayList<>();
+        TaskRun tr = createNewTaskRun(node);
+        TaskRunResult result = new TaskRunResult("", null, true, 0);
+        completeTask(tr, LHExecutionStatus.COMPLETED, result, event.timestamp);
+        return true;
     }
 
     private boolean activateThrowExceptionNode(

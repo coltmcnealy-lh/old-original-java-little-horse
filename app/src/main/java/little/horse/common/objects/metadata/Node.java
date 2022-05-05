@@ -197,7 +197,20 @@ public class Node extends BaseSchema {
             validateWaitForThreadNode(config);
         } else if (nodeType == NodeType.SLEEP) {
             validateSleepNode(config);
+        } else if (nodeType == NodeType.NOP) {
+            validateNopNode(config);
         }
+    }
+
+    private void validateNopNode(DepInjContext config)
+    throws LHValidationError {
+        if (taskDefName != null || externalEventDef != null) {
+            throw new LHValidationError(
+                "Must have null taskdef and externaleventdef for NOP node"
+            );
+        }
+
+        // TODO: Later on, validate that there's no variable mutations and such here.
     }
 
     private void validateTaskNode(DepInjContext config)

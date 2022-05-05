@@ -15,6 +15,9 @@ def conditionals(thread: ThreadSpecBuilder):
     thread.execute(dummy)
 
     with my_int.less_than(10):
-        my_int.assign(thread.execute(multiply, 2))
+        my_int.assign(thread.execute(multiply, my_int))
+
+    with my_int.greater_than(15):
+        thread.execute(dummy)
 
     thread.execute(dummy)

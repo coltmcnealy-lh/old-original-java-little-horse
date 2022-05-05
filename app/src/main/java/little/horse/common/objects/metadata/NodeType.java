@@ -6,5 +6,6 @@ public enum NodeType {
     SPAWN_THREAD,
     WAIT_FOR_THREAD,
     SLEEP,
+    NOP,
     THROW_EXCEPTION;
 }
