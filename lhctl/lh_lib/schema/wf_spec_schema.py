@@ -71,6 +71,18 @@ class LHComparisonEnum(Enum):
     NOT_IN = 'NOT IN'
 
 
+CONDITION_INVERSES = {
+    LHComparisonEnum.LESS_THAN: LHComparisonEnum.GREATER_THAN_EQ,
+    LHComparisonEnum.GREATER_THAN: LHComparisonEnum.LESS_THAN_EQ,
+    LHComparisonEnum.LESS_THAN_EQ: LHComparisonEnum.GREATER_THAN,
+    LHComparisonEnum.GREATER_THAN_EQ: LHComparisonEnum.LESS_THAN,
+    LHComparisonEnum.EQUALS: LHComparisonEnum.NOT_EQUALS,
+    LHComparisonEnum.NOT_EQUALS: LHComparisonEnum.EQUALS,
+    LHComparisonEnum.IN: LHComparisonEnum.NOT_IN,
+    LHComparisonEnum.NOT_IN: LHComparisonEnum.IN,
+}
+
+
 class EdgeConditionSchema(LHBaseModel):
     left_side: VariableAssignmentSchema
     right_side: VariableAssignmentSchema

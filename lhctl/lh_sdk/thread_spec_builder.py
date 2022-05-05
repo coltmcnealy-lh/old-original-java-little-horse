@@ -5,16 +5,21 @@ from inspect import signature, Signature
 from typing import (
     Any,
     Callable,
+    List,
     Mapping,
     Optional,
     Set,
+    Tuple,
     Union,
 )
 from lh_sdk.utils import get_lh_var_type, get_task_def_name
 
 from lh_lib.schema.wf_spec_schema import (
+    CONDITION_INVERSES,
+    EdgeConditionSchema,
     EdgeSchema,
     InterruptDefSchema,
+    LHComparisonEnum,
     NodeSchema,
     NodeType,
     ThreadSpecSchema,
@@ -79,12 +84,14 @@ class NodeOutput:
     def __init__(
         self,
         node_name,
+        thread: ThreadSpecBuilder,
         output_type: Optional[Any] = None,
         jsonpath: Optional[str] = None,
     ):
         self._node_name = node_name
         self._output_type = output_type
         self._jsonpath = jsonpath
+        self._thread = thread
 
     @property
     def output_type(self) -> Any:
@@ -92,21 +99,114 @@ class NodeOutput:
 
     @property
     def node_name(self) -> str:
+        if self._thread._last_node_name != self._node_name:
+            raise RuntimeError(
+                "Accessing node output after other nodes executed!"
+            )
         return self._node_name
 
     def jsonpath(self, path: str) -> NodeOutput:
+        if self._thread._last_node_name != self._node_name:
+            raise RuntimeError(
+                "Accessing node output after other nodes executed!"
+            )
         if self._jsonpath is not None:
             raise RuntimeError(
                 "Cannot double-up the jsonpath!"
             )
         return NodeOutput(
             self.node_name,
+            self._thread,
             output_type=self.output_type,
             jsonpath=path,
         )
 
     def get_jsonpath(self) -> Optional[str]:
+        if self._thread._last_node_name != self._node_name:
+            raise RuntimeError(
+                "Accessing node output after other nodes executed!"
+            )
         return self._jsonpath
+
+
+class ConditionContext:
+    def __init__(
+        self,
+        thread: ThreadSpecBuilder,
+        lhs: WFRunVariable,
+        rhs: Union[ACCEPTABLE_TYPES, WFRunVariable],
+        operator: LHComparisonEnum,
+    ):
+        self._thread = thread
+        self._lhs = lhs
+        self._rhs = rhs
+        self._operator = operator
+
+        self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
+
+    @property
+    def condition_schema(self) -> EdgeConditionSchema:
+        return EdgeConditionSchema(
+            left_side=self.left_side,
+            right_side=self.right_side,
+            comparator=self.operator,
+        )
+
+    @property
+    def thread(self):
+        return self._thread
+
+    @property
+    def left_side(self) -> VariableAssignmentSchema:
+        return VariableAssignmentSchema(
+            wf_run_variable_name=self._lhs.name,
+            json_path=self._lhs.get_jsonpath(),
+        )
+
+    @property
+    def right_side(self) -> VariableAssignmentSchema:
+        if isinstance(self._rhs, WFRunVariable):
+            return VariableAssignmentSchema(
+                wf_run_variable_name=self._rhs.name,
+                json_path=self._rhs.get_jsonpath(),
+            )
+        else:
+            return VariableAssignmentSchema(literal_value=self._rhs)
+
+    @property
+    def reverse_condition(self) -> EdgeConditionSchema:
+        condition = self.condition_schema
+        new_comparator = CONDITION_INVERSES[condition.comparator]
+        return EdgeConditionSchema(
+            left_side=self.left_side,
+            right_side=self.right_side,
+            comparator=new_comparator,
+        )
+
+    @property
+    def operator(self):
+        return self._operator
+
+    def __enter__(self):
+        new_condition = self.condition_schema
+        for node_name in self._thread._feeder_nodes:
+            cond = self._thread._feeder_nodes[node_name]
+            if cond is not None:
+                raise NotImplementedError(
+                    "Cannot yet do back-to-back if() without an execute() in between."
+                )
+            self._thread._feeder_nodes[node_name] = new_condition
+
+        self._feeder_nodes.update(self.thread._feeder_nodes)
+
+        if self.thread._last_node_name is None:
+            raise NotImplementedError(
+                "Cannot yet have an if() before the first execute() of the workflow"
+            )
+        self._feeder_nodes[self.thread._last_node_name] = self.reverse_condition
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self._thread._feeder_nodes.update(self._feeder_nodes)
 
 
 class WFRunVariable:
@@ -130,6 +230,10 @@ class WFRunVariable:
     def name(self) -> str:
         return self._name
 
+    @property
+    def thread(self) -> ThreadSpecBuilder:
+        return self._thread
+
     def jsonpath(self, path: str) -> WFRunVariable:
         return WFRunVariable(
             self.name,
@@ -141,36 +245,9 @@ class WFRunVariable:
     def get_jsonpath(self) -> Optional[str]:
         return self._jsonpath
 
-    def _create_mutation(
-        self,
-        op: VariableMutationOperation,
-        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
-    ) -> VariableMutationSchema:
-        out = VariableMutationSchema(
-            operation=op,
-        )
-
-        if isinstance(target, ACCEPTABLE_TYPES):
-            out.literal_value = target
-        elif isinstance(target, WFRunVariable):
-            out.source_variable = VariableAssignmentSchema(
-                wf_run_variable_name=target.name,
-                json_path=target.get_jsonpath(),
-            )
-        else:
-            assert isinstance(target, NodeOutput)
-            out.json_path = target.get_jsonpath()
-
-        return out
-
-    def _mutate(
-        self,
-        op: VariableMutationOperation,
-        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
-    ):
-        mutation = self._create_mutation(op, target)
-        self._thread.mutate(self.name, mutation)
-
+    ######################################
+    # Stuff for VariableMutation goes here
+    ######################################
 
     def assign(
         self,
@@ -204,6 +281,105 @@ class WFRunVariable:
     def remove_key(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
         self._mutate(VariableMutationOperation.REMOVE_KEY, target)
 
+    def _create_mutation(
+        self,
+        op: VariableMutationOperation,
+        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
+    ) -> VariableMutationSchema:
+        out = VariableMutationSchema(
+            operation=op,
+        )
+
+        if isinstance(target, ACCEPTABLE_TYPES):
+            out.literal_value = target
+        elif isinstance(target, WFRunVariable):
+            out.source_variable = VariableAssignmentSchema(
+                wf_run_variable_name=target.name,
+                json_path=target.get_jsonpath(),
+            )
+        else:
+            assert isinstance(target, NodeOutput)
+            out.json_path = target.get_jsonpath()
+
+        return out
+
+    def _mutate(
+        self,
+        op: VariableMutationOperation,
+        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
+    ):
+        mutation = self._create_mutation(op, target)
+        self._thread.mutate(self.name, mutation)
+
+    #####################################
+    # Stuff for conditionals follows here
+    #####################################
+    def less_than(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.LESS_THAN
+        )
+
+    def greater_than(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.GREATER_THAN
+        )
+
+    def greater_than_eq(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.GREATER_THAN_EQ
+        )
+
+    def less_than_eq(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.LESS_THAN_EQ
+        )
+
+    def equals(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.EQUALS
+        )
+
+    def not_equals(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.NOT_EQUALS
+        )
+
+    def contains(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        raise NotImplementedError()
+
+    def not_contains(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        raise NotImplementedError()
+
+    def is_in(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.IN
+        )
+
+    def is_not_in(
+        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
+    ) -> ConditionContext:
+        return ConditionContext(
+            self.thread, self, target, LHComparisonEnum.NOT_IN
+        )
+
 
 class ThreadSpecBuilder:
     def __init__(self, name: str, wf_spec: WFSpecSchema, wf: Workflow):
@@ -213,6 +389,8 @@ class ThreadSpecBuilder:
         self._last_node_name: Optional[str] = None
         self._wf_spec = wf_spec
         self._wf = wf
+        self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
+        # self._next_edge_condition: Optional[EdgeConditionSchema] = None
 
     def execute(
         self,
@@ -284,7 +462,7 @@ class ThreadSpecBuilder:
         # TODO: Add OutputType to TaskDef and lookup via api to validate it here.
         
         self._wf.mark_task_def_for_skip_build(node)
-        return NodeOutput(node_name)
+        return NodeOutput(node_name, self)
 
     def execute_task_func(self, func: Callable[..., Any], *splat_args) -> NodeOutput:
         sig: Signature = signature(func)
@@ -310,26 +488,26 @@ class ThreadSpecBuilder:
             output_type = None
         else:
             output_type = sig.return_annotation
-        return NodeOutput(node_name, output_type=output_type)
+        return NodeOutput(node_name, self, output_type=output_type)
 
     def _add_node(self, node: NodeSchema) -> str:
         if node.node_type == NodeType.TASK:
             node_human_name = node.task_def_name
 
         elif node.node_type == NodeType.EXTERNAL_EVENT:
-            node_human_name = f'wait-event-{node.external_event_def_name}'
+            node_human_name = f'WAIT-EVENT-{node.external_event_def_name}'
 
         elif node.node_type == NodeType.SLEEP:
             node_human_name = 'SLEEP'
 
         elif node.node_type == NodeType.SPAWN_THREAD:
-            node_human_name = f'spawn-{node.thread_spawn_thread_spec_name}'
+            node_human_name = f'SPAWN-{node.thread_spawn_thread_spec_name}'
 
         elif node.node_type == NodeType.WAIT_FOR_THREAD:
-            node_human_name = f'wait-thread-{node.thread_wait_source_node_name}'
+            node_human_name = f'WAIT-THREAD-{node.thread_wait_source_node_name}'
 
         elif node.node_type == NodeType.THROW_EXCEPTION:
-            node_human_name = f'throw-{node.exception_to_throw}'
+            node_human_name = f'THROW-{node.exception_to_throw}'
 
         else:
             raise RuntimeError("Unimplemented nodetype")
@@ -338,12 +516,17 @@ class ThreadSpecBuilder:
         node_name = f'{len(self._spec.nodes)}-{node_human_name}-{tag}'
         self._spec.nodes[node_name] = node
 
-        if self._last_node_name is not None:
+        for source_node_name in self._feeder_nodes:
+            condition = self._feeder_nodes[source_node_name]
             edge = EdgeSchema(
-                source_node_name=self._last_node_name,
-                sink_node_name=node_name
+                source_node_name=source_node_name,
+                sink_node_name=node_name,
+                condition=condition,
+                # condition=self._next_edge_condition,
             )
             self._spec.edges.append(edge)
+        self._feeder_nodes = {node_name: None}
+        # self._next_edge_condition = None
         self._last_node_name = node_name
         return node_name
 
@@ -371,7 +554,7 @@ class ThreadSpecBuilder:
         node.node_type = NodeType.EXTERNAL_EVENT
 
         node_name = self._add_node(node)
-        return NodeOutput(node_name)
+        return NodeOutput(node_name, self)
 
     def _get_def_for_var(self, var_name: str) -> WFRunVariableDefSchema:
         # TODO: Traverse a tree upwards to find variables for thread-scoping stuff
