@@ -1,4 +1,5 @@
 import json
+import logging
 import subprocess
 import time
 from typing import List, Optional, TypeVar
@@ -180,9 +181,16 @@ class LHClient:
 
     def add_wf_spec(self, wf: WFSpecSchema):
         url = f'{self.url}/WFSpec'
-        requests.post(
+        response = requests.post(
             url, json=json.loads(wf.json(by_alias=True))
-        ).raise_for_status()
+        )
+        try:
+            response.raise_for_status()
+        except Exception as exn:
+            logging.error(
+                f"Got an exception: {exn}, {response.content.decode()}"
+            )
+            raise exn
 
     def add_task_def(self, td: TaskDefSchema):
         url = f'{self.url}/TaskDef'

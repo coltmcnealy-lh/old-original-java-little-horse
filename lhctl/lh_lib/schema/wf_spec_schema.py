@@ -69,7 +69,7 @@ class LHComparisonEnum(Enum):
     EQUALS = 'EQUALS'
     NOT_EQUALS = 'NOT_EQUALS'
     IN = 'IN'
-    NOT_IN = 'NOT IN'
+    NOT_IN = 'NOT_IN'
 
 
 CONDITION_INVERSES = {

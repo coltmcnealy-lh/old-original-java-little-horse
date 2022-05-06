@@ -276,6 +276,7 @@ class ElseConditionContext:
         # each block to have a null condition and both go to the next thing.
         assert self._popped_node_name is not None
         self.parent.thread._feeder_nodes[self._popped_node_name] = None
+        self.parent.thread.add_nop_node()  # too lazy to do edge cases manually...
 
 
 class WFRunVariable:

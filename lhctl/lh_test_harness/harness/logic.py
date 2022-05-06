@@ -1,5 +1,7 @@
 from contextlib import closing
 import importlib
+import os
+import sys
 from types import ModuleType
 from typing import Callable, Iterable, List, Optional, Tuple
 
@@ -140,6 +142,11 @@ def check_all_tests(test_name: str, client: TestClient):
             except AssertionError as exn:
                 wf_run_orm.status = TestStatus.FAILED_UNACCEPTABLE
                 wf_run_orm.message = exn.args[0] if len(exn.args) else 'Failed check!'
+                _, _, exc_tb = sys.exc_info()
+                assert exc_tb is not None
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                assert wf_run_orm.message is not None
+                wf_run_orm.message += f"line: {exc_tb.tb_lineno}, file: {fname}"
 
             ses.merge(wf_run_orm)
             ses.commit()
