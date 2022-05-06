@@ -10,6 +10,7 @@ from typing import (
     Set,
     Union,
 )
+import uuid
 from lh_sdk.utils import get_lh_var_type, get_task_def_name
 
 from lh_lib.schema.wf_spec_schema import (
@@ -125,8 +126,7 @@ class NodeOutput:
             )
         return self._jsonpath
 
-
-class ConditionContext:
+class IfElseCondition:
     def __init__(
         self,
         thread: ThreadSpecBuilder,
@@ -138,6 +138,9 @@ class ConditionContext:
         self._lhs = lhs
         self._rhs = rhs
         self._operator = operator
+        self._id = uuid.uuid4().hex
+        self._cancelled = False
+        self._initial_feeder_node = thread._last_node_name
 
         self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
 
@@ -180,32 +183,99 @@ class ConditionContext:
             comparator=new_comparator,
         )
 
+    def notify_thread_between_if_else(self):
+        self.thread._between_if_elses[self._id] = self
+
+    def notify_thread_else_begun(self):
+        del self.thread._between_if_elses[self._id]
+
+    # To be called if the thread starts executing crap without doing the if_else
+    # first.
+    def handle_else_cancelled(self):
+        self._cancelled = True
+
     @property
     def operator(self):
         return self._operator
 
-    def __enter__(self):
-        new_condition = self.condition_schema
+    def is_true(self) -> IfConditionContext:
+        return IfConditionContext(self)
 
-        for node_name in self._thread._feeder_nodes:
-            if self._thread._feeder_nodes[node_name] is not None:
-                self.thread.add_nop_node()  # Just to make things work
+    def is_false(self) -> ElseConditionContext:
+        if self._cancelled:
+            raise RuntimeError(
+                "Must call the is_false() directly after end of is_true()!"
+            )
+        return ElseConditionContext(self)
+
+
+class IfConditionContext:
+    def __init__(
+        self,
+        parent: IfElseCondition,
+    ):
+        self._parent = parent
+
+        self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
+
+    @property
+    def parent(self):
+        return self._parent
+
+    def __enter__(self):
+        new_condition = self.parent.condition_schema
+        for node_name in self.parent.thread._feeder_nodes:
+            if self.parent.thread._feeder_nodes[node_name] is not None:
+                self.parent.thread.add_nop_node()  # Just to make things work
                 break
 
-        for node_name in self.thread._feeder_nodes:
-            self._thread._feeder_nodes[node_name] = new_condition
+        for node_name in self.parent.thread._feeder_nodes:
+            self.parent.thread._feeder_nodes[node_name] = new_condition
 
-        self._feeder_nodes.update(self.thread._feeder_nodes)
+        self._feeder_nodes.update(self.parent.thread._feeder_nodes)
 
-        if self.thread._last_node_name is None:
-            assert len(self.thread._feeder_nodes) == 0
-            self.thread.add_nop_node()
-            assert self.thread._last_node_name is not None
+        if self.parent.thread._last_node_name is None:
+            assert len(self.parent.thread._feeder_nodes) == 0
+            self.parent.thread.add_nop_node()
+            assert self.parent.thread._last_node_name is not None
 
-        self._feeder_nodes[self.thread._last_node_name] = self.reverse_condition
+        self._feeder_nodes[
+            self.parent.thread._last_node_name
+        ] = self.parent.reverse_condition
 
     def __exit__(self, exc_type, exc_value, tb):
-        self._thread._feeder_nodes.update(self._feeder_nodes)
+        self.parent.thread._feeder_nodes.update(self._feeder_nodes)
+        self.parent.notify_thread_between_if_else()
+
+
+class ElseConditionContext:
+    def __init__(self, parent: IfElseCondition):
+        self._parent = parent
+        self._popped_node_name: Optional[str] = None
+
+    @property
+    def parent(self):
+        return self._parent
+
+    def __enter__(self):
+        # The IfConditionContext has already __enter__()'ed and __exit__()'ed,
+        # so we know that the parent.thread._feeder_nodes contains the last_node from
+        # before the IfCondition actually entered, and it also contains the last
+        # node from the if block.
+        # We want to pop the last node from the if block and then re-add it later on.
+        self._popped_node_name = self.parent.thread._last_node_name
+        assert self._popped_node_name is not None
+        assert self._popped_node_name in self.parent.thread._feeder_nodes
+        del self.parent.thread._feeder_nodes[self._popped_node_name]
+
+        # There should still be nodes in there!
+        assert len(self.parent.thread._feeder_nodes) > 0
+
+    def __exit__(self, exc_type, exc_value, tb):
+        # After both the if and else blocks exit, we need the last node from
+        # each block to have a null condition and both go to the next thing.
+        assert self._popped_node_name is not None
+        self.parent.thread._feeder_nodes[self._popped_node_name] = None
 
 
 class WFRunVariable:
@@ -315,67 +385,67 @@ class WFRunVariable:
     #####################################
     def less_than(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.LESS_THAN
         )
 
     def greater_than(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.GREATER_THAN
         )
 
     def greater_than_eq(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.GREATER_THAN_EQ
         )
 
     def less_than_eq(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.LESS_THAN_EQ
         )
 
     def equals(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.EQUALS
         )
 
     def not_equals(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.NOT_EQUALS
         )
 
     def contains(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
+    ) -> IfElseCondition:
         raise NotImplementedError()
 
     def not_contains(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
+    ) -> IfElseCondition:
         raise NotImplementedError()
 
     def is_in(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.IN
         )
 
     def is_not_in(
         self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> ConditionContext:
-        return ConditionContext(
+    ) -> IfElseCondition:
+        return IfElseCondition(
             self.thread, self, target, LHComparisonEnum.NOT_IN
         )
 
@@ -390,6 +460,8 @@ class ThreadSpecBuilder:
         self._wf = wf
         self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
         # self._next_edge_condition: Optional[EdgeConditionSchema] = None
+
+        self._between_if_elses: dict[str, IfElseCondition] = {}
 
     def execute(
         self,
@@ -495,6 +567,15 @@ class ThreadSpecBuilder:
         ))
 
     def _add_node(self, node: NodeSchema) -> str:
+        to_delete = []
+
+        for if_else_condition_id in self._between_if_elses:
+            self._between_if_elses[if_else_condition_id].handle_else_cancelled()
+            to_delete.append(self._between_if_elses[if_else_condition_id]._id)
+
+        for cond_id in to_delete:
+            del self._between_if_elses[cond_id]
+
         if node.node_type == NodeType.TASK:
             node_human_name = node.task_def_name
 
