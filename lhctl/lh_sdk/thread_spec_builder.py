@@ -135,6 +135,8 @@ class NodeOutput:
         return self._jsonpath
 
     def with_retries(self, num_retries) -> NodeOutput:
+        if self.node.node_type != NodeType.TASK:
+            raise RuntimeError("Can only retry task node")
         self.node.num_retries = num_retries
         return self
 
