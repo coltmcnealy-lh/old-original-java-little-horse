@@ -103,6 +103,14 @@ class NodeOutput:
             )
         return self._node_name
 
+    @property
+    def thread(self):
+        return self._thread
+
+    @property
+    def node(self) -> NodeSchema:
+        return self.thread._spec.nodes[self.node_name]
+
     def jsonpath(self, path: str) -> NodeOutput:
         if self._thread._last_node_name != self._node_name:
             raise RuntimeError(
@@ -125,6 +133,15 @@ class NodeOutput:
                 "Accessing node output after other nodes executed!"
             )
         return self._jsonpath
+
+    def with_retries(self, num_retries) -> NodeOutput:
+        self.node.num_retries = num_retries
+        return self
+
+    def with_timeout(self, timeout_seconds: Union[int, WFRunVariable]) -> NodeOutput:
+        self.node.timeout_seconds = self.thread.construct_var_assign(timeout_seconds)
+        return self
+
 
 class IfElseCondition:
     def __init__(
@@ -460,7 +477,6 @@ class ThreadSpecBuilder:
         self._wf_spec = wf_spec
         self._wf = wf
         self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
-        # self._next_edge_condition: Optional[EdgeConditionSchema] = None
 
         self._between_if_elses: dict[str, IfElseCondition] = {}
 
@@ -481,12 +497,12 @@ class ThreadSpecBuilder:
         sleep_time: Union[int, VariableJsonpath, WFRunVariable]
     ) -> None:
         node = NodeSchema(node_type=NodeType.SLEEP)
-        node.timeout_seconds = self._construct_var_assign(
+        node.timeout_seconds = self.construct_var_assign(
             sleep_time, required_type=int
         )
         self._add_node(node)
 
-    def _construct_var_assign(
+    def construct_var_assign(
         self,
         entity: Union[VariableJsonpath, WFRunVariable, ACCEPTABLE_TYPES],
         required_type=None,
@@ -528,7 +544,7 @@ class ThreadSpecBuilder:
             # API somewhere, and make an API call to check that. Maybe Andrew does
             # this?
             arg = kwargs[param_name]
-            node.variables[param_name] = self._construct_var_assign(arg)
+            node.variables[param_name] = self.construct_var_assign(arg)
 
         node_name = self._add_node(node)
         # TODO: Add OutputType to TaskDef and lookup via api to validate it here.
@@ -551,7 +567,7 @@ class ThreadSpecBuilder:
             if param.annotation is None:
                 raise RuntimeError("You must annotate your parameters!")
 
-            node.variables[param_name] = self._construct_var_assign(
+            node.variables[param_name] = self.construct_var_assign(
                 arg, required_type=param.annotation
             )
 

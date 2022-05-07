@@ -45,6 +45,7 @@ class TaskRunSchema(LHBaseModel):
     wf_spec_id: str
     wf_spec_name: str
     thread_id: int
+    attempt_number: int = 0
 
     node_name: str
 
