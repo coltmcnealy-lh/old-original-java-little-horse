@@ -358,6 +358,18 @@ public class ThreadRun extends BaseSchema {
     throws LHConnectionError {
         TaskRun tr = taskRuns.get(trEvent.taskRunPosition);
         TaskRunEndedEvent event = trEvent.endedEvent;
+        if (tr.status != LHExecutionStatus.SCHEDULED 
+            && tr.status != LHExecutionStatus.RUNNING
+        ) {
+            // Then we know that something has gone wrong.
+            if (tr.status == LHExecutionStatus.HALTED) {
+                if (tr.failureReason == LHFailureReason.TIMEOUT) {
+                    // The task has already timed out, so technically this result
+                    // is invalid and should be ignored.
+                    return;
+                }
+            }
+        }
         LHExecutionStatus taskStatus = event.result.success
             ? LHExecutionStatus.COMPLETED : LHExecutionStatus.HALTED;
 

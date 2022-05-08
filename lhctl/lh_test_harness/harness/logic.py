@@ -126,12 +126,13 @@ def check_all_tests(test_name: str, client: TestClient):
     with closing(get_session()) as ses:
         for wf_run_orm, wf_run in client.iter_test_runs(test_name, ses):
             new_status, message = check_for_consistency(wf_run_orm, wf_run)
+            print("Checked for consistency")
 
-            if new_status is not None:
+            if new_status is not None and new_status != TestStatus.FALIED_ACCEPTABLE:
                 wf_run_orm.status = new_status
                 wf_run_orm.message = message
                 ses.merge(wf_run_orm)
-                ses.flush()
+                ses.commit()
                 continue
 
             mod = importlib.import_module(wf_run_orm.check_func_module)
@@ -140,13 +141,14 @@ def check_all_tests(test_name: str, client: TestClient):
                 func(wf_run)
                 wf_run_orm.status = TestStatus.SUCCEEDED
             except AssertionError as exn:
-                wf_run_orm.status = TestStatus.FAILED_UNACCEPTABLE
-                wf_run_orm.message = exn.args[0] if len(exn.args) else 'Failed check!'
-                _, _, exc_tb = sys.exc_info()
-                assert exc_tb is not None
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                assert wf_run_orm.message is not None
-                wf_run_orm.message += f"line: {exc_tb.tb_lineno}, file: {fname}"
+                if wf_run_orm.status != TestStatus.FALIED_ACCEPTABLE:
+                    wf_run_orm.status = TestStatus.FAILED_UNACCEPTABLE
+                    wf_run_orm.message = exn.args[0] if len(exn.args) else 'Failed.'
+                    _, _, exc_tb = sys.exc_info()
+                    assert exc_tb is not None
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    assert wf_run_orm.message is not None
+                    wf_run_orm.message += f"line: {exc_tb.tb_lineno}, file: {fname}"
 
             ses.merge(wf_run_orm)
             ses.commit()
