@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum as PythonEnum
 from datetime import datetime
 from typing import Any, List, Mapping, Optional
+import uuid
 
 from sqlalchemy import (
     Column,
@@ -112,9 +113,9 @@ class TaskRun(BaseOrm):
     stdout: str = Column(String, nullable=True)  # type: ignore
     stderr: str = Column(String, nullable=True)  # type: ignore
     task_def: str = Column(String, nullable=True)  # type: ignore
+    guid: str = Column(
+        String, default=lambda: uuid.uuid4().hex, primary_key=True
+    ) # type: ignore
 
     wf_run: WFRun = relationship('WFRun', back_populates='task_runs')
 
-    __table_args__ = (
-        PrimaryKeyConstraint('wf_run_id', 'thread_run_id', 'task_run_number'),
-    )

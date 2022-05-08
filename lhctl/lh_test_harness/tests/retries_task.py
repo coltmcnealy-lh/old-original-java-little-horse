@@ -1,4 +1,5 @@
 import random
+import time
 
 from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, WFRunSchema
 from lh_test_harness.test_client import TestClient
@@ -25,6 +26,8 @@ def launch_retries_task(client: TestClient, wf_spec_id: str):
     for _ in range(20):
         wf_run_id = client.run_wf(wf_spec_id, check_retries_task)
         print(f"Launched test {wf_run_id} on basic.py.")
+
+    time.sleep(10)
 
 
 def check_retries_task(wf_run: WFRunSchema):

@@ -14,6 +14,7 @@ public class TaskRun extends BaseSchema {
     @JsonBackReference
     public ThreadRun parentThread;
 
+    public int position;
     public int number;
     public String wfSpecId;
     public String wfSpecName;

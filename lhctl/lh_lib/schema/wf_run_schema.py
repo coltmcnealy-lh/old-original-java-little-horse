@@ -41,6 +41,7 @@ class LHExecutionStatusEnum(Enum):
 
 
 class TaskRunSchema(LHBaseModel):
+    position: int
     number: int
     wf_spec_id: str
     wf_spec_name: str

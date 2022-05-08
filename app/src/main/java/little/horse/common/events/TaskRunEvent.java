@@ -6,7 +6,7 @@ import little.horse.common.objects.BaseSchema;
 
 public class TaskRunEvent extends BaseSchema {
     public int threadID;
-    public int taskRunNumber;
+    public int taskRunPosition;
     public Date timestamp;
 
     // Only one of the below fields can be non-null.

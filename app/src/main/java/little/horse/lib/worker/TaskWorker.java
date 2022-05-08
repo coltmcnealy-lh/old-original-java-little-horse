@@ -122,7 +122,7 @@ public class TaskWorker {
 
         TaskRunEvent tre = new TaskRunEvent();
         tre.startedEvent = trs;
-        tre.taskRunNumber = schedReq.taskRunNumber;
+        tre.taskRunPosition = schedReq.taskRunNumber;
         tre.timestamp = LHUtil.now();
 
         WFEvent event = new WFEvent();
@@ -179,7 +179,7 @@ public class TaskWorker {
 
         TaskRunEvent tre2 = new TaskRunEvent();
         tre2.endedEvent = out;
-        tre2.taskRunNumber = schedReq.taskRunNumber;
+        tre2.taskRunPosition = schedReq.taskRunNumber;
         tre2.timestamp = LHUtil.now();
 
         WFEvent completedEvent = new WFEvent();

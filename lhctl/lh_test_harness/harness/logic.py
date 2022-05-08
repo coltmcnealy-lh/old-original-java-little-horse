@@ -85,7 +85,7 @@ def check_for_consistency(wf_run_orm: WFRun, wf_run: WFRunSchema):
         # 2. Matches the output in the db
         assert thr_num == task_run.thread_id
         tr_orm = find_task_run(
-            wf_run_orm, task_run.thread_id, task_run.number
+            wf_run_orm, task_run.thread_id, task_run.position
         )
 
         if tr_orm == None:

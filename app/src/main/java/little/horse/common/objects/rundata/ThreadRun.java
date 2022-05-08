@@ -250,7 +250,15 @@ public class ThreadRun extends BaseSchema {
         TaskRun tr = new TaskRun();
         tr.status = LHExecutionStatus.RUNNING;
         tr.threadId = id;
-        tr.number = taskRuns.size();
+        tr.position = taskRuns.size();
+
+        if (taskRuns.size() == 0) {
+            tr.number = 0;
+        } else if (attemptNumber != 0) {
+            tr.number = taskRuns.get(taskRuns.size() - 1).number;
+        } else {
+            tr.number = taskRuns.get(taskRuns.size() - 1).number + 1;
+        }
         tr.nodeName = node.name;
         tr.wfSpecId = wfRun.getWFSpec().getId();
         tr.wfSpecName = wfRun.getWFSpec().name;
@@ -283,7 +291,7 @@ public class ThreadRun extends BaseSchema {
     // but I'm not sure I wanna deal with jumping back and forth like that.
     @JsonIgnore
     private void handleTaskStarted(TaskRunEvent trEvent) {
-        TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
+        TaskRun tr = taskRuns.get(trEvent.taskRunPosition);
         TaskRunStartedEvent event = trEvent.startedEvent;
 
         tr.status = LHExecutionStatus.RUNNING;
@@ -316,13 +324,7 @@ public class ThreadRun extends BaseSchema {
         task.returnCode = returnCode;
 
         unlockVariables(task.getNode());
-
-        // Need the up next to be set whether or not the task fails/there is
-        // a retry/it succeeds.
         upNext = new ArrayList<>();
-        for (Edge edge: task.getNode().getOutgoingEdges()) {
-            addEdgeToUpNext(edge);
-        }
 
         if (taskStatus == LHExecutionStatus.COMPLETED) {
             try {
@@ -333,7 +335,6 @@ public class ThreadRun extends BaseSchema {
                     task, LHFailureReason.VARIABLE_LOOKUP_ERROR, 
                     "Failed mutating variables after task: " + exn.getMessage()
                 );
-                return;
             }
 
         } else {
@@ -342,12 +343,20 @@ public class ThreadRun extends BaseSchema {
                 "thread failed on node " + task.nodeName + ": " + stderr
             );
         }
+
+        if (upNext.size() == 0) {
+            // Only want to add the next edges if we didn't enqueue a retry or
+            // something like that
+            for (Edge edge: task.getNode().getOutgoingEdges()) {
+                addEdgeToUpNext(edge);
+            }
+        }
     }
 
     @JsonIgnore
     private void handleTaskEnded(TaskRunEvent trEvent)
     throws LHConnectionError {
-        TaskRun tr = taskRuns.get(trEvent.taskRunNumber);
+        TaskRun tr = taskRuns.get(trEvent.taskRunPosition);
         TaskRunEndedEvent event = trEvent.endedEvent;
         LHExecutionStatus taskStatus = event.result.success
             ? LHExecutionStatus.COMPLETED : LHExecutionStatus.HALTED;
@@ -704,7 +713,7 @@ public class ThreadRun extends BaseSchema {
         timer.wfRunId = wfRun.id;
         timer.threadRunId = id;
         timer.wfRunId = wfRun.id;
-        timer.taskRunId = tr.number;
+        timer.taskRunId = tr.position;
 
         Calendar calendar = null;
 
@@ -764,7 +773,7 @@ public class ThreadRun extends BaseSchema {
         tsr.wfSpecId = wfRun.wfSpecDigest;
         tsr.wfSpecName = wfRun.wfSpecName;
         tsr.threadRunNumber = id;
-        tsr.taskRunNumber = tr.number;
+        tsr.taskRunNumber = tr.position;
         tsr.kafkaTopic = wfRun.getWFSpec().getEventTopic();
         try {
             tsr.taskDefName = tr.getNode().taskDefName;
@@ -792,7 +801,7 @@ public class ThreadRun extends BaseSchema {
             if (timeoutTime != null) {
                 WFRunTimer timer = new WFRunTimer();
                 timer.threadRunId = id;
-                timer.taskRunId = tr.number;
+                timer.taskRunId = tr.position;
                 timer.nodeName = node.name;
                 timer.wfRunId = wfRun.id;
                 timer.maturationTimestamp = timeoutTime.getTimeInMillis();
@@ -923,7 +932,7 @@ public class ThreadRun extends BaseSchema {
         TaskRun tr = createNewTaskRun(node, attemptNumber);
         taskRuns.add(tr);
         correlSchema.assignedNodeName = node.name;
-        correlSchema.assignedTaskRunExecutionNumber = tr.number;
+        correlSchema.assignedTaskRunExecutionNumber = tr.position;
         correlSchema.assignedThreadId = tr.threadId;
 
         TaskRunResult result = new TaskRunResult(
