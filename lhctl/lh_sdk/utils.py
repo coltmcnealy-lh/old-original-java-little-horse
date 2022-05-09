@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 """
 This file is a concept prototype implementation that will show the seeds of a cool
 SDK for TaskDef creation from actual code.
@@ -9,11 +8,10 @@ from inspect import signature, Signature
 import json
 import os
 import requests
-from typing import TYPE_CHECKING, Any, Callable, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Tuple, Union
 
 from pydantic import BaseModel as PyThingBaseModel
 from humps import camelize
-
 
 if TYPE_CHECKING:
     from lh_lib.schema.wf_spec_schema import WFRunVariableTypeEnum

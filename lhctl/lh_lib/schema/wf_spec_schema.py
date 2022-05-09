@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Union
 
 from pydantic import Field
 
@@ -81,6 +81,17 @@ CONDITION_INVERSES = {
     LHComparisonEnum.NOT_EQUALS: LHComparisonEnum.EQUALS,
     LHComparisonEnum.IN: LHComparisonEnum.NOT_IN,
     LHComparisonEnum.NOT_IN: LHComparisonEnum.IN,
+}
+
+
+ACCEPTABLE_TYPES = Union[str, list, dict, int, bool, float]
+TYPE_TO_ENUM: Mapping[type[ACCEPTABLE_TYPES], WFRunVariableTypeEnum]= {
+    str: WFRunVariableTypeEnum.STRING,
+    list: WFRunVariableTypeEnum.ARRAY,
+    dict: WFRunVariableTypeEnum.OBJECT,
+    bool: WFRunVariableTypeEnum.BOOLEAN,
+    float: WFRunVariableTypeEnum.FLOAT,
+    int: WFRunVariableTypeEnum.INT,
 }
 
 

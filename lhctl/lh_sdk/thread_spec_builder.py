@@ -5,469 +5,33 @@ from inspect import signature, Signature
 from typing import (
     Any,
     Callable,
-    Mapping,
     Optional,
     Set,
     Union,
 )
-import uuid
-from lh_sdk.utils import get_lh_var_type, get_task_def_name
 
+from lh_sdk.condition_utils import IfElseCondition
+from lh_sdk.node_output import NodeOutput
+from lh_sdk.utils import (
+    get_lh_var_type,
+    get_task_def_name,
+)
 from lh_lib.schema.wf_spec_schema import (
-    CONDITION_INVERSES,
+    TYPE_TO_ENUM,
+    ACCEPTABLE_TYPES,
     EdgeConditionSchema,
     EdgeSchema,
     InterruptDefSchema,
-    LHComparisonEnum,
     NodeSchema,
     NodeType,
     ThreadSpecSchema,
     VariableAssignmentSchema,
-    VariableMutationOperation,
     VariableMutationSchema,
     WFRunVariableDefSchema,
     WFRunVariableTypeEnum,
     WFSpecSchema,
 )
-
-
-ACCEPTABLE_TYPES = Union[str, list, dict, int, bool, float]
-TYPE_TO_ENUM: Mapping[type[ACCEPTABLE_TYPES], WFRunVariableTypeEnum]= {
-    str: WFRunVariableTypeEnum.STRING,
-    list: WFRunVariableTypeEnum.ARRAY,
-    dict: WFRunVariableTypeEnum.OBJECT,
-    bool: WFRunVariableTypeEnum.BOOLEAN,
-    float: WFRunVariableTypeEnum.FLOAT,
-    int: WFRunVariableTypeEnum.INT,
-}
-
-
-class VariableJsonpath:
-    def __init__(
-        self,
-        schema: VariableAssignmentSchema,
-        node_name: str,
-    ):
-        self._node_name = node_name
-        self._schema = schema
-
-    @property
-    def schema(self) -> VariableAssignmentSchema:
-        return self._schema
-
-    @property
-    def node_name(self) -> str:
-        return self._node_name
-
-
-class NodeJsonpath:
-    def __init__(
-        self,
-        schema: VariableAssignmentSchema,
-        node_name: str,
-    ):
-        self._node_name = node_name
-        self._schema = schema
-
-    @property
-    def schema(self) -> VariableAssignmentSchema:
-        return self._schema
-
-    @property
-    def node_name(self) -> str:
-        return self._node_name
-
-
-class NodeOutput:
-    def __init__(
-        self,
-        node_name,
-        thread: ThreadSpecBuilder,
-        output_type: Optional[Any] = None,
-        jsonpath: Optional[str] = None,
-    ):
-        self._node_name = node_name
-        self._output_type = output_type
-        self._jsonpath = jsonpath
-        self._thread = thread
-
-    @property
-    def output_type(self) -> Any:
-        return self._output_type
-
-    @property
-    def node_name(self) -> str:
-        if self._thread._last_node_name != self._node_name:
-            raise RuntimeError(
-                "Accessing node output after other nodes executed!"
-            )
-        return self._node_name
-
-    @property
-    def thread(self):
-        return self._thread
-
-    @property
-    def node(self) -> NodeSchema:
-        return self.thread._spec.nodes[self.node_name]
-
-    def jsonpath(self, path: str) -> NodeOutput:
-        if self._thread._last_node_name != self._node_name:
-            raise RuntimeError(
-                "Accessing node output after other nodes executed!"
-            )
-        if self._jsonpath is not None:
-            raise RuntimeError(
-                "Cannot double-up the jsonpath!"
-            )
-        return NodeOutput(
-            self.node_name,
-            self._thread,
-            output_type=self.output_type,
-            jsonpath=path,
-        )
-
-    def get_jsonpath(self) -> Optional[str]:
-        if self._thread._last_node_name != self._node_name:
-            raise RuntimeError(
-                "Accessing node output after other nodes executed!"
-            )
-        return self._jsonpath
-
-    def with_retries(self, num_retries) -> NodeOutput:
-        if self.node.node_type != NodeType.TASK:
-            raise RuntimeError("Can only retry task node")
-        self.node.num_retries = num_retries
-        return self
-
-    def with_timeout(self, timeout_seconds: Union[int, WFRunVariable]) -> NodeOutput:
-        self.node.timeout_seconds = self.thread.construct_var_assign(timeout_seconds)
-        return self
-
-
-class IfElseCondition:
-    def __init__(
-        self,
-        thread: ThreadSpecBuilder,
-        lhs: WFRunVariable,
-        rhs: Union[ACCEPTABLE_TYPES, WFRunVariable],
-        operator: LHComparisonEnum,
-    ):
-        self._thread = thread
-        self._lhs = lhs
-        self._rhs = rhs
-        self._operator = operator
-        self._id = uuid.uuid4().hex
-        self._cancelled = False
-        self._initial_feeder_node = thread._last_node_name
-
-        self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
-
-    @property
-    def condition_schema(self) -> EdgeConditionSchema:
-        return EdgeConditionSchema(
-            left_side=self.left_side,
-            right_side=self.right_side,
-            comparator=self.operator,
-        )
-
-    @property
-    def thread(self):
-        return self._thread
-
-    @property
-    def left_side(self) -> VariableAssignmentSchema:
-        return VariableAssignmentSchema(
-            wf_run_variable_name=self._lhs.name,
-            json_path=self._lhs.get_jsonpath(),
-        )
-
-    @property
-    def right_side(self) -> VariableAssignmentSchema:
-        if isinstance(self._rhs, WFRunVariable):
-            return VariableAssignmentSchema(
-                wf_run_variable_name=self._rhs.name,
-                json_path=self._rhs.get_jsonpath(),
-            )
-        else:
-            return VariableAssignmentSchema(literal_value=self._rhs)
-
-    @property
-    def reverse_condition(self) -> EdgeConditionSchema:
-        condition = self.condition_schema
-        new_comparator = CONDITION_INVERSES[condition.comparator]
-        return EdgeConditionSchema(
-            left_side=self.left_side,
-            right_side=self.right_side,
-            comparator=new_comparator,
-        )
-
-    def notify_thread_between_if_else(self):
-        self.thread._between_if_elses[self._id] = self
-
-    def notify_thread_else_begun(self):
-        del self.thread._between_if_elses[self._id]
-
-    # To be called if the thread starts executing crap without doing the if_else
-    # first.
-    def handle_else_cancelled(self):
-        self._cancelled = True
-
-    @property
-    def operator(self):
-        return self._operator
-
-    def is_true(self) -> IfConditionContext:
-        return IfConditionContext(self)
-
-    def is_false(self) -> ElseConditionContext:
-        if self._cancelled:
-            raise RuntimeError(
-                "Must call the is_false() directly after end of is_true()!"
-            )
-        return ElseConditionContext(self)
-
-
-class IfConditionContext:
-    def __init__(
-        self,
-        parent: IfElseCondition,
-    ):
-        self._parent = parent
-
-        self._feeder_nodes: dict[str, Optional[EdgeConditionSchema]] = {}
-
-    @property
-    def parent(self):
-        return self._parent
-
-    def __enter__(self):
-        new_condition = self.parent.condition_schema
-        for node_name in self.parent.thread._feeder_nodes:
-            if self.parent.thread._feeder_nodes[node_name] is not None:
-                self.parent.thread.add_nop_node()  # Just to make things work
-                break
-
-        for node_name in self.parent.thread._feeder_nodes:
-            self.parent.thread._feeder_nodes[node_name] = new_condition
-
-        self._feeder_nodes.update(self.parent.thread._feeder_nodes)
-
-        if self.parent.thread._last_node_name is None:
-            assert len(self.parent.thread._feeder_nodes) == 0
-            self.parent.thread.add_nop_node()
-            assert self.parent.thread._last_node_name is not None
-
-        self._feeder_nodes[
-            self.parent.thread._last_node_name
-        ] = self.parent.reverse_condition
-
-    def __exit__(self, exc_type, exc_value, tb):
-        self.parent.thread._feeder_nodes.update(self._feeder_nodes)
-        self.parent.notify_thread_between_if_else()
-
-
-class ElseConditionContext:
-    def __init__(self, parent: IfElseCondition):
-        self._parent = parent
-        self._popped_node_name: Optional[str] = None
-
-    @property
-    def parent(self):
-        return self._parent
-
-    def __enter__(self):
-        # The IfConditionContext has already __enter__()'ed and __exit__()'ed,
-        # so we know that the parent.thread._feeder_nodes contains the last_node from
-        # before the IfCondition actually entered, and it also contains the last
-        # node from the if block.
-        # We want to pop the last node from the if block and then re-add it later on.
-        self._popped_node_name = self.parent.thread._last_node_name
-        assert self._popped_node_name is not None
-        assert self._popped_node_name in self.parent.thread._feeder_nodes
-        del self.parent.thread._feeder_nodes[self._popped_node_name]
-
-        # There should still be nodes in there!
-        assert len(self.parent.thread._feeder_nodes) > 0
-
-    def __exit__(self, exc_type, exc_value, tb):
-        # After both the if and else blocks exit, we need the last node from
-        # each block to have a null condition and both go to the next thing.
-        assert self._popped_node_name is not None
-        self.parent.thread._feeder_nodes[self._popped_node_name] = None
-        self.parent.thread.add_nop_node()  # too lazy to do edge cases manually...
-
-
-class WFRunVariable:
-    def __init__(
-        self,
-        name: str,
-        var_type: WFRunVariableTypeEnum,
-        thread: ThreadSpecBuilder,
-        jsonpath: Optional[str] = None,
-    ):
-        self._name = name
-        self._var_type = var_type
-        self._thread = thread
-        self._jsonpath = jsonpath
-
-    @property
-    def var_type(self) -> WFRunVariableTypeEnum:
-        return self._var_type
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def thread(self) -> ThreadSpecBuilder:
-        return self._thread
-
-    def jsonpath(self, path: str) -> WFRunVariable:
-        return WFRunVariable(
-            self.name,
-            self.var_type,
-            self._thread,
-            path,
-        )
-
-    def get_jsonpath(self) -> Optional[str]:
-        return self._jsonpath
-
-    ######################################
-    # Stuff for VariableMutation goes here
-    ######################################
-
-    def assign(
-        self,
-        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]
-    ):
-        self._mutate(VariableMutationOperation.ASSIGN, target)
-
-    def add(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.ADD, target)
-
-    def extend(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.EXTEND, target)
-
-    def subtract(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.SUBTRACT, target)
-
-    def multiply(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.MULTIPLY, target)
-
-    def divide(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.DIVIDE, target)
-
-    def remove_if_present(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]
-    ):
-        self._mutate(VariableMutationOperation.REMOVE_IF_PRESENT, target)
-
-    def remove_idx(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.REMOVE_INDEX, target)
-
-    def remove_key(self, target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput]):
-        self._mutate(VariableMutationOperation.REMOVE_KEY, target)
-
-    def _create_mutation(
-        self,
-        op: VariableMutationOperation,
-        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
-    ) -> VariableMutationSchema:
-        out = VariableMutationSchema(
-            operation=op,
-        )
-
-        if isinstance(target, ACCEPTABLE_TYPES):
-            out.literal_value = target
-        elif isinstance(target, WFRunVariable):
-            out.source_variable = VariableAssignmentSchema(
-                wf_run_variable_name=target.name,
-                json_path=target.get_jsonpath(),
-            )
-        else:
-            assert isinstance(target, NodeOutput)
-            out.json_path = target.get_jsonpath()
-
-        return out
-
-    def _mutate(
-        self,
-        op: VariableMutationOperation,
-        target: Union[ACCEPTABLE_TYPES, WFRunVariable, NodeOutput],
-    ):
-        mutation = self._create_mutation(op, target)
-        self._thread.mutate(self.name, mutation)
-
-    #####################################
-    # Stuff for conditionals follows here
-    #####################################
-    def less_than(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.LESS_THAN
-        )
-
-    def greater_than(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.GREATER_THAN
-        )
-
-    def greater_than_eq(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.GREATER_THAN_EQ
-        )
-
-    def less_than_eq(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.LESS_THAN_EQ
-        )
-
-    def equals(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.EQUALS
-        )
-
-    def not_equals(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.NOT_EQUALS
-        )
-
-    def contains(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        raise NotImplementedError()
-
-    def not_contains(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        raise NotImplementedError()
-
-    def is_in(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.IN
-        )
-
-    def is_not_in(
-        self, target: Union[ACCEPTABLE_TYPES, WFRunVariable]
-    ) -> IfElseCondition:
-        return IfElseCondition(
-            self.thread, self, target, LHComparisonEnum.NOT_IN
-        )
+from lh_sdk.wf_run_variable import WFRunVariable
 
 
 class ThreadSpecBuilder:
@@ -496,7 +60,7 @@ class ThreadSpecBuilder:
 
     def sleep_for(
         self,
-        sleep_time: Union[int, VariableJsonpath, WFRunVariable]
+        sleep_time: Union[int, WFRunVariable]
     ) -> None:
         node = NodeSchema(node_type=NodeType.SLEEP)
         node.timeout_seconds = self.construct_var_assign(
@@ -506,15 +70,10 @@ class ThreadSpecBuilder:
 
     def construct_var_assign(
         self,
-        entity: Union[VariableJsonpath, WFRunVariable, ACCEPTABLE_TYPES],
+        entity: Union[WFRunVariable, ACCEPTABLE_TYPES],
         required_type=None,
     ):
-        if isinstance(entity, VariableJsonpath):
-            # TODO: Figure out json schema so we can validate types here. Maybe
-            # have Andrew do that?
-            return entity.schema
-
-        elif isinstance(entity, WFRunVariable):
+        if isinstance(entity, WFRunVariable):
             if required_type is not None:
                 assert isinstance(required_type, type)
                 assert required_type in [list, str, float, dict, bool, int]
@@ -651,7 +210,10 @@ class ThreadSpecBuilder:
         self._spec.variable_defs[name] = var_def
         return WFRunVariable(name, var_type, self)
 
-    def mutate(self, var_name: str, mutation: VariableMutationSchema):
+    def get_parent_var(self, var_name) -> WFRunVariable:
+        raise NotImplementedError()
+
+    def _mutate(self, var_name: str, mutation: VariableMutationSchema):
         assert self._last_node_name is not None, "Execute task before mutating vars!"
         node = self._spec.nodes[self._last_node_name]
         node.variable_mutations[var_name] = mutation
