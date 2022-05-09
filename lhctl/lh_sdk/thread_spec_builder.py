@@ -12,6 +12,7 @@ from typing import (
 
 from lh_sdk.condition_utils import IfElseCondition
 from lh_sdk.node_output import NodeOutput
+from lh_sdk.threadspawn_utils import ThreadSpawnOutput
 from lh_sdk.utils import (
     get_lh_var_type,
     get_task_def_name,
@@ -249,6 +250,18 @@ class ThreadSpecBuilder:
         self.spec.interrupt_defs[event_name] = InterruptDefSchema(
             handler_thread_name=tspec_name
         )
+
+    def spawn_thread(
+        self,
+        thread_func: Callable[[ThreadSpecBuilder], None],
+    ) -> ThreadSpawnOutput:
+        raise NotImplementedError()
+
+    def wait_for_thread(
+        self,
+        thread_meta: ThreadSpawnOutput,
+    ) -> NodeOutput:
+        raise NotImplementedError()
 
     @property
     def spec(self) -> ThreadSpecSchema:
