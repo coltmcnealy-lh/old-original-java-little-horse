@@ -10,12 +10,6 @@ public class ThreadRunMeta extends BaseSchema {
     public String sourceNodeName;
     public String sourceNodeId;
 
-    // No info about thread status or result present here because that
-    // can be looked up from the threadID without another network hop.
-
-    public int timesAwaited = 0;
-
-
     public ThreadRunMeta() {
 
     }
@@ -24,7 +18,6 @@ public class ThreadRunMeta extends BaseSchema {
         this.sourceNodeId = task.nodeId;
         this.sourceNodeName = task.nodeName;
         this.threadId = thread.id;
-        this.timesAwaited = 0;
         this.parentThreadId = task.threadId;
         this.threadSpecName = task.parentThread.threadSpecName;
 

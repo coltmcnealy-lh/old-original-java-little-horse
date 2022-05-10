@@ -68,8 +68,6 @@ public class WFRun extends CoreMetadata {
     public HashMap<String, ArrayList<ExternalEventCorrel>> correlatedEvents;
     public Stack<String> pendingInterrupts;
 
-    public HashMap<String, ArrayList<ThreadRunMeta>> awaitableThreads;
-
     @JsonIgnore
     private WFSpec wfSpec;
 

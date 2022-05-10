@@ -48,8 +48,8 @@ public class Mutation {
             throw new VarSubOrzDash(
                 exn,
                 "Had an unexpected error mutating variable " + varName +
-                ", lhs: " + LHUtil.stringify(lhs) + ", rhs: " + 
-                LHUtil.stringify(rhs) + ":\n" + exn.getMessage()
+                ", lhs: " + LHUtil.objToString(lhs) + ", rhs: " + 
+                LHUtil.objToString(rhs) + ":\n" + exn.getMessage()
             );
         }
     }
@@ -326,7 +326,7 @@ public class Mutation {
             throw new VarSubOrzDash(
                 exn,
                 "Failed determing whether the left contains the right: " +
-                LHUtil.stringify(left) + " , " + LHUtil.stringify(right)
+                LHUtil.objToString(left) + " , " + LHUtil.objToString(right)
             );
         }
         return false;

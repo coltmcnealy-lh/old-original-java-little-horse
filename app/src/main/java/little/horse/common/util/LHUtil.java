@@ -120,7 +120,7 @@ public class LHUtil {
                 return (Map<String, Object>) Map.class.cast(obj);
             }
 
-            HashMap<String, Object> tmp = (HashMap<String, Object>) fromStringToObj(
+            HashMap<String, Object> tmp = (HashMap<String, Object>) stringToObj(
                 obj.toString(), cfg
             );
 
@@ -156,7 +156,7 @@ public class LHUtil {
         }
     }
 
-    public static Object fromStringToObj(String data, DepInjContext cfg) {
+    public static Object stringToObj(String data, DepInjContext cfg) {
         try {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
@@ -181,7 +181,7 @@ public class LHUtil {
         }
     }
 
-    public static String stringify(Object thing) {
+    public static String objToString(Object thing) {
         if (thing == null) return "null";
         if (thing instanceof Map) {
             try {

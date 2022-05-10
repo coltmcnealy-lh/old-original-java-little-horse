@@ -21,7 +21,6 @@ import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.DigestIgnore;
-import little.horse.common.objects.rundata.ThreadRunMeta;
 import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
@@ -249,7 +248,6 @@ public class WFSpec extends CoreMetadata {
             new HashMap<String, ArrayList<ExternalEventCorrel>>();
 
         wfRun.startTime = event.timestamp;
-        wfRun.awaitableThreads = new HashMap<String, ArrayList<ThreadRunMeta>>();
 
         wfRun.threadRuns.add(wfRun.createThreadClientAdds(
             entrypointThreadName, runRequest.variables, null

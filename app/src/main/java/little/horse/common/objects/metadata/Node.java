@@ -47,7 +47,7 @@ public class Node extends BaseSchema {
     public String externalEventDefName;
     public String externalEventDefId;
 
-    public String threadWaitSourceNodeName;
+    public int threadWaitThreadId;
     public String threadSpawnThreadSpecName;
 
     @JsonManagedReference
@@ -290,27 +290,17 @@ public class Node extends BaseSchema {
 
     private void validateWaitForThreadNode(DepInjContext config)
     throws LHValidationError {
-        Node sourceNode = threadSpec.nodes.get(threadWaitSourceNodeName);
-
-        if (sourceNode == null) {
+        if (threadWaitThreadId < 1) {
             throw new LHValidationError(
-                "Wait for thread node " + name + "has no valid source node " +
-                "from the same thread specified."
-            );
-        }
-        if (sourceNode.nodeType != NodeType.SPAWN_THREAD) {
-            throw new LHValidationError(
-                "Wait For Thread Node " + name + " references a node that is" +
-                " not of type SPAWN_THREAD: " + sourceNode.name + ": " +
-                sourceNode.nodeType
+                "The `threadId` field on a WAIT_FOR_THREAD node must be greater than"
+                + " zero because it must refer to a thread to wait for, and we cannot"
+                + " permit waiting for the root node (id `0`)!"
             );
         }
 
         // TODO: Throw an error if the WAIT_FOR_THREAD node doesn't come after
         // the SPAWN_THREAD node. Can figure this out by doing analysis on the
         // graph of nodes/edges on the ThreadSpec.
-
-        threadWaitSourceNodeName = sourceNode.name;
     }
 
     private void validateSleepNode(DepInjContext config) throws LHValidationError {

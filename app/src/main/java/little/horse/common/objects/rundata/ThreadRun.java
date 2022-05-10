@@ -218,7 +218,7 @@ public class ThreadRun extends BaseSchema {
         }
 
         try {
-            return LHUtil.jsonPath(LHUtil.stringify(dataToParse), var.jsonPath);
+            return LHUtil.jsonPath(LHUtil.objToString(dataToParse), var.jsonPath);
         } catch(Exception exn) {
             throw new VarSubOrzDash(
                 exn,
@@ -314,12 +314,27 @@ public class ThreadRun extends BaseSchema {
         TaskRunResult result,
         Date endTime
     ) throws LHConnectionError {
+        // The failure reason is ignored unless the task is failed. We provide
+        // TASK_FAILURE as a default value.
+        completeTask(
+            task, taskStatus, result, endTime, LHFailureReason.TASK_FAILURE
+        );
+    }
+
+    @JsonIgnore
+    private void completeTask(
+        TaskRun task,
+        LHExecutionStatus taskStatus,
+        TaskRunResult result,
+        Date endTime,
+        LHFailureReason reason
+    ) throws LHConnectionError {
         String stdout = result.stdout;
         String stderr = result.stderr;
         int returnCode = result.returncode;
         task.endTime = endTime;
-        task.stdout = LHUtil.fromStringToObj(stdout, config);
-        task.stderr = LHUtil.fromStringToObj(stderr, config);
+        task.stdout = LHUtil.stringToObj(stdout, config);
+        task.stderr = LHUtil.stringToObj(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 
@@ -339,7 +354,7 @@ public class ThreadRun extends BaseSchema {
 
         } else {
             failTask(
-                task, LHFailureReason.TASK_FAILURE,
+                task, reason,
                 "thread failed on node " + task.nodeName + ": " + stderr
             );
         }
@@ -379,7 +394,7 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public void mutateVariables(TaskRun tr) 
+    public void mutateVariables(TaskRun tr)
     throws VarSubOrzDash, LHConnectionError {
 
         // We need to do this atomically—-i.e. if there's one variable substitution
@@ -863,14 +878,7 @@ public class ThreadRun extends BaseSchema {
         );
         wfRun.threadRuns.add(thread);
 
-        if (wfRun.awaitableThreads.get(tr.nodeName) == null) {
-            wfRun.awaitableThreads.put(
-                tr.nodeName, new ArrayList<ThreadRunMeta>()
-            );
-        }
-
         ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
-        wfRun.awaitableThreads.get(tr.nodeName).add(meta);
         taskRuns.add(tr);
         TaskRunResult result = new TaskRunResult(meta.toString(), null, true, 0);
         completeTask(
@@ -971,82 +979,78 @@ public class ThreadRun extends BaseSchema {
         // awaited and continue on. If all of the relevant threads are done,
         // then this node completes.
         TaskRun tr = createNewTaskRun(node, attemptNumber);
-        ArrayList<ThreadRunMeta> awaitables = wfRun.awaitableThreads.get(
-            node.threadWaitSourceNodeName
-        );
+        String failureMessage = null;
+        ThreadRun toWaitFor = wfRun.threadRuns.get(node.threadWaitThreadId);
 
-        if (awaitables == null) {
+        if (toWaitFor == null) {
+            failureMessage = "Supposed to wait for thread " + node.threadWaitThreadId
+                + " but that thread doesn't exist yet!";
+        }
+
+        if (node.threadWaitThreadId == id) {
+            failureMessage = "Tried to wait for id " + id + " but that is id of " +
+                "the running thread!";
+        }
+
+        if (failureMessage != null) {
             taskRuns.add(tr);
             failTask(
                 tr, LHFailureReason.INVALID_WF_SPEC_ERROR,
-                "Got to node " + node.name + " which waits for a thread from " +
-                node.threadWaitSourceNodeName + " but no threads have started" +
-                " from the specified source node."
+                failureMessage
             );
             return true;
         }
-        boolean allTerminated = true;
-        boolean allCompleted = true;
 
-        for (ThreadRunMeta meta: awaitables) {
-            ThreadRun thread = wfRun.threadRuns.get(meta.threadId);
-            if (!thread.isCompleted()) {
-                allCompleted = false;
-            }
-            if (!thread.isTerminated()) {
-                allTerminated = false;
-            }
-        }
-
-        // Still waiting for some children to do their thing.
-        if (!allTerminated) {
+        // Still waiting for the child to do its thing.
+        if (!toWaitFor.isTerminated()) {
             return false;
         }
 
-        // If we got here, we know all the threads have finished. Let's handle the
-        // simplest case first--the threads succeeded:
-        if (allCompleted) {
+        if (toWaitFor.isCompleted()) {
             taskRuns.add(tr);
             completeTask(
                 tr, LHExecutionStatus.COMPLETED,
-                new TaskRunResult(awaitables.toString(), null, true, 0), event.timestamp
+                new TaskRunResult(
+                    LHUtil.objToString(toWaitFor.variables), null, true, 0
+                ),
+                event.timestamp
             );
+            return true;
+
+        }
+
+        // Note here: the exceptionName might be null, but getHandlerSpec will
+        // return the default exception handler thread (if one exists) in that case.
+        ExceptionHandlerSpec hspec = node.getHandlerSpec(
+            toWaitFor.exceptionName
+        );
+
+        if (hspec == null) {
+            // Then we just fail the task
+            String msg = "Tried to wait for thread " + toWaitFor.id + " but it " +
+                "failed rather than succeeded!";
+            tr.stdout = "";
+            tr.stderr = msg;
+
+            completeTask(
+                tr, LHExecutionStatus.HALTED, new TaskRunResult(
+                    null, msg, false, 1
+                ), event.timestamp, LHFailureReason.SUBTHREAD_FAILURE
+            );
+
         } else {
-            // TODO: We're going to combine the exception handler infra with the
-            // interrupt handler infra. After we do that, we're going to be able to
-            // handle more than one exception at once, which will enable us to join
-            // multiple threads at once.
-            if (awaitables.size() != 1) {
-                throw new RuntimeException(
-                    "TODO: handle joins of more than one thread at once."
-                );
-            }
+            String msg = "TaskRun on " + tr.nodeName +
+            " Failed with exception " + hspec.handlerThreadSpecName + ", so" +
+            " we are handling it.";
 
-            ThreadRun thread = wfRun.threadRuns.get(awaitables.get(0).threadId);
-            if (thread.isCompleted() || !thread.isTerminated()) {
-                throw new RuntimeException("should be impossible");
-            }
-
-            ExceptionHandlerSpec hspec = node.getHandlerSpec(
-                thread.exceptionName
+            completeTask(
+                tr, LHExecutionStatus.HALTED, new TaskRunResult(
+                    null, msg, false, 1
+                ), event.timestamp
             );
-            if (hspec == null) {
-                throw new RuntimeException(
-                    "Colt, you need to address case where there is no handler.");
-            } else {
-                String msg = "TaskRun on " + tr.nodeName +
-                " Failed with exception " + hspec.handlerThreadSpecName + ", so" +
-                " we are handling it.";
-
-                completeTask(
-                    tr, LHExecutionStatus.HALTED, new TaskRunResult(
-                        awaitables.toString(), msg, false, 1
-                    ), event.timestamp
-                );
-                handleException(
-                    hspec.handlerThreadSpecName, tr, LHFailureReason.TASK_FAILURE, msg
-                );
-            }
+            handleException(
+                hspec.handlerThreadSpecName, tr, LHFailureReason.TASK_FAILURE, msg
+            );
         }
 
         return true;

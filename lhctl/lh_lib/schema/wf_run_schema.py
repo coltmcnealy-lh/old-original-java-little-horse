@@ -141,5 +141,3 @@ class WFRunSchema(LHBaseModel):
 
     correlated_events: Optional[Mapping[str, List[ExternalEventCorrelSchema]]] = None
     pending_interrupts: Optional[List[str]] = None
-
-    awaitable_threads: Mapping[str, List[ThreadRunMetaSchema]]
