@@ -44,7 +44,8 @@ import little.horse.workflowworker.TaskScheduleRequest;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "id"
+    property = "id",
+    scope = ThreadRun.class
 )
 public class ThreadRun extends BaseSchema {
     public String threadSpecName;
@@ -333,8 +334,11 @@ public class ThreadRun extends BaseSchema {
         String stderr = result.stderr;
         int returnCode = result.returncode;
         task.endTime = endTime;
-        task.stdout = LHUtil.stringToObj(stdout, config);
-        task.stderr = LHUtil.stringToObj(stderr, config);
+
+        task.stdout = stdout;
+        task.stderr = stderr;
+        // task.stdout = LHUtil.stringToObj(stdout, config);
+        // task.stderr = LHUtil.stringToObj(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 

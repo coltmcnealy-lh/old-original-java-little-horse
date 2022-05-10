@@ -39,7 +39,8 @@ import little.horse.common.util.LHUtil;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "id"
+    property = "id",
+    scope = WFRun.class
 )
 public class WFRun extends CoreMetadata {
     // These fields are in the actual JSON for the WFRunSchema object

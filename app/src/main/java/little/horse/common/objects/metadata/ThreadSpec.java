@@ -20,7 +20,8 @@ import little.horse.common.util.json.JsonMapKey;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "name"
+    property = "name",
+    scope = ThreadSpec.class
 )
 public class ThreadSpec extends BaseSchema {
     @JsonMapKey

@@ -23,7 +23,8 @@ import little.horse.common.util.json.JsonMapKey;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "name"
+    property = "name",
+    scope = Node.class
 )
 public class Node extends BaseSchema {
     @JsonMapKey

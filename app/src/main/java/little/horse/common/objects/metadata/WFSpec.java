@@ -31,7 +31,8 @@ import little.horse.lib.deployers.WorkflowDeployer;
 // Just scoping for the purposes of the json parser
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "name"
+    property = "name",
+    scope = WFSpec.class
 )
 public class WFSpec extends CoreMetadata {
     @JsonIgnore
