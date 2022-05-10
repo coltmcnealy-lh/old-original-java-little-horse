@@ -11,7 +11,7 @@ def child_task(input_str: str) -> str:
 
 
 def subthread(thread: ThreadSpecBuilder):
-    parent_var = thread.get_parent_var("parent_var")
+    parent_var = thread.add_variable("another", str)# thread.get_parent_var("parent_var")
     thread.execute(child_task, parent_var)
     parent_var.assign("child value")
 

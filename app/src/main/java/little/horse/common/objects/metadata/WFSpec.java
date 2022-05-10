@@ -316,12 +316,22 @@ public class WFSpec extends CoreMetadata {
         if (desiredStatus == null) desiredStatus = LHDeployStatus.RUNNING;
         if (namespace == null) namespace = "default";  // Trololol
         if (allVarDefs == null) allVarDefs = new HashMap<>();
+        if (!threadSpecs.containsKey(entrypointThreadName)) {
+            throw new LHValidationError(
+                "Specified nonexistent entrypoint thread " + entrypointThreadName
+            );
+        }
 
         // TODO: This doesn't yet support lookUpOrCreateExternalEvent.
         // In the future, we'll want to support that use case.
         interruptEvents = new HashSet<String>();
         for (ThreadSpec thread: this.threadSpecs.values()) {
             thread.validate(config, this);
+            if (!threadSpecs.containsKey(thread.name)) {
+                throw new LHValidationError(
+                    "Thread has name that doesn't exist: " + thread.name
+                );
+            }
 
             if (allVarDefs.containsKey(thread.name)) {
                 throw new LHValidationError(

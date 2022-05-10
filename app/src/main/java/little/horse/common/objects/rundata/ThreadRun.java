@@ -973,21 +973,29 @@ public class ThreadRun extends BaseSchema {
         Node node, WFEvent event, List<TaskScheduleRequest> toSchedule,
         List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
-        // Iterate through all of the ThreadRunMetaSchema's in the wfRun.
-        // If it's from the node we're waiting for and it's NOT done, then
-        // this node does nothing. But if it's already done, we mark it as
-        // awaited and continue on. If all of the relevant threads are done,
-        // then this node completes.
         TaskRun tr = createNewTaskRun(node, attemptNumber);
         String failureMessage = null;
-        ThreadRun toWaitFor = wfRun.threadRuns.get(node.threadWaitThreadId);
+        Integer threadId;
+
+        try {
+            Object threadIdObj = assignVariable(node.threadWaitThreadId);
+            threadId = Integer.class.cast(threadIdObj);
+        } catch (VarSubOrzDash|ClassCastException exn) {
+            failTask(
+                tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,
+                "Failed determining ID of thread to wait for: " + exn.getMessage()
+            );
+            return true;
+        }
+
+        ThreadRun toWaitFor = wfRun.threadRuns.get(threadId);
 
         if (toWaitFor == null) {
-            failureMessage = "Supposed to wait for thread " + node.threadWaitThreadId
+            failureMessage = "Supposed to wait for thread " + threadId
                 + " but that thread doesn't exist yet!";
         }
 
-        if (node.threadWaitThreadId == id) {
+        if (threadId == id) {
             failureMessage = "Tried to wait for id " + id + " but that is id of " +
                 "the running thread!";
         }

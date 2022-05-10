@@ -83,6 +83,7 @@ class ThreadSpecBuilder:
 
             var_assign = VariableAssignmentSchema()
             var_assign.wf_run_variable_name = entity.name
+            var_assign.json_path = entity.get_jsonpath()
             return var_assign
 
         else:
@@ -168,7 +169,7 @@ class ThreadSpecBuilder:
             node_human_name = f'SPAWN-{node.thread_spawn_thread_spec_name}'
 
         elif node.node_type == NodeType.WAIT_FOR_THREAD:
-            node_human_name = f'WAIT-THREAD-{node.thread_wait_source_node_name}'
+            node_human_name = f'WAIT-THREAD'
 
         elif node.node_type == NodeType.THROW_EXCEPTION:
             node_human_name = f'THROW-{node.exception_to_throw}'
@@ -235,33 +236,63 @@ class ThreadSpecBuilder:
         self, event_name: str, handler: Callable[[ThreadSpecBuilder], None]
     ):
         # First, we need to create the ThreadSpec somehow.
-        tspec_name = handler.__name__
-        handler_builder = ThreadSpecBuilder(
-            tspec_name,
-            self._wf_spec,
-            self._wf
-        )
-
-        self._wf_spec.thread_specs[tspec_name] = handler_builder.spec
-        handler(handler_builder)
+        self._wf.add_subthread(handler)
 
         # Ok, now the threadspec is created, so let's set the handler.
         self.spec.interrupt_defs = self.spec.interrupt_defs or {}
         self.spec.interrupt_defs[event_name] = InterruptDefSchema(
-            handler_thread_name=tspec_name
+            handler_thread_name=handler.__name__
         )
 
     def spawn_thread(
         self,
         thread_func: Callable[[ThreadSpecBuilder], None],
     ) -> ThreadSpawnOutput:
-        raise NotImplementedError()
+        # There's a few things to do here:
+        # 1. Create the threadspec from the passed in thread_func.
+        # 2. Add a properly-configured SPAWN_THREAD node
+        # 3. Return a handle which makes it possible to manually or automatically
+        #    assign the ThreadRunMeta to some variables.
+
+        # Create the threadspec:
+        thread_name = thread_func.__name__
+
+        self._wf.add_subthread(thread_func)
+
+        node = NodeSchema(
+            node_type=NodeType.SPAWN_THREAD,
+            thread_spawn_thread_spec_name=thread_name,
+        )
+        node_name = self._add_node(node)
+
+        output = ThreadSpawnOutput(node_name, self)
+        var = self.add_variable(f"temp-{node_name}", int)
+        var.assign(output.jsonpath("$.threadId"))
+        output._var = var
+        return output
 
     def wait_for_thread(
         self,
-        thread_meta: ThreadSpawnOutput,
+        thread: Union[int, WFRunVariable, ThreadSpawnOutput],
     ) -> NodeOutput:
-        raise NotImplementedError()
+        # All we gotta do is determine the VariableAssignment for the id of the
+        # thread we're supposed to wait for. Then stuff that variable assignment
+        # into a node.
+        node = NodeSchema(node_type=NodeType.WAIT_FOR_THREAD)
+        node_name = self._add_node(node)
+
+        var_assign: VariableAssignmentSchema
+
+        if isinstance(thread, Union[int, WFRunVariable]):
+            var_assign = self.construct_var_assign(thread)
+        elif isinstance(thread, ThreadSpawnOutput):
+            # This is the tricky one where we have to retroactively add a variable
+            var_assign = self.construct_var_assign(thread.get_var())
+        else:
+            raise RuntimeError("Invalid type for thread wait id!")
+
+        node.thread_wait_thread_id = var_assign
+        return NodeOutput(node_name, self)
 
     @property
     def spec(self) -> ThreadSpecSchema:
@@ -279,20 +310,32 @@ class Workflow:
         self._name = self._entrypoint_func.__name__
 
         self._spec = WFSpecSchema(
-            entrypoint_thread_name="entrypoint",
+            entrypoint_thread_name=self._name,
             name=self._name
         )
         self._module_dict = module_dict
-
         self._spec.name = self._name
+        self._funcs: dict[str, Callable[[ThreadSpecBuilder], None]] = {}
+        self.add_subthread(entrypoint_function)
+        self.compile()
 
-        self._entrypoint_builder = ThreadSpecBuilder(
-            "entrypoint",
-            self._spec,
-            self,
-        )
-        self._spec.thread_specs["entrypoint"] = self._entrypoint_builder.spec
-        self._entrypoint_func(self._entrypoint_builder)
+    def add_subthread(self, thread_func: Callable[[ThreadSpecBuilder], None]):
+        self._funcs[thread_func.__name__] = thread_func
+
+    def compile(self):
+        # Iterate through all the threads and compile them (:
+        seen_funcs: Set[str] = set({})
+        
+        while True:
+            cur_funcs_size = len(self._funcs)
+            for func_name in list(self._funcs.keys()):
+                if func_name not in seen_funcs:
+                    seen_funcs.add(func_name)
+                    thr = ThreadSpecBuilder(func_name, self._spec, self)
+                    self._funcs[func_name](thr)
+                    self._spec.thread_specs[func_name] = thr.spec
+            if cur_funcs_size == len(self._funcs):
+                break
 
     @property
     def module_dict(self) -> dict:

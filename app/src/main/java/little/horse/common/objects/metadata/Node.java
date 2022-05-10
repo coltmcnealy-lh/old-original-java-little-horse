@@ -47,7 +47,7 @@ public class Node extends BaseSchema {
     public String externalEventDefName;
     public String externalEventDefId;
 
-    public int threadWaitThreadId;
+    public VariableAssignment threadWaitThreadId;
     public String threadSpawnThreadSpecName;
 
     @JsonManagedReference
@@ -290,13 +290,19 @@ public class Node extends BaseSchema {
 
     private void validateWaitForThreadNode(DepInjContext config)
     throws LHValidationError {
-        if (threadWaitThreadId < 1) {
+        if (threadWaitThreadId == null) {
             throw new LHValidationError(
-                "The `threadId` field on a WAIT_FOR_THREAD node must be greater than"
-                + " zero because it must refer to a thread to wait for, and we cannot"
-                + " permit waiting for the root node (id `0`)!"
+                "Must provide variable assignment to specify thread to wait for!"
             );
         }
+
+        // if (threadWaitThreadId < 1) {
+        //     throw new LHValidationError(
+        //         "The `threadId` field on a WAIT_FOR_THREAD node must be greater than"
+        //         + " zero because it must refer to a thread to wait for, and we cannot"
+        //         + " permit waiting for the root node (id `0`)!"
+        //     );
+        // }
 
         // TODO: Throw an error if the WAIT_FOR_THREAD node doesn't come after
         // the SPAWN_THREAD node. Can figure this out by doing analysis on the

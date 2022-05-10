@@ -139,7 +139,7 @@ class NodeSchema(LHBaseModel):
 
     variables: Optional[dict[str, VariableAssignmentSchema]] = None
     external_event_def_name: Optional[str] = None
-    thread_wait_source_node_name: Optional[str] = None
+    thread_wait_thread_id: Optional[VariableAssignmentSchema] = None
     thread_spawn_thread_spec_name: Optional[str] = None
 
     variable_mutations: dict[str, VariableMutationSchema] = Field(

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class NodeOutput:
     def __init__(
         self,
-        node_name,
+        node_name: str,
         thread: ThreadSpecBuilder,
         output_type: Optional[Any] = None,
         jsonpath: Optional[str] = None,
