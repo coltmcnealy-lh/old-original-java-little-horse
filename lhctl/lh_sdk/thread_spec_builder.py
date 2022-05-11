@@ -208,12 +208,24 @@ class ThreadSpecBuilder:
         if not isinstance(var_type, WFRunVariableTypeEnum):
             var_type = TYPE_TO_ENUM[var_type]
 
+        if name in self._wf._var_defs:
+            raise RuntimeError(
+                f"Variable {name} already defined. SDK doesn't support overloading"
+                " variables yet."
+            )
+
         var_def = WFRunVariableDefSchema(type=var_type, default_value=default_val)
         self._spec.variable_defs[name] = var_def
-        return WFRunVariable(name, var_type, self)
+        out = WFRunVariable(name, var_type, self)
+        self._wf._var_defs[name] = out
+        return out
 
     def get_parent_var(self, var_name) -> WFRunVariable:
-        raise NotImplementedError()
+        var = self._wf._var_defs.get(var_name)
+        if var is None:
+            raise RuntimeError("This really shouldn't happen unless Colt screwed up")
+
+        return var
 
     def _mutate(self, var_name: str, mutation: VariableMutationSchema):
         assert self._last_node_name is not None, "Execute task before mutating vars!"
@@ -316,6 +328,7 @@ class Workflow:
         self._module_dict = module_dict
         self._spec.name = self._name
         self._funcs: dict[str, Callable[[ThreadSpecBuilder], None]] = {}
+        self._var_defs: dict[str, WFRunVariable] = {}
         self.add_subthread(entrypoint_function)
         self.compile()
 
