@@ -310,6 +310,13 @@ class ThreadSpecBuilder:
         node.thread_wait_thread_id = var_assign
         return NodeOutput(node_name, self)
 
+    def throw_exception(self, exc_name: str) -> None:
+        node = NodeSchema(
+            node_type=NodeType.THROW_EXCEPTION,
+            exception_to_throw=exc_name,
+        )
+        self._add_node(node)
+
     @property
     def spec(self) -> ThreadSpecSchema:
         return self._spec

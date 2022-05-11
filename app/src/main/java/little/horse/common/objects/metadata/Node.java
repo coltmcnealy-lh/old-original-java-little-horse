@@ -58,7 +58,7 @@ public class Node extends BaseSchema {
     public String taskDefName;
     public String taskDefId;
 
-    // Ignored unless node is of nodeType THROW_EXCEPTION_TO_PARENT
+    // Ignored unless node is of nodeType THROW_EXCEPTION
     public String exceptionToThrow;
 
     public ExceptionHandlerSpec baseExceptionhandler;
