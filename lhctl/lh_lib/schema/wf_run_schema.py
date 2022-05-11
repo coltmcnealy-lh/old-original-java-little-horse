@@ -3,7 +3,7 @@ from enum import Enum
 
 from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Union
 from lh_sdk.utils import LHBaseModel
-from lh_lib.schema.wf_spec_schema import EdgeSchema
+from lh_lib.schema.wf_spec_schema import ACCEPTABLE_TYPES, EdgeSchema
 
 
 VALID_VARIABLE_TYPE = Union[float, int, str, bool, list, dict]
@@ -52,8 +52,8 @@ class TaskRunSchema(LHBaseModel):
 
     worker_id: Optional[str] = None
     stdin: Optional[str] = None
-    stdout: Optional[str] = None
-    stderr: Optional[str] = None
+    stdout: Optional[ACCEPTABLE_TYPES] = None
+    stderr: Optional[ACCEPTABLE_TYPES] = None
     returncode: Optional[int] = None
 
     start_time: Optional[datetime] = None

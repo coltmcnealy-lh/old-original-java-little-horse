@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.Cancellable;
@@ -22,6 +23,8 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFSpec;
+import little.horse.common.objects.rundata.LHExecutionStatus;
+import little.horse.common.objects.rundata.LHFailureReason;
 import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.WFRunTimer;
@@ -62,8 +65,22 @@ public class SchedulerProcessor
         try {
             processHelper(record.key(), record.value(), record.timestamp());
         } catch(Exception exn) {
-            // TODO: Something less dumb
-            exn.printStackTrace();
+            String wfRunId = record.key();
+            WFRun wfRun = wfRunStore.get(wfRunId);
+            if (wfRun == null) {
+                LHUtil.logError("failed on an unknown wfrun: ", exn.getStackTrace());
+                return;
+            }
+            try {
+                wfRun.status = LHExecutionStatus.HALTED;
+                wfRun.errorCode = LHFailureReason.INTERNAL_LITTLEHORSE_ERROR;
+                String st = ExceptionUtils.getStackTrace(exn);
+                wfRun.errorMessage = "Had an unexpected error: " + st;
+                wfRunStore.put(wfRunId, wfRun);
+            } catch (Exception exn2) {
+                exn2.printStackTrace();
+                LHUtil.logError("Had a massive orzdash");
+            }
         }
     }
 

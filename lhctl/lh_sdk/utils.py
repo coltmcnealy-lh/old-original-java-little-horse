@@ -14,7 +14,7 @@ from pydantic import BaseModel as PyThingBaseModel
 from humps import camelize
 
 if TYPE_CHECKING:
-    from lh_lib.schema.wf_spec_schema import WFRunVariableTypeEnum
+    from lh_lib.schema.wf_spec_schema import ACCEPTABLE_TYPES, WFRunVariableTypeEnum
 
 
 DEFAULT_URL = os.getenv("LHORSE_API_URL", "http://localhost:5000")
@@ -110,3 +110,11 @@ def get_task_def_name(func: Callable):
 
 def parse_task_def_name(td_name: str) -> Tuple[str, str]:
     return '.'.join(td_name.split('-')[:-1]), td_name.split('-')[-1]
+
+
+def stringify(thing: ACCEPTABLE_TYPES) -> str:
+    if type(thing) in [str, int, bool, float]:
+        return str(thing)
+
+    else:
+        return json.dumps(thing)

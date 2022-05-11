@@ -101,7 +101,9 @@ public class Mutation {
 
         newOut = newOut == null ? null : coerceBackToType(newOut);
 
-        if (!dryRun) tr.variables.put(varName, newOut);
+        if (!dryRun) {
+            tr.variables.put(varName, newOut);
+        }
     }
 
     private Object coerceBackToType(Object o) throws VarSubOrzDash {
@@ -210,7 +212,7 @@ public class Mutation {
         // Just try to cast the right hand side to what it's supposed to be
         // in order to verify that it'll work.
         if (varDef.type == WFRunVariableTypeEnum.INT) {
-            return (Integer) rhs + (Integer) lhs;
+            return toInt(rhs) + toInt(lhs);
 
         } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
             return toStr(lhs) + toStr(rhs);
@@ -265,9 +267,6 @@ public class Mutation {
         Double lfloat = toDouble(lhs);
         Double rfloat = toDouble(rhs);
         Double out = lfloat - rfloat;
-
-        LHUtil.log("\n\n\n\n", out, "\n\n\n\n");
-
         return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
     }
 

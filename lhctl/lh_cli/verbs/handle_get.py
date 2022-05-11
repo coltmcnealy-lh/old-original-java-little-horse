@@ -12,6 +12,7 @@ from lh_lib.schema.wf_spec_schema import (
     TaskDefSchema,
 )
 from lh_lib.utils.printer import Printer
+from lh_sdk.utils import stringify
 
 
 T = TypeVar('T')
@@ -41,6 +42,10 @@ class GETWFRun(GettableResource[WFRunSchema]):
             printer.print("No resources found!")
             return
         printer.print("WFRun Status:", wf_run.status.value)
+        if wf_run.error_code is not None:
+            printer.print("Error Code:", wf_run.error_code)
+        if wf_run.error_message is not None:
+            printer.print("Error Message:", wf_run.error_message)
         printer.print("Threads:")
         printer.indent()
         for trun in wf_run.thread_runs:
@@ -52,6 +57,8 @@ class GETWFRun(GettableResource[WFRunSchema]):
         if trun.is_interrupt_thread:
             printer.print("Interrupt thread!")
         printer.print("Status: ", trun.status.value)
+        if trun.error_message is not None:
+            printer.print("Error Message:", trun.error_message)
 
         printer.print("Tasks:")
         printer.indent()
@@ -60,10 +67,12 @@ class GETWFRun(GettableResource[WFRunSchema]):
             if task.stdout is None:
                 adjusted_stdout = None
             else:
-                adjusted_stdout = task.stdout.rstrip("\n")
+                adjusted_stdout = stringify(task.stdout).rstrip("\n")
 
             if task.stderr is not None:
-                adjusted_stdout = str(adjusted_stdout) + ' ||| Stderr:' + task.stderr
+                adjusted_stdout = str(adjusted_stdout) + ' ||| Stderr:' + stringify(
+                    task.stderr
+                )
 
             if task.failure_message is not None:
                 adjusted_stdout = adjusted_stdout or ''

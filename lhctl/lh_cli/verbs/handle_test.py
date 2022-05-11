@@ -69,7 +69,7 @@ class TESTHandler:
         for case in cases:
             launch_test(case, test_client, ns.requests)
 
-        # time.sleep(3)
+        time.sleep(3)
 
         for case in cases:
             check_all_tests(case, test_client)

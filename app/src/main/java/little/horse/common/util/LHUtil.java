@@ -295,6 +295,7 @@ public class LHUtil {
             case INVALID_WF_SPEC_ERROR:         return false;
             case TIMEOUT:                       return true;
             case INTERNAL_LITTLEHORSE_ERROR:    return true;
+            case SUBTHREAD_FAILURE:             return false;
             default: throw new RuntimeException("Not possible.");
         }
     }

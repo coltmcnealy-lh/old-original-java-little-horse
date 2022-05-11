@@ -162,7 +162,7 @@ public class ThreadRun extends BaseSchema {
     ) throws LHConnectionError, VarSubOrzDash {
         if (mutSchema.jsonPath != null) {
             return LHUtil.jsonPath(
-                tr.stdout.toString(), mutSchema.jsonPath
+                LHUtil.objToString(tr.stdout), mutSchema.jsonPath
             );
         } else if (mutSchema.sourceVariable != null) {
             return assignVariable(mutSchema.sourceVariable);
@@ -337,8 +337,8 @@ public class ThreadRun extends BaseSchema {
 
         // task.stdout = stdout;
         // task.stderr = stderr;
-        task.stdout = LHUtil.stringToObj(stdout, config);
-        task.stderr = LHUtil.stringToObj(stderr, config);
+        task.stdout = stdout == null ? null : LHUtil.stringToObj(stdout, config);
+        task.stderr = stderr == null ? null : LHUtil.stringToObj(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 
@@ -884,7 +884,9 @@ public class ThreadRun extends BaseSchema {
 
         ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
         taskRuns.add(tr);
-        TaskRunResult result = new TaskRunResult(meta.toString(), null, true, 0);
+        TaskRunResult result = new TaskRunResult(
+            LHUtil.objToString(meta), null, true, 0
+        );
         completeTask(
             tr, LHExecutionStatus.COMPLETED, result, event.timestamp
         );
@@ -1258,7 +1260,12 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     public boolean isTerminated() {
-        return (isCompleted() || haltReasons.contains(WFHaltReasonEnum.FAILED));
+        return (status != LHExecutionStatus.RUNNING) && (
+            status != LHExecutionStatus.SCHEDULED
+        ) && (
+            isCompleted() ||
+            haltReasons.contains(WFHaltReasonEnum.FAILED)
+        );
     }
 
     @JsonIgnore
