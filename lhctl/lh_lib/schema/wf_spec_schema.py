@@ -128,7 +128,6 @@ class VariableMutationSchema(LHBaseModel):
 
 class ExceptionHandlerSpecSchema(LHBaseModel):
     handler_thread_spec_name: str
-    should_resume: bool
 
 
 class NodeSchema(LHBaseModel):

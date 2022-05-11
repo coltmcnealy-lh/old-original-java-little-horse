@@ -126,7 +126,6 @@ def check_all_tests(test_name: str, client: TestClient):
     with closing(get_session()) as ses:
         for wf_run_orm, wf_run in client.iter_test_runs(test_name, ses):
             new_status, message = check_for_consistency(wf_run_orm, wf_run)
-            print("Checked for consistency")
 
             if new_status is not None and new_status != TestStatus.FALIED_ACCEPTABLE:
                 wf_run_orm.status = new_status

@@ -1,11 +1,10 @@
 from argparse import ArgumentParser, _SubParsersAction, Namespace
 import importlib
-import json
-from typing import Any, Callable
+from typing import Any
 
 from lh_lib.client import LHClient
 from lh_sdk.compile import get_specs
-from lh_sdk.thread_spec_builder import ThreadSpecBuilder, Workflow
+from lh_sdk.thread_spec_builder import Workflow, THREAD_FUNC
 
 
 class COMPILEHandler():
@@ -33,7 +32,7 @@ class COMPILEHandler():
 
         # This should work because we should have imported the function in the line
         # above
-        wf_func: Callable[[ThreadSpecBuilder], Any] = mod.__dict__[ns.wf_func]
+        wf_func: THREAD_FUNC = mod.__dict__[ns.wf_func]
         wf = Workflow(wf_func, mod.__dict__)
         specs = get_specs(wf)
 

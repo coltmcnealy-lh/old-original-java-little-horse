@@ -24,4 +24,3 @@ def my_workflow(thread: ThreadSpecBuilder):
     child = thread.spawn_thread(subthread)
 
     thread.wait_for_thread(child)
-

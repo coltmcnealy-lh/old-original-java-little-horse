@@ -72,7 +72,6 @@ class TESTHandler:
         # time.sleep(3)
 
         for case in cases:
-            print("gonna check")
             check_all_tests(case, test_client)
 
         get_and_print_summary()

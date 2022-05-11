@@ -35,6 +35,9 @@ from lh_lib.schema.wf_spec_schema import (
 from lh_sdk.wf_run_variable import WFRunVariable
 
 
+THREAD_FUNC = Callable[['ThreadSpecBuilder'], None]
+
+
 class ThreadSpecBuilder:
     def __init__(self, name: str, wf_spec: WFSpecSchema, wf: Workflow):
         self._spec: ThreadSpecSchema = ThreadSpecSchema(name=name)
@@ -146,6 +149,9 @@ class ThreadSpecBuilder:
             node_type=NodeType.NOP,
         ))
 
+    def add_subthread(self, thr: THREAD_FUNC) -> str:
+        return self._wf.add_subthread(thr)
+
     def _add_node(self, node: NodeSchema) -> str:
         to_delete = []
 
@@ -221,11 +227,11 @@ class ThreadSpecBuilder:
         return out
 
     def get_parent_var(self, var_name) -> WFRunVariable:
-        var = self._wf._var_defs.get(var_name)
-        if var is None:
+        temp_var = self._wf._var_defs.get(var_name)
+        if temp_var is None:
             raise RuntimeError("This really shouldn't happen unless Colt screwed up")
 
-        return var
+        return WFRunVariable(temp_var.name, temp_var.var_type, self)
 
     def _mutate(self, var_name: str, mutation: VariableMutationSchema):
         assert self._last_node_name is not None, "Execute task before mutating vars!"
@@ -245,20 +251,20 @@ class ThreadSpecBuilder:
         return self._spec.variable_defs[var_name]
 
     def handle_interrupt(
-        self, event_name: str, handler: Callable[[ThreadSpecBuilder], None]
+        self, event_name: str, handler: THREAD_FUNC
     ):
         # First, we need to create the ThreadSpec somehow.
-        self._wf.add_subthread(handler)
+        handler_thread_name = self.add_subthread(handler)
 
         # Ok, now the threadspec is created, so let's set the handler.
         self.spec.interrupt_defs = self.spec.interrupt_defs or {}
         self.spec.interrupt_defs[event_name] = InterruptDefSchema(
-            handler_thread_name=handler.__name__
+            handler_thread_name=handler_thread_name
         )
 
     def spawn_thread(
         self,
-        thread_func: Callable[[ThreadSpecBuilder], None],
+        thread_func: THREAD_FUNC,
     ) -> ThreadSpawnOutput:
         # There's a few things to do here:
         # 1. Create the threadspec from the passed in thread_func.
@@ -267,9 +273,7 @@ class ThreadSpecBuilder:
         #    assign the ThreadRunMeta to some variables.
 
         # Create the threadspec:
-        thread_name = thread_func.__name__
-
-        self._wf.add_subthread(thread_func)
+        thread_name = self.add_subthread(thread_func)
 
         node = NodeSchema(
             node_type=NodeType.SPAWN_THREAD,
@@ -327,13 +331,14 @@ class Workflow:
         )
         self._module_dict = module_dict
         self._spec.name = self._name
-        self._funcs: dict[str, Callable[[ThreadSpecBuilder], None]] = {}
+        self._funcs: dict[str, THREAD_FUNC] = {}
         self._var_defs: dict[str, WFRunVariable] = {}
         self.add_subthread(entrypoint_function)
         self.compile()
 
-    def add_subthread(self, thread_func: Callable[[ThreadSpecBuilder], None]):
+    def add_subthread(self, thread_func: THREAD_FUNC) -> str:
         self._funcs[thread_func.__name__] = thread_func
+        return thread_func.__name__
 
     def compile(self):
         # Iterate through all the threads and compile them (:

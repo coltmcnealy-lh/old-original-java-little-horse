@@ -335,10 +335,10 @@ public class ThreadRun extends BaseSchema {
         int returnCode = result.returncode;
         task.endTime = endTime;
 
-        task.stdout = stdout;
-        task.stderr = stderr;
-        // task.stdout = LHUtil.stringToObj(stdout, config);
-        // task.stderr = LHUtil.stringToObj(stderr, config);
+        // task.stdout = stdout;
+        // task.stderr = stderr;
+        task.stdout = LHUtil.stringToObj(stdout, config);
+        task.stderr = LHUtil.stringToObj(stderr, config);
         task.status = taskStatus;
         task.returnCode = returnCode;
 

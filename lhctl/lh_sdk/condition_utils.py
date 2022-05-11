@@ -61,6 +61,7 @@ class IfElseCondition:
 
     @property
     def right_side(self) -> VariableAssignmentSchema:
+        from lh_sdk.wf_run_variable import WFRunVariable
         if isinstance(self._rhs, WFRunVariable):
             return VariableAssignmentSchema(
                 wf_run_variable_name=self._rhs.name,

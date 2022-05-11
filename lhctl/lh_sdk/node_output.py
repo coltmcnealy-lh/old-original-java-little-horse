@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
-from lh_lib.schema.wf_spec_schema import NodeSchema, NodeType
+from lh_lib.schema.wf_spec_schema import ExceptionHandlerSpecSchema, NodeSchema, NodeType
 
 if TYPE_CHECKING:
     from lh_sdk.wf_run_variable import WFRunVariable
-    from lh_sdk.thread_spec_builder import ThreadSpecBuilder
+    from lh_sdk.thread_spec_builder import ThreadSpecBuilder, THREAD_FUNC
 
 
 class NodeOutput:
@@ -73,4 +73,26 @@ class NodeOutput:
 
     def with_timeout(self, timeout_seconds: Union[int, WFRunVariable]) -> NodeOutput:
         self.node.timeout_seconds = self.thread.construct_var_assign(timeout_seconds)
+        return self
+
+    def catch_exception(
+        self,
+        handler: THREAD_FUNC,
+        exc_name: Optional[str] = None
+    ) -> NodeOutput:
+        if self.node_name != self.thread._last_node_name:
+            raise RuntimeError("Modifying an already-set node!")
+
+        thread_name = self.thread.add_subthread(handler)
+
+        handler_spec = ExceptionHandlerSpecSchema(
+            handler_thread_spec_name=thread_name
+        )
+        if exc_name is None:
+            self.node.base_exceptionhandler = handler_spec
+        else:
+            if self.node.custom_exception_handlers is None:
+                self.node.custom_exception_handlers = {}
+            self.node.custom_exception_handlers[exc_name] = handler_spec
+
         return self
