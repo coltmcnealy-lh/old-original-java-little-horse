@@ -301,6 +301,7 @@ public class WFRun extends CoreMetadata {
                 if (!thread.isCompleted()) allCompleted = false;
             }
             if (allCompleted) {
+                endTime = event.timestamp;
                 this.status = LHExecutionStatus.COMPLETED;
             } else if (allTerminated) {
                 this.status = LHExecutionStatus.HALTED;
@@ -395,6 +396,7 @@ class WFRunApiStuff {
         event.wfRunId = guid;
         event.content = request.toString();
         event.type = WFEventType.WF_RUN_STARTED;
+        event.timestamp = LHUtil.now();
 
         try {
             WFSpec spec = LHDatabaseClient.lookupMetaNameOrId(

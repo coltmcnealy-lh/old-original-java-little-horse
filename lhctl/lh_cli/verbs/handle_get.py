@@ -42,6 +42,11 @@ class GETWFRun(GettableResource[WFRunSchema]):
             printer.print("No resources found!")
             return
         printer.print("WFRun Status:", wf_run.status.value)
+
+        if wf_run.start_time is not None and wf_run.end_time is not None:
+            runtime = wf_run.end_time - wf_run.start_time
+            printer.print("Execution time: ", runtime)
+
         if wf_run.error_code is not None:
             printer.print("Error Code:", wf_run.error_code)
         if wf_run.error_message is not None:
