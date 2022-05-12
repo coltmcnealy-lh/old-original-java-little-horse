@@ -6,8 +6,8 @@ import little.horse.common.objects.rundata.LHFailureReason;
 
 public class TaskRunEndedEvent extends BaseSchema {
     public TaskRunResult result;
-    public int threadRunId;
-    public int taskRunNumber;
+    public int threadId;
+    public int taskRunPosition;
     public LHFailureReason reason;
     public String message;
 }

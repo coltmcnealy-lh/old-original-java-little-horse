@@ -5,7 +5,7 @@ import java.util.Date;
 import little.horse.common.objects.BaseSchema;
 
 public class TaskRunEvent extends BaseSchema {
-    public int threadID;
+    public int threadId;
     public int taskRunPosition;
     public Date timestamp;
 

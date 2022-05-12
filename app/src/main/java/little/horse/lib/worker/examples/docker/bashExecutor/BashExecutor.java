@@ -10,10 +10,10 @@ import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.examples.docker.DDConfig;
 import little.horse.lib.deployers.examples.docker.DDConstants;
 import little.horse.lib.worker.WorkerContext;
-import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.lib.worker.examples.docker.JavaTaskExecutor;
 import little.horse.workflowworker.TaskScheduleRequest;
 
-public class BashExecutor implements DockerTaskExecutor {
+public class BashExecutor implements JavaTaskExecutor {
     private BashTaskMetadata meta;
 
     public void init(DDConfig ddConfig, DepInjContext config) {        
@@ -52,9 +52,9 @@ public class BashExecutor implements DockerTaskExecutor {
             } else if (metaVarMatcher.matches()) {
                 String metaVarname = arg.substring(3, arg.length() - 3);
                 if (metaVarname.equals("THREAD_RUN_ID")) {
-                    cmd.add(String.valueOf(request.threadRunNumber));
+                    cmd.add(String.valueOf(request.threadId));
                 } else if (metaVarname.equals("TASK_RUN_NUMBER")) {
-                    cmd.add(String.valueOf(request.taskRunNumber));
+                    cmd.add(String.valueOf(request.taskRunPosition));
                 } else if (metaVarname.equals("WF_RUN_ID")) {
                     cmd.add(request.wfRunId);
                 } else {

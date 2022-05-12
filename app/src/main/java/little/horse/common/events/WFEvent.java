@@ -18,7 +18,7 @@ public class WFEvent extends BaseSchema {
     public String wfSpecName;
     public String wfRunId;
     public Date timestamp;
-    public int threadRunId;
+    public int threadId;
 
     public WFEventType type;
 

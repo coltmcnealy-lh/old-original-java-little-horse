@@ -1,28 +1,25 @@
+"""
+This module provides a Python Task Executor which gives At-Least-Once guarantees for
+task execution.
+"""
 import argparse
-import importlib
-import json
-
-from lh_sdk.utils import cast_all_args, parse_task_def_name
+from contextlib import closing
+from executor.worker import PythonTaskWorker
 
 
-parser = argparse.ArgumentParser('lhctl_execute')
-parser.add_argument(
-    "task_def_name",
-    help="TaskDef name. Formated as module_name.replace('.','-') + '-' + func_name.",
-)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--task_def_name")
+    parser.add_argument("--num_threads", type=int)
+    parser.add_argument("--app_id")
+    parser.add_argument("--ap_instance_id")
+    parser.add_argument("--poll_period", type=float)
+    parser.add_argument("--bootstrap_servers")
+    parser.add_argument("--task_module_name")
+    parser.add_argument("--task_func_name")
 
-args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
+    arg_dict = vars(args)
 
-module_name, func_name = parse_task_def_name(args.task_def_name)
-module = importlib.import_module(module_name)
-func = module.__dict__[func_name]
-
-new_args = cast_all_args(func, *unknown)
-
-result = func(**new_args)
-
-if isinstance(result, list) or isinstance(result, dict):
-    result = json.dumps(result)
-
-# This is a pretty silly way of serializing, but whatevs
-print(result, end='')
+    with closing(PythonTaskWorker(**arg_dict)) as worker:
+        worker.run()

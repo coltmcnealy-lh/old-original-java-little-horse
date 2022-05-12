@@ -85,6 +85,7 @@ CONDITION_INVERSES = {
 
 
 ACCEPTABLE_TYPES = Union[str, list, dict, int, bool, float]
+ACCEPTABLE_TYPES_LIST = [str, list, dict, int, bool, float]
 TYPE_TO_ENUM: Mapping[type[ACCEPTABLE_TYPES], WFRunVariableTypeEnum]= {
     str: WFRunVariableTypeEnum.STRING,
     list: WFRunVariableTypeEnum.ARRAY,

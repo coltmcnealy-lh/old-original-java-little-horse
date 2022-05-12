@@ -304,7 +304,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     public WFEvent newWFEvent(WFEventType type, BaseSchema content) {
         WFEvent out = wfRun.newWFEvent(type, content);
-        out.threadRunId = id;
+        out.threadId = id;
         return out;
     }
 
@@ -803,8 +803,8 @@ public class ThreadRun extends BaseSchema {
         tsr.wfRunId = wfRun.id;
         tsr.wfSpecId = wfRun.wfSpecDigest;
         tsr.wfSpecName = wfRun.wfSpecName;
-        tsr.threadRunNumber = id;
-        tsr.taskRunNumber = tr.position;
+        tsr.threadId = id;
+        tsr.taskRunPosition = tr.position;
         tsr.kafkaTopic = wfRun.getWFSpec().getEventTopic();
         try {
             tsr.taskDefName = tr.getNode().taskDefName;

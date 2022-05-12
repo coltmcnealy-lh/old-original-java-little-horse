@@ -14,8 +14,8 @@ public class WorkerContext {
 
     public void log(Object... things) {
         LHUtil.logBack(
-            1, tsr.taskDefName, tsr.taskDefName, tsr.wfRunId, tsr.threadRunNumber,
-            tsr.taskRunNumber, things
+            1, tsr.taskDefName, tsr.taskDefName, tsr.wfRunId, tsr.threadId,
+            tsr.taskRunPosition, things
         );
 
         for (Object thing: things) {

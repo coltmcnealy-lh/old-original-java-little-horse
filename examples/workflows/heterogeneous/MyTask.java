@@ -2,7 +2,7 @@ import little.horse.common.DepInjContext;
 import little.horse.lib.deployers.examples.docker.DDConfig;
 import little.horse.lib.deployers.examples.docker.DDConstants;
 import little.horse.lib.worker.WorkerContext;
-import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.lib.worker.examples.docker.JavaTaskExecutor;
 import little.horse.workflowworker.TaskScheduleRequest;
 
 

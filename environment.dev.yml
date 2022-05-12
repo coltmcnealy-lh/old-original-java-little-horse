@@ -17,10 +17,10 @@ dependencies:
   - psycopg2
   - pydantic
   - pyhumps
-  - python-confluent-kafka
   - werkzeug
   - xmltodict
   - pip:
+    - confluent-kafka
     - pylint
     - quart
     - Quart-CORS

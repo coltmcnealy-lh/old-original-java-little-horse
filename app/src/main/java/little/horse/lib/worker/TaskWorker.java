@@ -28,20 +28,20 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.lib.worker.examples.docker.JavaTaskExecutor;
 import little.horse.workflowworker.TaskScheduleRequest;
 
 public class TaskWorker {
     private DepInjContext config;
     private TaskDef taskDef;
-    private DockerTaskExecutor executor;
+    private JavaTaskExecutor executor;
     private ExecutorService threadPool;
     private KafkaConsumer<String, Bytes> consumer;
     private KafkaProducer<String, Bytes> txnProducer;
     private KafkaProducer<String, Bytes> producer;
 
     public TaskWorker(
-        DepInjContext config, String taskQueueName, DockerTaskExecutor executor, int numThreads
+        DepInjContext config, String taskQueueName, JavaTaskExecutor executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
         this.taskDef = LHDatabaseClient.lookupMetaNameOrId(
@@ -117,12 +117,12 @@ public class TaskWorker {
         );
 
         TaskRunStartedEvent trs = new TaskRunStartedEvent();
-        trs.threadRunNumber = schedReq.threadRunNumber;
+        trs.threadId = schedReq.threadId;
         trs.workerId = "some-worker-id";
 
         TaskRunEvent tre = new TaskRunEvent();
         tre.startedEvent = trs;
-        tre.taskRunPosition = schedReq.taskRunNumber;
+        tre.taskRunPosition = schedReq.taskRunPosition;
         tre.timestamp = LHUtil.now();
 
         WFEvent event = new WFEvent();
@@ -132,7 +132,7 @@ public class TaskWorker {
         event.wfSpecName = schedReq.wfSpecName;
         event.type = WFEventType.TASK_EVENT;
         event.timestamp = tre.timestamp;
-        event.threadRunId = schedReq.threadRunNumber;
+        event.threadId = schedReq.threadId;
 
         ProducerRecord<String, Bytes> prodRecord = new ProducerRecord<String, Bytes>(
             schedReq.kafkaTopic, schedReq.wfRunId, new Bytes(event.toBytes())
@@ -174,17 +174,17 @@ public class TaskWorker {
 
         TaskRunEndedEvent out = new TaskRunEndedEvent();
         out.result = result;
-        out.taskRunNumber = schedReq.taskRunNumber;
-        out.threadRunId = schedReq.threadRunNumber;
+        out.taskRunPosition = schedReq.taskRunPosition;
+        out.threadId = schedReq.threadId;
 
         TaskRunEvent tre2 = new TaskRunEvent();
         tre2.endedEvent = out;
-        tre2.taskRunPosition = schedReq.taskRunNumber;
+        tre2.taskRunPosition = schedReq.taskRunPosition;
         tre2.timestamp = LHUtil.now();
 
         WFEvent completedEvent = new WFEvent();
         completedEvent.wfRunId = schedReq.wfRunId;
-        completedEvent.threadRunId = schedReq.threadRunNumber;
+        completedEvent.threadId = schedReq.threadId;
         completedEvent.timestamp = tre2.timestamp;
         completedEvent.wfSpecId = schedReq.wfSpecId;
         completedEvent.wfSpecName = schedReq.wfSpecName;

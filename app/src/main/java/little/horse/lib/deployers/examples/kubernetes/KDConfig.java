@@ -16,7 +16,7 @@ import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.deployers.examples.kubernetes.specs.Deployment;
-import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.lib.worker.examples.docker.JavaTaskExecutor;
 
 
 public class KDConfig {
@@ -53,7 +53,7 @@ public class KDConfig {
         return this.wfSpecId;
     }
 
-    public DockerTaskExecutor getTaskExecutor() {
+    public JavaTaskExecutor getTaskExecutor() {
         return LHUtil.loadClass(taskExecutorClassName);
     }
 

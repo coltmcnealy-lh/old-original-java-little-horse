@@ -182,8 +182,8 @@ public class WFRun extends CoreMetadata {
             // This is an interrupt. Find the appropriate thread and interrupt it.
             // There's two options: the thread number is set, or it's not set.
             // If the thread number is set, then just interrupt that thread.
-            if (event.threadRunId != -1) {
-                threadRuns.get(event.threadRunId).handleInterrupt(payload);
+            if (event.threadId != -1) {
+                threadRuns.get(event.threadId).handleInterrupt(payload);
             } else {
                 // if there's no thread number set, interrupt all threads that
                 // listen to this interrupt.
@@ -195,7 +195,7 @@ public class WFRun extends CoreMetadata {
             ExternalEventCorrel correl = new ExternalEventCorrel();
             correl.event = payload;
             correl.arrivalTime = event.timestamp;
-            correl.assignedThreadId = event.threadRunId;
+            correl.assignedThreadId = event.threadId;
 
             if (correlatedEvents == null) {
                 correlatedEvents = new HashMap<>();
@@ -225,17 +225,17 @@ public class WFRun extends CoreMetadata {
         }
 
         if (event.type == WFEventType.TASK_EVENT) {
-            ThreadRun thread = threadRuns.get(event.threadRunId);
+            ThreadRun thread = threadRuns.get(event.threadId);
             thread.incorporateEvent(event);
         }
 
         if (event.type == WFEventType.WF_RUN_STOP_REQUEST) {
-            if (event.threadRunId == 0 && status == LHExecutionStatus.RUNNING) {
+            if (event.threadId == 0 && status == LHExecutionStatus.RUNNING) {
                 status = LHExecutionStatus.HALTING;
             }
-            int threadID = event.threadRunId >= 0 ? event.threadRunId : 0;
+            int threadID = event.threadId >= 0 ? event.threadId : 0;
             if (threadID < threadRuns.size()) {
-                threadRuns.get(event.threadRunId).halt(
+                threadRuns.get(event.threadId).halt(
                     WFHaltReasonEnum.MANUAL_STOP,
                     "Manual halt of this thread requested by system admin."
                 );
@@ -243,11 +243,11 @@ public class WFRun extends CoreMetadata {
         }
 
         if (event.type == WFEventType.WF_RUN_RESUME_REQUEST) {
-            if (event.threadRunId == 0 && status != LHExecutionStatus.COMPLETED) {
+            if (event.threadId == 0 && status != LHExecutionStatus.COMPLETED) {
                 status = LHExecutionStatus.RUNNING;
             }
-            if (event.threadRunId < threadRuns.size()) {
-                threadRuns.get(event.threadRunId).removeHaltReason(
+            if (event.threadId < threadRuns.size()) {
+                threadRuns.get(event.threadId).removeHaltReason(
                     WFHaltReasonEnum.MANUAL_STOP
                 );
             }
@@ -449,7 +449,7 @@ class WFRunApiStuff {
             event.wfRun = wfRun;
             event.wfRunId = wfRunGuid;
             event.type = WFEventType.WF_RUN_STOP_REQUEST;    
-            event.threadRunId = tid;
+            event.threadId = tid;
             event.wfSpecId = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();
@@ -489,7 +489,7 @@ class WFRunApiStuff {
             event.wfRun = wfRun;
             event.wfRunId = wfRunGuid;
             event.type = WFEventType.WF_RUN_RESUME_REQUEST;    
-            event.threadRunId = tid;
+            event.threadId = tid;
             event.wfSpecId = event.wfRun.wfSpecDigest;
             event.wfSpecName = event.wfRun.wfSpecName;
             event.record();

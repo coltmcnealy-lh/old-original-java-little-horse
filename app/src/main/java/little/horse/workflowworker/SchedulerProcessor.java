@@ -104,7 +104,7 @@ public class SchedulerProcessor
                     WFEvent event = new WFEvent();
                     event.content = timer.toString();
                     event.setConfig(config);
-                    event.threadRunId = timer.threadRunId;
+                    event.threadId = timer.threadRunId;
                     event.timestamp = new Date(timestamp);
                     event.wfRunId = timer.wfRunId;
                     event.type = WFEventType.TIMER_EVENT;

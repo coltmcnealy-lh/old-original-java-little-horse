@@ -5,7 +5,7 @@ import little.horse.lib.deployers.examples.docker.DDConfig;
 import little.horse.lib.worker.WorkerContext;
 import little.horse.workflowworker.TaskScheduleRequest;
 
-public interface DockerTaskExecutor {
+public interface JavaTaskExecutor {
     public void init(DDConfig ddConfig, DepInjContext config);
 
     public Object executeTask(

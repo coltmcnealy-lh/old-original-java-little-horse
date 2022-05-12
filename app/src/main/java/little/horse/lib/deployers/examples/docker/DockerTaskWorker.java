@@ -5,11 +5,11 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.util.LHUtil;
 import little.horse.lib.worker.TaskWorker;
-import little.horse.lib.worker.examples.docker.DockerTaskExecutor;
+import little.horse.lib.worker.examples.docker.JavaTaskExecutor;
 
 public class DockerTaskWorker {
     private TaskWorker worker;
-    private DockerTaskExecutor executor;
+    private JavaTaskExecutor executor;
 
     public DockerTaskWorker(DDConfig ddConfig, DepInjContext config) {
         this.executor = ddConfig.getTaskExecutor();
