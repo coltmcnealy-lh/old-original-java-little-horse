@@ -2,22 +2,8 @@ from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, WFRunSchema
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_utils import are_equal
-
-
-def big_blob_task() -> dict:
-    return {
-        "some_blob": {
-            "some_int": 1,
-            "some_float": 2.5,
-            "some_bool": False,
-        },
-        "some_list": [1, 2, 3, 4],
-        "some_str": "Hello, there!",
-    }
-
-
-def dummy() -> str:
-    return "dummy"
+from lh_test_harness.tests.shared_tasks import OBI_GREETING, echo_task
+from lh_test_harness.tests.var_assign_jsonpath_happy import big_blob_task
 
 
 def var_adds(thread: ThreadSpecBuilder):
@@ -29,7 +15,7 @@ def var_adds(thread: ThreadSpecBuilder):
     arr.extend(big_blob.jsonpath('$.some_list'))
     counter.add(big_blob.jsonpath('$.some_list[1]'))
 
-    thread.execute(dummy)
+    thread.execute(echo_task, OBI_GREETING)
     counter.add(1)
     arr.remove_if_present(4)
 

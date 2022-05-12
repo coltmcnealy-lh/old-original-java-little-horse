@@ -53,7 +53,8 @@ class TESTHandler:
                         *(__file__.split('/')[:-1]),
                         "../../lh_test_harness/tests/"
                     )
-                ) if '__' not in file and file.endswith('.py')
+                ) if '__' not in file and file.endswith('.py') and
+                file != 'shared_tasks.py'
             ]
         else:
             cases = ns.cases

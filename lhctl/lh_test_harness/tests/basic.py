@@ -2,16 +2,14 @@ from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, WFRunSchema
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_utils import are_equal
+from lh_test_harness.tests.shared_tasks import echo_task
 
 
-# Simple task used by the test.
-def hello_world() -> str:
-    return "Hello, there!"
-
+HELLO = "Hello, there!"
 
 # This is the workflow function that we test.
 def basic(thread: ThreadSpecBuilder):
-    thread.execute(hello_world)
+    thread.execute(echo_task, HELLO)
 
 
 # The "input" for test case 1. It's simple; we just launch the workflow.
@@ -34,4 +32,4 @@ def check_basic_1(wf_run: WFRunSchema):
 
     task_run = thr.task_runs[0]
     assert task_run.status == LHExecutionStatusEnum.COMPLETED
-    assert are_equal(task_run.stdout, hello_world())
+    assert are_equal(task_run.stdout, HELLO)

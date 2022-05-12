@@ -3,25 +3,18 @@ import time
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, WFRunSchema
-
-
-def dummy_task(foo: int) -> int:
-    return foo + 1
-
-
-def dummy_copy(foo: int) -> int:
-    return foo + 1
+from lh_test_harness.tests.shared_tasks import increment
 
 
 def subthread(st: ThreadSpecBuilder):
     parent_var = st.get_parent_var("parent_var")
-    parent_var.add(st.execute(dummy_task, 12))
+    parent_var.add(st.execute(increment, 12))
 
 
 def bigger_subthread(st: ThreadSpecBuilder):
-    st.execute(dummy_copy, 123456)
+    st.execute(increment, 123456)
     parent_var = st.get_parent_var("parent_var")
-    parent_var.subtract(st.execute(dummy_copy, 4))
+    parent_var.subtract(st.execute(increment, 4))
 
 
 def threads_basic(thread: ThreadSpecBuilder):
@@ -29,7 +22,7 @@ def threads_basic(thread: ThreadSpecBuilder):
     parent_var = thread.add_variable("parent_var", int)
 
     # Add 1 to the input
-    parent_var.assign(thread.execute(dummy_task, input_var))
+    parent_var.assign(thread.execute(increment, input_var))
 
     # Add 13 to the input twice
     child1 = thread.spawn_thread(subthread)
@@ -44,7 +37,7 @@ def threads_basic(thread: ThreadSpecBuilder):
     # At this point, parent_var = (2 * input) + 21
 
     # After the last task, the parent_var should now be ((2 * input) + 21) / 3
-    parent_var.divide(thread.execute(dummy_task, 2))
+    parent_var.divide(thread.execute(increment, 2))
 
 
 def launch_threads_basic(client: TestClient, wf_spec_id: str):

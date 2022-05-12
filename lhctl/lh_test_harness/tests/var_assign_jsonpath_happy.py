@@ -2,21 +2,8 @@ from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, WFRunSchema
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_utils import are_equal
+from lh_test_harness.tests.shared_tasks import big_blob_task, echo_task
 
-
-def big_blob_task() -> dict:
-    return {
-        "some_blob": {
-            "some_int": 1,
-            "some_float": 2.5,
-            "some_bool": False,
-        },
-        "some_list": [1, 2, 3, 4],
-        "some_str": "Hello, there!",
-    }
-
-def dummy_task() -> str:
-    return "hello there!"
 
 str_result = "this is some str"
 
@@ -39,7 +26,7 @@ def var_assign_jsonpath_happy(thread: ThreadSpecBuilder):
     my_second_obj.assign(big_blob.jsonpath("$.some_blob"))
     my_str.assign(str_result)
 
-    thread.execute(dummy_task)
+    thread.execute(echo_task, "hello there!")
     my_float.assign(my_second_obj.jsonpath("$.some_float"))
 
 

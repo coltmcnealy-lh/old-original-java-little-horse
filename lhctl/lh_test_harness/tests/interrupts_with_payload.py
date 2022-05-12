@@ -6,15 +6,12 @@ from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_lib.schema.wf_spec_schema import WFRunVariableTypeEnum
 from lh_test_harness.test_client import TestClient
 from lh_test_harness.test_utils import are_equal
+from lh_test_harness.tests.shared_tasks import hello_there
 
 
 OBI = "General Kenobi"
 R2 = "R2-D2"
 PAYLOAD = {"Jedi": "Obi-Wan", "Sith": "Vader"}
-
-
-def hello_there(name: str) -> str:
-    return f"Hello there, {name}!"
 
 
 # This is the interrupt handler thread!

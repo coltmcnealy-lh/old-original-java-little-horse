@@ -2,30 +2,10 @@ from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, LHFailureReasonEn
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_utils import are_equal
+from lh_test_harness.tests.shared_tasks import echo_float, echo_int, echo_task
 
 
-def big_blob_task() -> dict:
-    return {
-        "some_blob": {
-            "some_int": 1,
-            "some_float": 2.5,
-            "some_bool": False,
-        },
-        "some_list": [1, 2, 3, 4],
-        "some_str": "Hello, there!",
-    }
-
-
-def dummy() -> str:
-    return "dummy"
-
-
-def return_3() -> int:
-    return 3
-
-
-def return_neg_2_5() -> float:
-    return -2.5
+DUMMY = "dummy"
 
 
 def var_mutations(thread: ThreadSpecBuilder):
@@ -36,15 +16,15 @@ def var_mutations(thread: ThreadSpecBuilder):
     my_float = thread.add_variable("my_float", float)
     my_obj = thread.add_variable("my_obj", dict)
 
-    dummy_str = thread.execute(dummy)
+    dummy_str = thread.execute(echo_task, DUMMY)
     my_int.assign(my_obj.jsonpath('$.my_int'))
     my_str.add(dummy_str)
 
-    return_3_output = thread.execute(return_3)
+    return_3_output = thread.execute(echo_int, 3)
     my_int.subtract(return_3_output)
     my_list.add(my_obj.jsonpath("$.some_thing"))
 
-    float_mut_output = thread.execute(return_neg_2_5)
+    float_mut_output = thread.execute(echo_float, -2.5)
     my_float.add(float_mut_output)
     my_list.remove_idx(2)
 
@@ -82,7 +62,7 @@ def check_var_mutations_1(wf_run: WFRunSchema):
     assert are_equal(vars['my_int'], 47), "my_int"
     assert are_equal(vars['my_bool'], True), "my_bool"
     assert are_equal(vars['my_list'], [[1, 2, 3]]), "my_list"
-    assert are_equal(vars['my_str'], dummy()), "my_str"
+    assert are_equal(vars['my_str'], DUMMY), "my_str"
     assert 1234 not in vars['my_obj'], "deleted 1234"  # type: ignore
     assert are_equal(vars['my_float'], 3.2 - 2.5), "my_float"
 

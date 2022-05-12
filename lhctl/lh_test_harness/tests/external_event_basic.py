@@ -7,10 +7,7 @@ from lh_lib.schema.wf_run_schema import (
 )
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_client import TestClient
-
-
-def hello_there(name: str) -> str:
-    return f"Hello there, {name}!"
+from lh_test_harness.tests.shared_tasks import hello_there
 
 
 # This is the interrupt handler thread!

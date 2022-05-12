@@ -4,18 +4,11 @@ from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, LHFailureReasonEn
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_test_harness.test_utils import are_equal
-
-
-OBI_GREETING = "Hello, there!"
-
-
-def timeout_task() -> str:
-    time.sleep(3)
-    return OBI_GREETING
+from lh_test_harness.tests.shared_tasks import slow_task
 
 
 def retries_task_timeout(thread: ThreadSpecBuilder):
-    thread.execute(timeout_task).with_timeout(1).with_retries(1)
+    thread.execute(slow_task).with_timeout(1).with_retries(1)
 
 
 def launch_retries_task_timeout(client: TestClient, wf_spec_id: str):

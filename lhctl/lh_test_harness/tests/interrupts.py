@@ -5,10 +5,7 @@ from lh_sdk.thread_spec_builder import ThreadSpecBuilder
 from lh_lib.schema.wf_spec_schema import WFRunVariableTypeEnum
 from lh_test_harness.test_client import TestClient
 from lh_test_harness.test_utils import are_equal
-
-
-def hello_there(name: str) -> str:
-    return f"Hello there, {name}!"
+from lh_test_harness.tests.shared_tasks import hello_there
 
 
 # This is the interrupt handler thread!

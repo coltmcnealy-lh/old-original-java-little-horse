@@ -3,37 +3,27 @@ import time
 from lh_lib.schema.wf_run_schema import LHExecutionStatusEnum, NodeTypeEnum, WFRunSchema
 from lh_test_harness.test_client import TestClient
 from lh_sdk.thread_spec_builder import ThreadSpecBuilder
+from lh_test_harness.tests.shared_tasks import echo_task
 
 
-def entrypoint() -> str:
-    return "This is entrypoint task"
+ENTRYPOINT = "This is entrypoint task"
 
+UNDER_TEN = "Its under 10!"
 
-def its_under_10() -> str:
-    return "Its under 10!"
+TEN_OR_MORE = "Its 10 or more!"
 
+FEELING_LUCKY = "You feeling lucky, punk?"
 
-def its_10_or_more() -> str:
-    return "Its 10 or more!"
+MERGER = "This task should execute on all WFRun's."
 
-
-def feeling_lucky() -> str:
-    return "You feeling lucky, punk?"
-
-
-def merger_task() -> str:
-    return "This task should execute on all WFRun's."
-
-
-def colt() -> str:
-    return "This is colt's grad year!"
+COLT = "This is colt's grad year!"
 
 
 # This is the workflow function that we test.
 def conditionals_basic(thread: ThreadSpecBuilder):
     my_int = thread.add_variable("my_int", int)
 
-    thread.execute(entrypoint)
+    thread.execute(echo_task, ENTRYPOINT)
 
     greater_than_zero = my_int.greater_than(0)
 
@@ -41,19 +31,19 @@ def conditionals_basic(thread: ThreadSpecBuilder):
 
         under_ten = my_int.less_than(10)
         with under_ten.is_true():
-            thread.execute(its_under_10)
+            thread.execute(echo_task, UNDER_TEN)
         with under_ten.is_false():
-            thread.execute(its_10_or_more)
+            thread.execute(echo_task, TEN_OR_MORE)
 
         is_lucky = my_int.is_in([42, 137])
         with is_lucky.is_true():
-            thread.execute(feeling_lucky)
+            thread.execute(echo_task, FEELING_LUCKY)
 
-    thread.execute(merger_task)
+    thread.execute(echo_task, MERGER)
 
     is_colts_number = my_int.equals(20)
     with is_colts_number.is_true():
-        thread.execute(colt)
+        thread.execute(echo_task, COLT)
 
 
 # The "input" for test case 1. It's simple; we just launch the workflow.
@@ -87,32 +77,32 @@ def check_conditionals_basic(wf_run: WFRunSchema):
 
     if my_int <= 0:
         assert len(tasks) == 2, "Should only have 2 taskruns"
-        assert tasks[0].stdout == entrypoint()
-        assert tasks[1].stdout == merger_task()
+        assert tasks[0].stdout == ENTRYPOINT
+        assert tasks[1].stdout == MERGER
 
     elif my_int < 10:
         assert len(tasks) == 3
-        assert tasks[0].stdout == entrypoint()
-        assert tasks[1].stdout == its_under_10()
-        assert tasks[2].stdout == merger_task()
+        assert tasks[0].stdout == ENTRYPOINT
+        assert tasks[1].stdout == UNDER_TEN
+        assert tasks[2].stdout == MERGER
 
     elif my_int == 20:
         assert len(tasks) == 4
-        assert tasks[0].stdout == entrypoint()
-        assert tasks[1].stdout == its_10_or_more()
-        assert tasks[2].stdout == merger_task()
-        assert tasks[3].stdout == colt()
+        assert tasks[0].stdout == ENTRYPOINT
+        assert tasks[1].stdout == TEN_OR_MORE
+        assert tasks[2].stdout == MERGER
+        assert tasks[3].stdout == COLT
 
     elif my_int in [42, 137]:
         assert len(tasks) == 4
-        assert tasks[0].stdout == entrypoint()
-        assert tasks[1].stdout == its_10_or_more()
-        assert tasks[2].stdout == feeling_lucky()
-        assert tasks[3].stdout == merger_task()
+        assert tasks[0].stdout == ENTRYPOINT
+        assert tasks[1].stdout == TEN_OR_MORE
+        assert tasks[2].stdout == FEELING_LUCKY
+        assert tasks[3].stdout == MERGER
 
     else:
         assert my_int >= 10
         assert len(tasks) == 3
-        assert tasks[0].stdout == entrypoint()
-        assert tasks[1].stdout == its_10_or_more()
-        assert tasks[2].stdout == merger_task()
+        assert tasks[0].stdout == ENTRYPOINT
+        assert tasks[1].stdout == TEN_OR_MORE
+        assert tasks[2].stdout == MERGER
