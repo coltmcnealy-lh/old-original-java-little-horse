@@ -27,8 +27,8 @@ import org.apache.kafka.streams.state.HostInfo;
 
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.examples.docker.DockerTaskDeployer;
-import little.horse.lib.deployers.examples.docker.DockerWorkflowDeployer;
+import little.horse.deployers.examples.docker.DockerTaskDeployer;
+import little.horse.deployers.examples.docker.DockerWorkflowDeployer;
 import okhttp3.OkHttpClient;
 
 

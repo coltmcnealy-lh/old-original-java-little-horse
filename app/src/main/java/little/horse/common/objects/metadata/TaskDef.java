@@ -11,7 +11,7 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.TaskDeployer;
+import little.horse.deployers.TaskDeployer;
 
 
 public class TaskDef extends CoreMetadata {

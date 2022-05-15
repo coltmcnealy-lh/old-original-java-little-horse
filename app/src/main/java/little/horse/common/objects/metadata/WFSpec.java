@@ -25,7 +25,7 @@ import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
 import little.horse.common.util.LHUtil;
-import little.horse.lib.deployers.WorkflowDeployer;
+import little.horse.deployers.WorkflowDeployer;
 
 
 // Just scoping for the purposes of the json parser
@@ -357,6 +357,15 @@ public class WFSpec extends CoreMetadata {
         }
 
         validateVariables();
+        WorkflowDeployer deployer;
+        try {
+            deployer = getWFDeployer();
+        } catch(Exception exn) {
+            throw new LHValidationError(
+                "Failed getting workflow deployer! " + exn.getMessage()
+            );
+        }
+        deployer.validate(this, config);
     }
 
     @JsonIgnore

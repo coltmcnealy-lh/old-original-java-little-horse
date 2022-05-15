@@ -39,7 +39,7 @@ import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFSpec;
 
 import little.horse.common.util.LHUtil;
-import little.horse.workflowworker.TaskScheduleRequest;
+import little.horse.scheduler.TaskScheduleRequest;
 
 
 @JsonIdentityInfo(
