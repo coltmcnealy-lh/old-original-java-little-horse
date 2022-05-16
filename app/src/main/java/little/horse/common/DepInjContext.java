@@ -211,7 +211,8 @@ public class DepInjContext {
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.getStateDirectory());
         props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 4000);
-        props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, "exactly_once");
+        props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, "exactly_once_v2");
+        // props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, "at_least_once");
         props.put(
             StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
             Serdes.StringSerde.class.getName()
