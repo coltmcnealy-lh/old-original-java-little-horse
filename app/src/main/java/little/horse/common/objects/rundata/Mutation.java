@@ -157,7 +157,7 @@ public class Mutation {
             return (List<Object>) o;
         } else if (o instanceof String) {
             try {
-                return new ObjectMapper().readValue(
+                return LHUtil.getObjectMapper(config).readValue(
                     (String) o, List.class
                 );
             } catch (JsonProcessingException exn) {
@@ -173,7 +173,7 @@ public class Mutation {
             return (Map<Object, Object>) o;
         } else if (o instanceof String) {
             try {
-                return new ObjectMapper().readValue(
+                return LHUtil.getObjectMapper(config).readValue(
                     (String) o, Map.class
                 );
             } catch (JsonProcessingException exn) {

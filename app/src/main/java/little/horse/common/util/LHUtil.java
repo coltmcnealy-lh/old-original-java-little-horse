@@ -166,10 +166,10 @@ public class LHUtil {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
-            LHUtil.logBack(
-                1,
-                "LHUtil.fromStringToObj() caught exception", exn.getMessage()
-            );
+            // LHUtil.logBack(
+            //     1,
+            //     "LHUtil.fromStringToObj() caught exception", exn.getMessage()
+            // );
             return data;
         }
     }
@@ -190,6 +190,9 @@ public class LHUtil {
         if (thing == null) return "null";
         if (thing instanceof Map) {
             try {
+                if (LHUtil.mapper != null) {
+                    return LHUtil.mapper.writeValueAsString(thing);
+                }
                 return new ObjectMapper().writeValueAsString(thing);
             } catch (Exception exn) {
                 exn.printStackTrace();
