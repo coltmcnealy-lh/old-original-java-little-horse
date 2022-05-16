@@ -54,9 +54,8 @@ def launch_conditionals_basic(client: TestClient, wf_spec_id: str):
             check_conditionals_basic,
             my_int=i,
         )
-        print(f"Launched test {wf_run_id} on basic.py.")
-
-    time.sleep(5)
+        print(f"Launched test {wf_run_id} on conditionals_basic.py.")
+    time.sleep(2)
 
 # The "check" for test case 1. Verify that the tasks worked properly.
 # Note that if we got this far, we already know that the records in the db match

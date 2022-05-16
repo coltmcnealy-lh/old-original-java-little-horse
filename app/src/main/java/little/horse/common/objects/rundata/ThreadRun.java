@@ -711,6 +711,7 @@ public class ThreadRun extends BaseSchema {
     ) throws LHConnectionError {
         upNext = new ArrayList<>();
         TaskRun tr = createNewTaskRun(node);
+        taskRuns.add(tr);
         TaskRunResult result = new TaskRunResult("", null, true, 0);
         completeTask(tr, LHExecutionStatus.COMPLETED, result, event.timestamp);
         return true;

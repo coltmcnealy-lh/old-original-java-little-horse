@@ -121,6 +121,10 @@ class IfConditionContext:
 
     def __enter__(self):
         new_condition = self.parent.condition_schema
+
+        if len(self.parent.thread._spec.nodes) == 0:
+            self.parent.thread.add_nop_node()
+
         for node_name in self.parent.thread._feeder_nodes:
             if self.parent.thread._feeder_nodes[node_name] is not None:
                 self.parent.thread.add_nop_node()  # Just to make things work

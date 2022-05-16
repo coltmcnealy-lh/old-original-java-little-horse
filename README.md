@@ -155,7 +155,7 @@ Look at the code in `examples/workflows/basic_wf.py`. It should be pretty self-e
 The `my_workflow()` function in `basic_wf.py` defines the `WFSpec`. The other functions become `TaskDef`'s (both `WFSpec` and `TaskDef` are JSON in their true form). To see the raw JSON Spec output, navigate to the `examples` directory and then run the following:
 
 ```
-lhctl compile workflows.basic_wf my_workflow
+lhctl compile workflows.basic_wf.my_workflow
 ```
 *NOTE: try piping the above command to `| jq .` to format it, or paste it to an online json pretty printer.*
 

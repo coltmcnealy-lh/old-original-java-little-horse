@@ -68,6 +68,7 @@ public class SchedulerProcessor
             String wfRunId = record.key();
             WFRun wfRun = wfRunStore.get(wfRunId);
             if (wfRun == null) {
+                exn.printStackTrace();
                 LHUtil.logError("failed on an unknown wfrun: ", exn.getStackTrace());
                 return;
             }
