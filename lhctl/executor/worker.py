@@ -170,7 +170,6 @@ class PythonTaskWorker:
                 })
 
         except Exception as exn:
-            breakpoint()
             result = TaskRunResultSchema(**{
                 "stdout": None,
                 "stderr": traceback.format_exc(),
