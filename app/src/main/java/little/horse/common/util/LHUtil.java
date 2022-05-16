@@ -37,12 +37,17 @@ import little.horse.common.util.json.JsonMapKeyDeserializer;
 
 
 public class LHUtil {
+    private static ObjectMapper mapper = null;
+
     public static String generateGuid() {
         return UUID.randomUUID().toString();
     }
 
     public static ObjectMapper getObjectMapper(DepInjContext cfg) {
-        return new MapperInitializer(cfg).getMapper();
+        if (mapper == null) {
+            mapper = new MapperInitializer(cfg).getMapper();
+        }
+        return mapper;
     }
 
     public static String toValidK8sName(String oldStr) {
