@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from importlib import import_module
 import json
+import logging
 from os import environ
 import traceback
 from typing import Iterable, Optional
@@ -107,12 +108,11 @@ class PythonTaskWorker:
     def _iter_requests(self) -> Iterable[TaskScheduleRequestSchema]:
         while True:
             self._prod.poll(0)
-            msg = self._cons.poll(self._poll_period)
-            if msg is None:
-                continue
-            msg_dict = json.loads(msg.value().decode())
+            result = self._cons.consume(self._num_threads * 2, timeout=self._poll_period)
             self._cons.commit()
-            yield TaskScheduleRequestSchema(**msg_dict)
+            for msg in result:
+                msg_dict = json.loads(msg.value().decode())
+                yield TaskScheduleRequestSchema(**msg_dict)
 
     def run(self):
         for req in self._iter_requests():
@@ -122,11 +122,10 @@ class PythonTaskWorker:
         try:
             self._process_helper(req)
         except Exception as exn:
-            breakpoint()
-            print(exn)
+            logging.exception(f"Failed processing! ", exc_info=exn)
+            # TODO: produce an event back to LH saying the thing failed.
 
     def _process_helper(self, req: TaskScheduleRequestSchema):
-        print(req.json(by_alias=True))
 
         # Record the TaskRun as started
         ts = datetime.now()
@@ -201,7 +200,6 @@ class PythonTaskWorker:
         }), req)
 
     def _record_event(self, event: WFEventSchema, req: TaskScheduleRequestSchema):
-        print("Producing!")
         self._prod.produce(
             req.kafka_topic,
             event.json(by_alias=True).encode(),
