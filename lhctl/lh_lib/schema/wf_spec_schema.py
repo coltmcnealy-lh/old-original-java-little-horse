@@ -205,3 +205,20 @@ class ExternalEventDefSchema(LHBaseModel):
     @property
     def id(self) -> str:
         return self.name
+
+
+class TaskImplTypeEnum(Enum):
+    PYTHON = 'PYTHON'
+    JAVA = 'JAVA'
+
+
+class DockerTaskDeployMetadata(LHBaseModel):
+    docker_image: str
+    metadata: str = Field(default_factory=lambda: "")
+    customValidatorClassName: Optional[str] = None
+    taskExecutorClassName: Optional[str] = None
+    task_type: TaskImplTypeEnum
+    env: Mapping[str, str] = Field(default_factory=lambda: dict({}))
+
+    python_module: Optional[str] = None
+    python_function: Optional[str] = None

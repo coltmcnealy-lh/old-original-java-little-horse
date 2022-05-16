@@ -44,8 +44,8 @@ services:
       LHORSE_DEFAULT_PARTITIONS: "1"
       LHORSE_DEFAULT_REPLICAS: "1"
       LHORSE_KAFKA_APPLICATION_ID: "lh-api"
-      LHORSE_DEFAULT_WF_DEPLOYER: "little.horse.lib.deployers.examples.docker.DockerWorkflowDeployer"
-      LHORSE_DEFAULT_TASK_DEPLOYER: "little.horse.lib.deployers.examples.docker.DockerTaskDeployer"
+      LHORSE_DEFAULT_WF_DEPLOYER: "little.horse.deployers.examples.docker.DockerWorkflowDeployer"
+      LHORSE_DEFAULT_TASK_DEPLOYER: "little.horse.deployers.examples.docker.DockerTaskDeployer"
       # Specific to the DockerTaskDeployer
       LHORSE_DOCKER_TASK_EXECUTOR_CLASS: "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
     network_mode: "host"

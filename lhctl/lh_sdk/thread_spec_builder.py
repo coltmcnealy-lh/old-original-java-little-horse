@@ -18,6 +18,7 @@ from lh_sdk.utils import (
     get_task_def_name,
 )
 from lh_lib.schema.wf_spec_schema import (
+    ACCEPTABLE_TYPES_LIST,
     TYPE_TO_ENUM,
     ACCEPTABLE_TYPES,
     EdgeConditionSchema,
@@ -90,7 +91,7 @@ class ThreadSpecBuilder:
             return var_assign
 
         else:
-            assert isinstance(entity, ACCEPTABLE_TYPES)
+            assert type(entity) in ACCEPTABLE_TYPES_LIST
             # If we got here, then we want a literal value to be assigned.
             var_assign = VariableAssignmentSchema()
 
@@ -299,7 +300,7 @@ class ThreadSpecBuilder:
 
         var_assign: VariableAssignmentSchema
 
-        if isinstance(thread, Union[int, WFRunVariable]):
+        if isinstance(thread, int) or isinstance(thread, WFRunVariable):
             var_assign = self.construct_var_assign(thread)
         elif isinstance(thread, ThreadSpawnOutput):
             # This is the tricky one where we have to retroactively add a variable

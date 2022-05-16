@@ -16,17 +16,29 @@ from typing import Iterable, Optional
 from confluent_kafka import Producer, Consumer
 
 from lh_lib.client import LHClient
-from lh_lib.schema.task_run_event_schema import TaskRunEndedEvent, TaskRunEventSchema, TaskRunResultSchema, TaskRunStartedEvent, TaskScheduleRequestSchema, WFEventSchema, WFEventTypeEnum
+from lh_lib.schema.task_run_event_schema import (
+    TaskRunEndedEvent,
+    TaskRunEventSchema,
+    TaskRunResultSchema,
+    TaskRunStartedEvent,
+    TaskScheduleRequestSchema,
+    WFEventSchema,
+    WFEventTypeEnum,
+)
 from lh_lib.schema.wf_run_schema import LHFailureReasonEnum
-from lh_lib.schema.wf_spec_schema import ACCEPTABLE_TYPES, ACCEPTABLE_TYPES_LIST, TaskDefSchema
+from lh_lib.schema.wf_spec_schema import (
+    ACCEPTABLE_TYPES_LIST,
+    DockerTaskDeployMetadata,
+    TaskDefSchema,
+    TaskImplTypeEnum,
+)
 from executor.executor_config import (
+    API_URL,
     EXECUTOR_NUM_THREADS,
     KAFKA_APPLICATION_ID,
     KAFKA_APPLICATION_IID,
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_POLL_PERIOD,
-    TASK_FUNC_NAME_KEY,
-    TASK_MODULE_NAME_KEY,
     TASKDEF_ID_KEY,
 )
 from lh_sdk.utils import stringify
@@ -41,9 +53,7 @@ class PythonTaskWorker:
         app_instance_id: Optional[str] = None,
         poll_period: Optional[float] = None,
         bootstrap_servers: Optional[str] = None,
-        task_module_name: Optional[str] = None,
-        task_func_name: Optional[str] = None,
-        api_url: Optional[str] = None,
+        api_url: str = API_URL,
         client: Optional[LHClient] = None,
     ):
         self._task_def_name = task_def_name or environ[TASKDEF_ID_KEY]
@@ -52,8 +62,6 @@ class PythonTaskWorker:
         self._app_instance_id = app_instance_id or KAFKA_APPLICATION_IID
         self._poll_period = poll_period or KAFKA_POLL_PERIOD
         self._bootstrap_servers = bootstrap_servers or KAFKA_BOOTSTRAP_SERVERS
-        self._task_module_name = task_module_name or environ[TASK_MODULE_NAME_KEY]
-        self._task_func_name = task_func_name or environ[TASK_FUNC_NAME_KEY]
         self._client = client or LHClient(api_url)
 
         response = self._client.get_resource_by_id(
@@ -65,6 +73,16 @@ class PythonTaskWorker:
             raise RuntimeError(f"Was unable to find taskdef {self._task_def_name}")
 
         self._task_def = response.result
+        assert self._task_def.deploy_metadata is not None, "Invalid taskdef!"
+        dd_metadata = DockerTaskDeployMetadata(**json.loads(
+            self._task_def.deploy_metadata
+        ))
+        assert dd_metadata.task_type == TaskImplTypeEnum.PYTHON
+        self._task_module_name = dd_metadata.python_module
+        self._task_func_name = dd_metadata.python_function
+
+        assert self._task_func_name is not None, "invalid taskdef!"
+        assert self._task_module_name is not None, "invalid taskdef!"
 
         self._cons = Consumer(**{
             "bootstrap.servers": self._bootstrap_servers,
@@ -88,10 +106,12 @@ class PythonTaskWorker:
 
     def _iter_requests(self) -> Iterable[TaskScheduleRequestSchema]:
         while True:
+            self._prod.poll(0)
             msg = self._cons.poll(self._poll_period)
             if msg is None:
                 continue
             msg_dict = json.loads(msg.value().decode())
+            self._cons.commit()
             yield TaskScheduleRequestSchema(**msg_dict)
 
     def run(self):
@@ -99,6 +119,13 @@ class PythonTaskWorker:
             self._threadpool.submit(self._process_request, req)
 
     def _process_request(self, req: TaskScheduleRequestSchema):
+        try:
+            self._process_helper(req)
+        except Exception as exn:
+            breakpoint()
+            print(exn)
+
+    def _process_helper(self, req: TaskScheduleRequestSchema):
         print(req.json(by_alias=True))
 
         # Record the TaskRun as started
@@ -144,6 +171,7 @@ class PythonTaskWorker:
                 })
 
         except Exception as exn:
+            breakpoint()
             result = TaskRunResultSchema(**{
                 "stdout": None,
                 "stderr": traceback.format_exc(),
@@ -157,16 +185,23 @@ class PythonTaskWorker:
             task_run_position=req.task_run_position,
             reason=failure_reason,
         )
+        ts = datetime.now()
         self._record_event(WFEventSchema(**{
             "wf_spec_id": req.wf_spec_id,
             "wf_run_id": req.wf_run_id,
             "timestamp": datetime.now(),
             "thread_id": req.thread_id,
             "type": WFEventTypeEnum.TASK_EVENT,
-            "content": ended_event.json(by_alias=True),
+            "content": TaskRunEventSchema(**{
+                "thread_id": req.thread_id,
+                "task_run_position": req.task_run_position,
+                "timestamp": ts,
+                "ended_event": ended_event,
+            }).json(by_alias=True),
         }), req)
 
     def _record_event(self, event: WFEventSchema, req: TaskScheduleRequestSchema):
+        print("Producing!")
         self._prod.produce(
             req.kafka_topic,
             event.json(by_alias=True).encode(),
@@ -176,4 +211,4 @@ class PythonTaskWorker:
     def close(self):
         self._threadpool.shutdown()
         self._cons.close()
-        self._prod.close()
+        self._prod.flush()

@@ -21,6 +21,7 @@ import little.horse.deployers.TaskDeployer;
 import little.horse.deployers.examples.common.CustomTaskValidator;
 import little.horse.deployers.examples.common.DeployerConfig;
 import little.horse.deployers.examples.common.DeployerConstants;
+import little.horse.deployers.examples.common.TaskImplTypeEnum;
 import little.horse.deployers.examples.common.taskimpl.TaskWorker;
 
 
@@ -67,10 +68,18 @@ public class DockerTaskDeployer implements TaskDeployer {
             meta.dockerImage
         ).withEnv(envList).withName(
             "lh-task-" + spec.getId()
-        ).withCmd(
-            "java", "-cp", "/javaInclude:/littleHorse.jar",
-            TaskWorker.class.getCanonicalName()
         ).withLabels(labels);
+
+        if (meta.taskType == TaskImplTypeEnum.JAVA) {
+            ccc = ccc.withCmd(
+                "java", "-cp", "/javaInclude:/littleHorse.jar",
+                TaskWorker.class.getCanonicalName()
+            );
+        } else if (meta.taskType == TaskImplTypeEnum.PYTHON) {
+            ccc = ccc.withCmd(
+                "python", "-m", "executor"
+            );
+        }
 
         ccc.withHostConfig(ccc.getHostConfig().withNetworkMode("host"));
 
@@ -103,12 +112,22 @@ public class DockerTaskDeployer implements TaskDeployer {
             DockerTaskDeployMetadata meta = BaseSchema.fromString(
                 spec.deployMetadata, DockerTaskDeployMetadata.class, config
             );
-            if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
-                message = "Must provide docker image and TaskExecutor class name!";
+            if (meta.dockerImage == null) {
+                message = "Must provide docker image!";
             }
 
             if (meta.env == null) {
                 meta.env = new HashMap<>();
+            }
+
+            if (meta.taskType == TaskImplTypeEnum.JAVA) {
+                if (meta.taskExecutorClassName == null) {
+                    message = "Must provide task executor class for Java tasks!";
+                }
+            } else if (meta.taskType == TaskImplTypeEnum.PYTHON) {
+                if (meta.pythonFunction == null || meta.pythonModule == null) {
+                    message = "Must provide module and function for python tasks!";
+                }
             }
 
             if (meta.customValidatorClassName != null) {
@@ -117,6 +136,9 @@ public class DockerTaskDeployer implements TaskDeployer {
                 );
                 validator.validate(spec, config);
             }
+
+            // The above may have mutated the deployMeta, we want to reflect those
+            // changes, so we re-save it.
             spec.deployMetadata = meta.toString();
         } catch (LHSerdeError exn) {
             exn.printStackTrace();

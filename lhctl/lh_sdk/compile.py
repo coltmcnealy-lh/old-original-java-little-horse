@@ -10,8 +10,10 @@ from pydantic import Field
 from lh_sdk.thread_spec_builder import Workflow
 from lh_sdk.utils import LHBaseModel, add_resource, get_lh_var_type, get_task_def_name, parse_task_def_name
 from lh_lib.schema.wf_spec_schema import (
+    DockerTaskDeployMetadata,
     ExternalEventDefSchema,
     TaskDefSchema,
+    TaskImplTypeEnum,
     WFSpecSchema,
     NodeSchema,
     NodeType,
@@ -24,8 +26,6 @@ DEFAULT_DOCKER_IMAGE = os.getenv(
     "little-horse-test:latest"
 )
 
-SECONDARY_VAL = "little.horse.lib.worker.examples.docker.bashExecutor.BashValidator"
-EXECUTOR_CLASS = "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
 
 def iter_nodes(wf: WFSpecSchema) -> Iterable[NodeSchema]:
     for tspec_name in wf.thread_specs.keys():
@@ -92,16 +92,16 @@ def create_task_def(task_def_name: str, wf: Workflow) -> dict:
     for varname in required_vars.keys():
         bash_command.append(f"<<{varname}>>")
 
+    deploy_meta = DockerTaskDeployMetadata(
+        docker_image=f"lh-task-{task_def_name}:latest",
+        task_type=TaskImplTypeEnum.PYTHON,
+        python_function=task_func.__name__,
+        python_module=task_func.__module__,
+    )
+
     task_def = {
         "name": task_def_name,
-        "deployMetadata": json.dumps({
-            "dockerImage": f"lh-task-{task_def_name}:latest",
-            "metadata": json.dumps({
-                "bashCommand": bash_command,
-            }),
-            "secondaryValidatorClassName": SECONDARY_VAL,
-            "taskExecutorClassName": EXECUTOR_CLASS,
-        }),
+        "deployMetadata": deploy_meta.json(by_alias=True),
         "requiredVars": required_vars,
     }
     return task_def
@@ -114,7 +114,7 @@ def _spec_result_alias_generator(s: str) -> str:
         'wfRun': "WFRun",
         "wfSpec": "WFSpec",
         "dockerfile": "Dockerfile"
-    }.get(camelize(s), camelize(s))
+    }.get(camelize(s), camelize(s))  # type: ignore
 
 
 class SpecsResult(LHBaseModel):

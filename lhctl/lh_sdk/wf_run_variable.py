@@ -11,6 +11,7 @@ from lh_sdk.node_output import NodeOutput
 
 from lh_lib.schema.wf_spec_schema import (
     ACCEPTABLE_TYPES,
+    ACCEPTABLE_TYPES_LIST,
     LHComparisonEnum,
     VariableAssignmentSchema,
     VariableMutationOperation,
@@ -103,7 +104,7 @@ class WFRunVariable:
             operation=op,
         )
 
-        if isinstance(target, ACCEPTABLE_TYPES):
+        if type(target) in ACCEPTABLE_TYPES_LIST:
             out.literal_value = target
         elif isinstance(target, WFRunVariable):
             out.source_variable = VariableAssignmentSchema(

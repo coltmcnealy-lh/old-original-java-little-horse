@@ -68,6 +68,6 @@ class WFEventSchema(LHBaseModel):
     wf_spec_name: Optional[str] = None
     wf_run_id: str
     timestamp: datetime
-    threadId: int
+    threadId: int = 0
     type: WFEventTypeEnum
     content: str
