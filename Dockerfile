@@ -10,6 +10,7 @@
 # * A properly-configured base python environment with all of the SDK's depencies
 #   installed.
 
+# Python 3.10 or greater required.
 FROM python:3.10-slim AS base
 
 # Install:

@@ -85,10 +85,15 @@ The repository has the following components:
         * `rundata`: Code in this directory is involved in the logic of a Workflow Run (`WFRun`). The majority of the interesting stuff is in the `ThreadRun.java`.
     * `events/`: contains schemas for events involved in a `WFRun`, such as `TaskScheduledEvent`, `TaskCompletedEvent`, and `ExternalEvent`.
     * `util` and `exceptions` contain utility code.
-* `app/src/main/java/little/horse/lib/`: This directory contains a) Java interfaces to implement Task/Workflow Deployers and Workers, and b) example implementations of those interfaces.
-    * `deployers`: Contains interfaces needed to deploy the Workflow Worker and Task Workers. The `examples` subdirectory implements sample Docker and Kubernetes deployers.
-    * `worker`: Contains interfaces needed to implement a LittleHorse Task Worker, and a reference implementation for a worker that executes tasks in a Docker container (this works for Kubernetes as well).
-* `app/src/main/java/little/horse/sdk`: This contains scaffolding for an SDK, but I've only put two days of work into it.
+* `app/src/main/java/little/horse/deployers/`: This directory contains a) Java interfaces to implement Task/Workflow Deployers and Workers, and b) example implementations of those interfaces.
+    * `examples`: Example implementations of the `TaskDeployer.java` and `WorkflowDeployer.java` interfaces.
+      * `docker`, `kubernetes`: Example implementations to deploy to docker and kubernetes, respectively.
+* `app/src/main/java/little/horse/sdk`: This contains a semi-abandoned prototype for a workflow-authoring SDK. It has been neglected in favor of the `lhctl` directory.
+* `lhctl`: The Python SDK and Test Harness.
+  * `lh_sdk`: Contains a python library for authoring workflows as code.
+  * `executor`: Contains a python library and executable used for turning a standard python function into a `TaskDef` worker.
+  * `lh_test_harness`: Contains a set of integration tests that verify that workflows run as they should. More functionality will soon be added.
+  * `lh_cli`: Implements the actual `lhctl` command, which is patterned after `kubectl`.
 
 ### Where the Logic Is
 * Core API:
@@ -99,19 +104,20 @@ The repository has the following components:
         * *Note: it is all put together in the `LittleHorseAPI.java` class.*
     * `APIStreamsContext.java` is the high-tech class used to turn Kafka Streams into a database, allowing for querying data partitioned across several RocksDB instances.
 * Workflow Scheduling Logic
-    * `WFRunTopology.java` initializes the Kafka Streams Topology on the Workflow Worker process. This topology is the actual scheduler that sends task schedule requests to appropriate task queues, and updates the state of the WFRun in a Kafka Topic that is listened to by the CoreMetadata Topology on the Core LittleHorse API.
-    * `WFRuntime.java` shepherds the actual scheduling. See how it gets inserted in `WFRunTopology.java`.
+    * `SchedulerTopology.java` initializes the Kafka Streams Topology on the Workflow Worker process. This topology is the actual scheduler that sends task schedule requests to appropriate task queues, and updates the state of the WFRun in a Kafka Topic that is listened to by the CoreMetadata Topology on the Core LittleHorse API.
+    * `SchedulerProcessor.java` shepherds the actual scheduling. See how it gets inserted in `SchedulerTopology.java`.
     * `WFRun.java` and `ThreadRun.java` have the real potatoes of the actual state transition logic for what happens when an event (i.e. Task Completed) is processed.
 * Deployer Interfaces
     * `WorkflowDeployer.java` is the interface for deploying a workflow.
-        * `DockerWorkflowDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `WorkflowWorker.java` class, see the K8s entrypoint and the Docker command.
+        * `DockerWorkflowDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `Scheduler.java` class, see the K8s entrypoint and the Docker command.
     * `TaskDeployer.java` is the interface for deploying tasks.
-        * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations. Note that they both use the `DockerTaskWorker.java` class, see the K8s entrypoint and the Docker command.
+        * `DockerTaskDeployer.java` and `K8sWorkflowDeployer.java` are example implementations.
 
 ### Entrypoint Classes
 * `LittleHorseAPI.java` is run for the core API.
-* `DockerTaskWorker.java` is an example of a process that executes Tasks.
-* `WorkflowWorker.java` is an example of a process that does the Workflow Scheduling.
+* `TaskWorker.java` is the entrypoint class used by the `DockerTaskDeployer` and `K8sWorkflowDeployer` classes. It takes in a name of an implementation of the `JavaTask.java` interface, and executes the function for each `TaskScheduleRequest`.
+  * *This is analagous to `python -m executor` for python-based tasks.*
+* `Scheduler.java` is an example of a process that does the Workflow Scheduling.
 
 ## Running Examples
 
