@@ -1,9 +1,8 @@
 import little.horse.common.DepInjContext;
-import little.horse.lib.deployers.examples.docker.DDConfig;
-import little.horse.lib.deployers.examples.docker.DDConstants;
-import little.horse.lib.worker.WorkerContext;
-import little.horse.lib.worker.examples.docker.JavaTaskExecutor;
-import little.horse.workflowworker.TaskScheduleRequest;
+import little.horse.deployers.examples.common.DeployerConfig;
+import little.horse.deployers.examples.common.taskimpl.WorkerContext;
+import little.horse.deployers.examples.common.taskimpl.JavaTask;
+import little.horse.scheduler.TaskScheduleRequest;
 
 
 // haven't figured out how to get VSCode to have different classpaths for
@@ -11,8 +10,8 @@ import little.horse.workflowworker.TaskScheduleRequest;
 // have tasks in their own separate VSCode project but here we have it in a totally
 // unrelated one as a standalone java file.
 
-public class MyTask implements DockerTaskExecutor {
-    public void init(DDConfig ddConfig, DepInjContext config) {
+public class MyTask implements JavaTask {
+    public void init(DeployerConfig ddConfig, DepInjContext config) {
 
     }
 

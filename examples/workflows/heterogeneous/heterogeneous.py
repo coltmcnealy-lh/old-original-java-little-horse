@@ -5,7 +5,7 @@ def my_python_task() -> str:
     return "Hello from a python task!"
 
 
-def my_workflow(thread: ThreadSpecBuilder):
+def heterogeneous_wf(thread: ThreadSpecBuilder):
     # Execute a Java task and pass in an argument to the Task
     thread.execute("my-java-task", myInputVar="my-input")
 
