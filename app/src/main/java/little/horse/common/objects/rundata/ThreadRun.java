@@ -795,6 +795,7 @@ public class ThreadRun extends BaseSchema {
     ) throws LHConnectionError {
         upNext = new ArrayList<>();
         TaskRun tr = createNewTaskRun(node, attemptNumber);
+        tr.scheduleTime = LHUtil.now();
         taskRuns.add(tr);
 
         TaskScheduleRequest tsr = new TaskScheduleRequest();

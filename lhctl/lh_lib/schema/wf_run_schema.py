@@ -56,6 +56,7 @@ class TaskRunSchema(LHBaseModel):
     stderr: Optional[ACCEPTABLE_TYPES] = None
     returncode: Optional[int] = None
 
+    schedule_time: Optional[datetime] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
 

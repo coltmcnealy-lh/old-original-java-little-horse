@@ -32,6 +32,7 @@ public class TaskRun extends BaseSchema {
     public Object stderr;
     public int returnCode;
 
+    public Date scheduleTime;
     public Date startTime;
     public Date endTime;
 
