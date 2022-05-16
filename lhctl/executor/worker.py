@@ -90,6 +90,7 @@ class PythonTaskWorker:
             "group.id": self._app_id,
             "group.instance.id": self._app_instance_id,
             "enable.auto.commit": True,
+            "isolation.level": "read_committed",
             "auto.commit.interval.ms": 500,
             "auto.offset.reset": "earliest",
         })
