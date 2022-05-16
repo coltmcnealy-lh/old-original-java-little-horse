@@ -9,7 +9,6 @@ from executor.worker import PythonTaskWorker
 
 
 if __name__ == '__main__':
-    print(os.getpid())
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_def_name")
     parser.add_argument("--num_threads", type=int)
@@ -22,5 +21,4 @@ if __name__ == '__main__':
     arg_dict = vars(args)
 
     with closing(PythonTaskWorker(**arg_dict)) as worker:
-        print("here we are", flush=True)
         worker.run()

@@ -200,6 +200,7 @@ class PythonTaskWorker:
         }), req)
 
     def _record_event(self, event: WFEventSchema, req: TaskScheduleRequestSchema):
+        logging.warn("Producing record: " + event.json(by_alias=True))
         self._prod.produce(
             req.kafka_topic,
             event.json(by_alias=True).encode(),

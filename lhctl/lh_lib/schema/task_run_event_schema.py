@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Mapping, Optional
 
+from pydantic import Field
+
 from lh_lib.schema.wf_run_schema import LHFailureReasonEnum
 from lh_lib.schema.wf_spec_schema import ACCEPTABLE_TYPES
 from lh_sdk.utils import LHBaseModel
@@ -68,6 +70,6 @@ class WFEventSchema(LHBaseModel):
     wf_spec_name: Optional[str] = None
     wf_run_id: str
     timestamp: datetime
-    threadId: int = 0
+    thread_id: int = Field(default=0)
     type: WFEventTypeEnum
     content: str
