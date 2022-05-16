@@ -117,7 +117,7 @@ def check_for_consistency(wf_run_orm: WFRun, wf_run: WFRunSchema):
     if len(orphans) == 0 and len(mis_reports) == 0:
         return None, None
 
-    return TestStatus.FALIED_ACCEPTABLE, "Had some minor reporting errors"
+    return TestStatus.FAILED_ACCEPTABLE, "Had some minor reporting errors"
 
 
 def check_all_tests(test_name: str, client: TestClient):
@@ -125,14 +125,15 @@ def check_all_tests(test_name: str, client: TestClient):
     # match.
     with closing(get_session()) as ses:
         for wf_run_orm, wf_run in client.iter_test_runs(test_name, ses):
-            new_status, message = check_for_consistency(wf_run_orm, wf_run)
+            # # We've deprecated the check_for_consistency check now.
+            # new_status, message = check_for_consistency(wf_run_orm, wf_run)
 
-            if new_status is not None and new_status != TestStatus.FALIED_ACCEPTABLE:
-                wf_run_orm.status = new_status
-                wf_run_orm.message = message
-                ses.merge(wf_run_orm)
-                ses.commit()
-                continue
+            # if new_status is not None and new_status != TestStatus.FAILED_ACCEPTABLE:
+            #     wf_run_orm.status = new_status
+            #     wf_run_orm.message = message
+            #     ses.merge(wf_run_orm)
+            #     ses.commit()
+            #     continue
 
             mod = importlib.import_module(wf_run_orm.check_func_module)
             func = mod.__dict__[wf_run_orm.check_func_name]
@@ -140,7 +141,7 @@ def check_all_tests(test_name: str, client: TestClient):
                 func(wf_run)
                 wf_run_orm.status = TestStatus.SUCCEEDED
             except AssertionError as exn:
-                if wf_run_orm.status != TestStatus.FALIED_ACCEPTABLE:
+                if wf_run_orm.status != TestStatus.FAILED_ACCEPTABLE:
                     wf_run_orm.status = TestStatus.FAILED_UNACCEPTABLE
                     wf_run_orm.message = exn.args[0] if len(exn.args) else 'Failed.'
                     _, _, exc_tb = sys.exc_info()

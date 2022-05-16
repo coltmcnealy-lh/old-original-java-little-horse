@@ -13,7 +13,8 @@ def deploy_test(client: LHClient, test_name: str) -> None:
     wf = Workflow(func, module.__dict__)
     specs = get_specs(wf)
 
-    for task_def in specs.task_def:
-        inject_test_to_taskdef(task_def)
+    # # This is now deprecated
+    # for task_def in specs.task_def:
+    #     inject_test_to_taskdef(task_def)
 
     client.deploy_specs(specs)

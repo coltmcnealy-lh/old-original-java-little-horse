@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: d8a732134944
+Revision ID: 735dcd0b6916
 Revises: 
-Create Date: 2022-05-11 19:13:42.989091
+Create Date: 2022-05-16 07:50:31.013271
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd8a732134944'
+revision = '735dcd0b6916'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -27,7 +27,7 @@ def upgrade():
     sa.Column('wf_spec_id', sa.String(), nullable=False),
     sa.Column('wf_run_id', sa.String(), nullable=False),
     sa.Column('message', sa.String(), nullable=True),
-    sa.Column('status', sa.Enum('LAUNCHING', 'LAUNCHED', 'FAILED_LAUNCH', 'SUCCEEDED', 'FALIED_ACCEPTABLE', 'FAILED_UNACCEPTABLE', name='teststatus'), nullable=False),
+    sa.Column('status', sa.Enum('LAUNCHING', 'LAUNCHED', 'FAILED_LAUNCH', 'SUCCEEDED', 'FAILED_ACCEPTABLE', 'FAILED_UNACCEPTABLE', name='teststatus'), nullable=False),
     sa.Column('harness_worker_partition', sa.Integer(), nullable=True),
     sa.Column('already_graded', sa.Boolean(), nullable=False),
     sa.Column('check_func_name', sa.String(), nullable=False),
