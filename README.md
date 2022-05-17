@@ -144,6 +144,8 @@ There is one container for the core API server, a kafka broker, and zookeeper (u
 
 ### Run a Workflow
 
+*Important:* This section assumes that your current working directory is `examples/`.
+
 Let's run the `basic_wf` workflow. The `basic_wf` workflow is quite simple. It consists of three Node's:
 
 1. The `ask_for_name` Node executes the `whats-your-name` task.
@@ -157,6 +159,8 @@ The `my_workflow()` function in `basic_wf.py` defines the `WFSpec`. The other fu
 ```
 lhctl compile workflows.basic_wf.my_workflow
 ```
+This command is purely a dry-run command which shows you the specs that will be deployed in our next step.
+
 *NOTE: try piping the above command to `| jq .` to format it, or paste it to an online json pretty printer.*
 
 You can see that there are `TaskDef`, `WFSpec`, `ExternalEventDef`, and `Dockerfile` entries. The `Dockerfile`'s build images that run the `TaskDef`'s (it's a mild but pretty cool hack in `lhctl`).
