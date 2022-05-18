@@ -1,7 +1,6 @@
 package little.horse.api.metadata;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -15,14 +14,12 @@ import org.apache.kafka.streams.processor.api.RecordMetadata;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.api.OffsetInfo;
-import little.horse.api.OffsetInfoCollection;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.LHDeployStatus;
-import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 
 public class BaseIdProcessor<T extends CoreMetadata>
@@ -68,35 +65,12 @@ implements Processor<String, T, String, AliasEvent> {
         }
 
         if (recordMeta != null) {
-            Bytes nb = kvStore.get(Constants.LATEST_OFFSET_ROCKSDB_KEY);
-            OffsetInfoCollection infos = null;
-            try {
-                infos = nb != null ? BaseSchema.fromBytes(
-                    nb.get(), OffsetInfoCollection.class, config
-                ) : null;
-            } catch (LHSerdeError exn) {
-                exn.printStackTrace();
-                LHUtil.logError("Shouldn't be possible.");
-                return;
-            }
-
-            if (infos == null) {
-                infos = new OffsetInfoCollection();
-                infos.partitionMap = new HashMap<String, OffsetInfo>();
-            }
-
             // Now save the offset.
-            OffsetInfo oi = new OffsetInfo();
-            oi.offset = offset;
-            oi.recordTime = new Date(record.timestamp());
-            oi.processTime = LHUtil.now();
+            OffsetInfo oi = new OffsetInfo(recordMeta, new Date(record.timestamp()));
 
-            infos.latest = oi;
-            String key = recordMeta.topic() + recordMeta.partition();
-            infos.partitionMap.put(key, oi);
+            String key = OffsetInfo.getKey(recordMeta);
             LHUtil.log("Putting ", key, oi.toString());
-
-            kvStore.put(Constants.LATEST_OFFSET_ROCKSDB_KEY, new Bytes(infos.toBytes()));
+            kvStore.put(key, new Bytes(oi.toBytes()));
         }
 
     }

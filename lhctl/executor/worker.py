@@ -99,6 +99,7 @@ class PythonTaskWorker:
         self._prod = Producer(**{
             "bootstrap.servers": self._bootstrap_servers,
             "client.id": self._app_id,
+            'partitioner': 'murmur2',
         })
 
         self._threadpool = ThreadPoolExecutor(max_workers=self._num_threads)
@@ -204,7 +205,8 @@ class PythonTaskWorker:
         self._prod.produce(
             req.kafka_topic,
             event.json(by_alias=True).encode(),
-            key=req.wf_run_id,
+            key=req.wf_run_id.encode(),
+            headers={"lang": "python".encode()}
         )
 
     def close(self):

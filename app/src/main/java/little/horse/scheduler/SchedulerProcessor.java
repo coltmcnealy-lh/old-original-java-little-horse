@@ -141,7 +141,9 @@ public class SchedulerProcessor
                 wfRun.setWFSpec(wfSpec);
             } else {
                 // This really shouldn't happen.
-                LHUtil.logError("Couldnt find wfRun for event", event);
+                LHUtil.log("Couldn't find wfRun for event", wfRunGuid);
+
+                // TODO: Shoudl we maybe put some record saying it's orzdashed?
                 return;
             }
         } else {

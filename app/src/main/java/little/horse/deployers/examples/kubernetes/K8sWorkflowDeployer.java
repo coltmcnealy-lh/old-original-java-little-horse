@@ -63,7 +63,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         dp.metadata.namespace = (meta.namespace == null) ?
             kdConfig.getDefaultK8sNamespace(): meta.namespace;
 
-        dp.metadata.name = spec.name;
+        dp.metadata.name = kdConfig.getK8sName(spec);
         dp.metadata.labels = new HashMap<String, String>();
 
         dp.metadata.labels.put("app", kdConfig.getK8sName(spec));

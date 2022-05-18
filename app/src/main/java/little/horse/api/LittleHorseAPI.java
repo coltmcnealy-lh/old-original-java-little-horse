@@ -145,7 +145,7 @@ public class LittleHorseAPI {
         }));
 
         streams.start();
-        this.app.start(5000);
+        this.app.start(config.getAdvertisedPort());
     }
 
     public static void main(String[] args) throws LHConnectionError {

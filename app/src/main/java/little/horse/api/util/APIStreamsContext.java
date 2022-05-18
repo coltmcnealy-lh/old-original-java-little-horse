@@ -24,7 +24,6 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import little.horse.api.OffsetInfo;
-import little.horse.api.OffsetInfoCollection;
 import little.horse.api.metadata.AliasEntryCollection;
 import little.horse.api.metadata.AliasIdentifier;
 import little.horse.api.metadata.CoreMetadataEntry;
@@ -75,10 +74,6 @@ public class APIStreamsContext<T extends CoreMetadata> {
             return entry == null ? null : BaseSchema.fromString(
                 entry.content, cls, config
             );
-            // return objBytes == null ?
-            //     null : BaseSchema.fromBytes(
-            //         objBytes.get(), CoreMetadataEntry.class, config
-            //     );
 
         } catch (LHSerdeError exn) {
             throw new RuntimeException(
@@ -180,30 +175,30 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
 
         if (forceLocal || metadata.activeHost().equals(thisHost)) {
+            String offsetInfoKey = OffsetInfo.getKey(
+                T.getIdKafkaTopic(config, cls),
+                partition
+            );
             while (true) {
-                OffsetInfoCollection infos;
                 Bytes b = getStore(T.getIdStoreName(cls)).get(
-                    Constants.LATEST_OFFSET_ROCKSDB_KEY
+                    offsetInfoKey
                 );
 
-                try {
-                    infos = (b != null) ? BaseSchema.fromBytes(
-                        b.get(), OffsetInfoCollection.class, config
-                    ) : null;
-                } catch(LHSerdeError exn) {
-                    exn.printStackTrace();
-                    throw new RuntimeException("this should be impossible");
-                }
-                if (infos != null) {
-                    String mapKey = T.getIdKafkaTopic(config, cls) + partition;
-                    OffsetInfo info = infos.partitionMap.get(mapKey);
-                    if (info != null && info.offset >= offset) {
+                if (b != null) {
+                    OffsetInfo info;
+                    try {
+                        info = BaseSchema.fromBytes(b.get(), OffsetInfo.class, config);
+                    } catch(LHSerdeError exn) {
+                        exn.printStackTrace();
+                        throw new RuntimeException("this should be impossible");
+                    }
+                    if (info.offset >= offset) {
                         break;
                     }
                 }
 
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(50);
                 } catch(Exception exn) {}
             }
         } else {
@@ -220,7 +215,7 @@ public class APIStreamsContext<T extends CoreMetadata> {
                 "http://%s:%s%s", host.host(), host.port(), newApiPath
             );
             LHUtil.log(
-                "Calling wait externally:", url
+                "Calling wait externally to", url, "from", thisHost.host()
             );
             new LHRpcCLient(config).getResponse(url, cls);
         }
@@ -322,11 +317,10 @@ public class APIStreamsContext<T extends CoreMetadata> {
                 return queryRemote(storeKey, storeName, host);
             } catch(LHConnectionError exn) {
                 // Just swallow it and throw later.
-                System.out.println("Failed on host\n\n\n\n" + host + "\n\n\n"); 
+                LHUtil.logError("Failed on host" + host + "\n\n\n");
                 exn.printStackTrace();
             }
         }
-        LHUtil.log("\n\n\n", metadata.standbyHosts(), "\n\n\n");
         throw new LHConnectionError(
             null,
             "Neither active nor standby hosts returned valid response."

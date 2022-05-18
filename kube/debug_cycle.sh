@@ -26,7 +26,7 @@ wait
 
 kind load docker-image --name littlehorse little-horse-api
 
-kubectl scale statefulset little-horse-api --replicas=2 --namespace default
+kubectl scale statefulset little-horse-api --replicas=3 --namespace default
 
 
 sleep 5

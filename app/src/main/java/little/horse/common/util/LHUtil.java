@@ -89,6 +89,7 @@ public class LHUtil {
         framesBack += 2;  // 2 frames needed for processing the thing.
         StackTraceElement ste = Thread.currentThread().getStackTrace()[framesBack];
 
+        System.out.print("LHorse: ");
         System.out.print(ste.getMethodName());
         System.out.print(" ");
         System.out.print(ste.getFileName());
@@ -107,7 +108,7 @@ public class LHUtil {
     }
 
     public static void logError(Object... things) {
-        logBack(1, "ERROR:", things);
+        logBack(1, things);
     }
 
     /**
