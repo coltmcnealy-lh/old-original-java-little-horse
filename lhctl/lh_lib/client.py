@@ -144,17 +144,21 @@ class LHClient:
 
         return intermediate
 
-    def deploy_specs(self, specs: SpecsResult, skip_build=False):
+    def deploy_specs(
+        self, specs: SpecsResult, skip_build=False, docker_push_step=None
+    ):
         if not skip_build:
             for task_def_name in specs.dockerfile:
                 self.build_docker(
                     specs.dockerfile[task_def_name],
                     task_def_name,
+                    docker_push_step,
                 )
 
         for task_def in specs.task_def:
             print("adding task def")
             self.add_task_def(task_def)
+            print("Done adding task def", flush=True)
 
         for external_event in specs.external_event_def:
             self.add_external_event_def(external_event)
@@ -168,10 +172,21 @@ class LHClient:
         self,
         dockerfile: str,
         task_def_name: str,
+        docker_push_step=None,
     ):
         tag = f'lh-task-{task_def_name}:latest'
         cmd = ['docker', 'build', '-f', '-', '-t', tag, '.']
         subprocess.run(cmd, input=dockerfile, text=True)
+
+        if docker_push_step is None:
+            return
+
+        cmd = docker_push_step.split()
+        for i in range(len(cmd)):
+            if cmd[i] == "<<image>>":
+                cmd[i] = tag
+
+        subprocess.run(cmd, text=True)
 
     def add_external_event_def(self, ee: ExternalEventDefSchema):
         url = f'{self.url}/ExternalEventDef'
@@ -181,9 +196,11 @@ class LHClient:
 
     def add_wf_spec(self, wf: WFSpecSchema):
         url = f'{self.url}/WFSpec'
+        print("adding wfspec")
         response = requests.post(
             url, json=json.loads(wf.json(by_alias=True))
         )
+        print("done with wfspec request", flush=True)
         try:
             response.raise_for_status()
         except Exception as exn:

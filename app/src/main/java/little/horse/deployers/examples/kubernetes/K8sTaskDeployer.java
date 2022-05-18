@@ -19,6 +19,7 @@ import little.horse.common.util.LHClassLoadError;
 import little.horse.common.util.LHUtil;
 import little.horse.deployers.TaskDeployer;
 import little.horse.deployers.examples.common.CustomTaskValidator;
+import little.horse.deployers.examples.common.TaskImplTypeEnum;
 import little.horse.deployers.examples.common.taskimpl.TaskWorker;
 import little.horse.deployers.examples.kubernetes.specs.*;
 
@@ -68,10 +69,17 @@ public class K8sTaskDeployer implements TaskDeployer {
         container.name = kdConfig.getK8sName(spec);
         container.image = meta.dockerImage;
         container.imagePullPolicy = "IfNotPresent";
-        container.command = Arrays.asList(
-            "java", "-cp", "/javaInclude:/littleHorse.jar",
-            TaskWorker.class.getCanonicalName()
-        );
+
+        if (meta.taskType == TaskImplTypeEnum.JAVA) {
+            container.command = Arrays.asList(
+                "java", "-cp", "/javaInclude:/littleHorse.jar",
+                TaskWorker.class.getCanonicalName()
+            );
+        } else if (meta.taskType == TaskImplTypeEnum.PYTHON) {
+            container.command = Arrays.asList(
+                "python", "-m", "executor"
+            );
+        }
 
         HashMap<String, String> env = config.getBaseEnv();
         env.put(
@@ -136,16 +144,26 @@ public class K8sTaskDeployer implements TaskDeployer {
             K8sTaskDeployMeta meta = BaseSchema.fromString(
                 spec.deployMetadata, K8sTaskDeployMeta.class, config
             );
-            if (meta.dockerImage == null || meta.taskExecutorClassName == null) {
-                message = "Must provide docker image and TaskExecutor class name!";
+            if (meta.dockerImage == null) {
+                message = "Must provide docker image!";
             }
             if (meta.env == null) {
                 meta.env = new HashMap<>();
             }
 
-            if (meta.secondaryValidatorClassName != null) {
+            if (meta.taskType == TaskImplTypeEnum.JAVA) {
+                if (meta.taskExecutorClassName == null) {
+                    message = "Must provide task executor class for Java tasks!";
+                }
+            } else if (meta.taskType == TaskImplTypeEnum.PYTHON) {
+                if (meta.pythonFunction == null || meta.pythonModule == null) {
+                    message = "Must provide module and function for python tasks!";
+                }
+            }
+
+            if (meta.customValidatorClassName != null) {
                 CustomTaskValidator validator = LHUtil.loadClass(
-                    meta.secondaryValidatorClassName
+                    meta.customValidatorClassName
                 );
                 validator.validate(spec, config);
             }

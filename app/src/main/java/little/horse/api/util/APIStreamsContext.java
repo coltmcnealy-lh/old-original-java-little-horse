@@ -23,6 +23,7 @@ import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
+import little.horse.api.OffsetInfo;
 import little.horse.api.OffsetInfoCollection;
 import little.horse.api.metadata.AliasEntryCollection;
 import little.horse.api.metadata.AliasIdentifier;
@@ -195,7 +196,8 @@ public class APIStreamsContext<T extends CoreMetadata> {
                 }
                 if (infos != null) {
                     String mapKey = T.getIdKafkaTopic(config, cls) + partition;
-                    if (infos.partitionMap.get(mapKey).offset >= offset) {
+                    OffsetInfo info = infos.partitionMap.get(mapKey);
+                    if (info != null && info.offset >= offset) {
                         break;
                     }
                 }

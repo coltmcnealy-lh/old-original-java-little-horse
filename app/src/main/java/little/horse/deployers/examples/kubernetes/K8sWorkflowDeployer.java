@@ -142,15 +142,14 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
 
     public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {
         String message = null;
-        if (spec.deployMetadata == null) {
-            throw new LHValidationError("Must provide valid Docker validation!");
-        }
         try {
-            K8sWorkflowDeployMeta meta = BaseSchema.fromString(
-                spec.deployMetadata, K8sWorkflowDeployMeta.class, config
-            );
-            if (meta.dockerImage == null) {
-                message = "Must provide docker image for Workflow Worker!";
+            if (spec.deployMetadata != null) {
+                K8sWorkflowDeployMeta meta = BaseSchema.fromString(
+                    spec.deployMetadata, K8sWorkflowDeployMeta.class, config
+                );
+                if (meta.dockerImage == null) {
+                    message = "Must provide docker image for Workflow Worker!";
+                }
             }
 
             KDConfig kdc = LHUtil.loadClass(KDConfig.class.getCanonicalName());

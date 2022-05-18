@@ -92,6 +92,7 @@ implements Processor<String, T, String, AliasEvent> {
             infos.latest = oi;
             String key = recordMeta.topic() + recordMeta.partition();
             infos.partitionMap.put(key, oi);
+            LHUtil.log("Putting ", key, oi.toString());
 
             kvStore.put(Constants.LATEST_OFFSET_ROCKSDB_KEY, new Bytes(infos.toBytes()));
         }

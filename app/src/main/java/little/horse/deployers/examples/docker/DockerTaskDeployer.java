@@ -27,7 +27,6 @@ import little.horse.deployers.examples.common.taskimpl.TaskWorker;
 
 public class DockerTaskDeployer implements TaskDeployer {
     public void deploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
-        LHUtil.log("Ok got here");
         DeployerConfig ddConfig = new DeployerConfig();
         DockerClient client = ddConfig.getDockerClient();
 

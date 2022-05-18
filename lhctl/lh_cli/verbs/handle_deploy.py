@@ -31,6 +31,10 @@ class DEPLOYHandler():
             action='store_true',
             help='Deploy without building docker images first.'
         )
+        parser.add_argument(
+            "--docker_push_step",
+            help="Executable file to run on each docker image to push it to cluster."
+        )
         parser.set_defaults(func=self.deploy)
 
     def deploy(self, ns: Namespace, client: LHClient):
@@ -45,5 +49,9 @@ class DEPLOYHandler():
             wf = Workflow(func, module.__dict__)
             specs = get_specs(wf)
 
-        client.deploy_specs(specs)
+        client.deploy_specs(
+            specs,
+            skip_build=ns.skip_build,
+            docker_push_step=ns.docker_push_step
+        )
         print("Successfully deployed workflow.")
