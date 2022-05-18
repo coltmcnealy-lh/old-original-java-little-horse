@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
@@ -51,15 +52,16 @@ implements Processor<String, T, String, AliasEvent> {
         try {
             processHelper(record);
         } catch (Exception exn) {
-            // exn.printStackTrace();
+            exn.printStackTrace();
             // In the future, maybe implement a deadletter queue.
 
             T newMeta = record.value();
             newMeta.status = LHDeployStatus.ERROR;
             newMeta.statusMessage = String.format(
-                "Had an %s error: %s",
+                "Had an %s error: %s\n%s",
                 exn.getClass().getCanonicalName(),
-                exn.getMessage()
+                exn.getMessage(),
+                ExceptionUtils.getStackTrace(exn)
             );
             CoreMetadataEntry entry = new CoreMetadataEntry(newMeta, offset);
             kvStore.put(record.key(), new Bytes(entry.toBytes()));
@@ -126,10 +128,6 @@ implements Processor<String, T, String, AliasEvent> {
     }
 
     private void updateMeta(T old, T newMeta, final Record<String, T> record, long offset) {
-        if (!newMeta.getId().equals(record.key())) {
-            throw new RuntimeException("WTF?");
-        }
-
         // It is somewhat frowned upon to do this within Kafka Streams. However,
         // the processChange is an idempotent, level-triggered method; so repeated
         // calls are not destructive. Furthermore, the deployment of TaskQueue's
@@ -139,9 +137,13 @@ implements Processor<String, T, String, AliasEvent> {
         // low, so we don't have to be super fast.
         try {
             newMeta.processChange(old);
-        } catch(LHConnectionError exn) { // Maybe catch all exceptions here
+        } catch(Exception exn) {
+            // Maybe we want to do some cleanup? Or just leave that to the caller?
             exn.printStackTrace();
             newMeta.status = LHDeployStatus.ERROR;
+            newMeta.statusMessage = "Had a failure when deploying the resource: "
+                + exn.getClass().getCanonicalName() + ":\n" + exn.getMessage() +
+                "\n" + ExceptionUtils.getStackTrace(exn);
         }
 
         // Store the actual data in the ID store:

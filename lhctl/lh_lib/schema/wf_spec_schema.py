@@ -170,6 +170,7 @@ class ThreadSpecSchema(LHBaseModel):
 class WFSpecSchema(LHBaseModel):
     name: str
     status: LHDeployStatus = LHDeployStatus.STOPPED
+    status_message: Optional[str] = None
     desired_status: LHDeployStatus = LHDeployStatus.RUNNING
 
     thread_specs: dict[str, ThreadSpecSchema] = Field(default_factory=dict)
@@ -185,6 +186,7 @@ class TaskDefSchema(LHBaseModel):
     partitions: int = 3
     name: str
     status: LHDeployStatus = LHDeployStatus.RUNNING
+    status_message: Optional[str] = None
 
     task_deployer_class_name: Optional[str] = None
     deploy_metadata: Optional[str] = None

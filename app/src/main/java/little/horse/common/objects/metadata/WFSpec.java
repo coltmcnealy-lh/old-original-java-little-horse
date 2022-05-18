@@ -38,12 +38,6 @@ public class WFSpec extends CoreMetadata {
     @JsonIgnore
     public static String typeName = "wfSpec";
 
-    // Journalling
-    @DigestIgnore
-    public LHDeployStatus status;
-    @DigestIgnore
-    public LHDeployStatus desiredStatus;
-
     // Actual definition here.
     @JsonManagedReference
     public HashMap<String, ThreadSpec> threadSpecs;

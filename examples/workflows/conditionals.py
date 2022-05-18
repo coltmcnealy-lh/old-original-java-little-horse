@@ -14,10 +14,13 @@ def conditionals(thread: ThreadSpecBuilder):
     my_int = thread.add_variable("my_int", int)
     thread.execute(dummy)
 
-    with my_int.less_than(10):
+    cond = my_int.less_than(10)
+
+    with cond.is_true():
         my_int.assign(thread.execute(multiply, my_int))
 
-        with my_int.greater_than(15):
+        new_cond = my_int.greater_than(15)
+        with new_cond.is_true():
             thread.execute(dummy)
 
     thread.execute(dummy)
