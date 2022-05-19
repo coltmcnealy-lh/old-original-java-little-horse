@@ -182,6 +182,7 @@ class WFSpecSchema(LHBaseModel):
 
 
 class TaskDefSchema(LHBaseModel):
+    version_number: int = Field(default_factory=lambda: 0)
     required_vars: Optional[Mapping[str, WFRunVariableDefSchema]] = None
     partitions: int = 3
     name: str

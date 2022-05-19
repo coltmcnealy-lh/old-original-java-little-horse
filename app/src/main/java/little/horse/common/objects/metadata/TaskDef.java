@@ -18,6 +18,8 @@ public class TaskDef extends CoreMetadata {
     public HashMap<String, WFRunVariableDef> requiredVars;
     private Integer partitions = null;
 
+    public int versionNumber = 0;
+
     public int getPartitions() {
         if (partitions == null) {
             return config.getDefaultPartitions();
@@ -93,6 +95,8 @@ public class TaskDef extends CoreMetadata {
         TaskDeployer deployer = getTaskDeployer();
 
         if (oldTD != null) {
+            versionNumber = oldTD.versionNumber + 1;
+
             if (oldTD.partitions != partitions) {
                 throw new RuntimeException(
                     "Oh boy, this is bad and shouldn't be possible"
