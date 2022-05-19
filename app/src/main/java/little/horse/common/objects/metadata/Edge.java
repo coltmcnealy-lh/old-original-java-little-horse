@@ -4,14 +4,12 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.DigestIgnore;
 
 public class Edge extends BaseSchema {
     public String sourceNodeName;
     public String sinkNodeName;
     public EdgeCondition condition;
 
-    @DigestIgnore
     public boolean alreadyActivated = false;
 
     @JsonBackReference

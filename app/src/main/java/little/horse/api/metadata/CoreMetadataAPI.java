@@ -83,7 +83,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
 
             } else {
                 response.status = ResponseStatus.OK;
-                response.objectId = response.result.getId();
+                response.objectId = response.result.getObjectId();
             }
         } catch(LHConnectionError exn) {
             exn.printStackTrace();
@@ -104,16 +104,21 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             T t = BaseSchema.fromBytes(ctx.bodyAsBytes(), this.cls, config);
             t.validate(config);
 
+            // Absolutely CRUCIAL to call this method before saving it. Otherwise,
+            // the random id could be generated twice. TODO: Maybe put this in the
+            // BaseSchema.fromBytes() thing?
+            t.getObjectId();
+
             RecordMetadata record = t.save().get();
             streamsContext.waitForProcessing(
-                t.getId(), record.offset(), record.partition(), false,
+                t.getObjectId(), record.offset(), record.partition(), false,
                 T.getWaitForAPIPath(
-                    t.getId(), record.offset(), record.partition(), cls
+                    t.getObjectId(), record.offset(), record.partition(), cls
                 )
             );
 
-            response.result = LHDatabaseClient.lookupMetaNameOrId(t.getId(), config, cls);
-            response.objectId = t.getId();
+            response.result = LHDatabaseClient.lookupMetaNameOrId(t.getObjectId(), config, cls);
+            response.objectId = t.getObjectId();
             response.status = ResponseStatus.OK;
 
         } catch (LHSerdeError exn) {
@@ -154,7 +159,7 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
             } else {
                 RecordMetadata record = T.sendNullRecord(id, config, cls).get();
                 streamsContext.waitForProcessing(
-                    result.result.getId(), record.offset(),
+                    result.result.getObjectId(), record.offset(),
                     record.partition(), false,
                     T.getWaitForAPIPath(
                         id, record.offset(), record.partition(), cls
@@ -210,7 +215,6 @@ public class CoreMetadataAPI<T extends CoreMetadata> {
                 response.result = collection;
                 if (response.result != null) {
                     response.status = ResponseStatus.OK;
-                    response.objectId = response.result.getId();
                 } else {
                     response.status = ResponseStatus.OBJECT_NOT_FOUND;
                     response.message = "obj deleted and idx will follow soon.";

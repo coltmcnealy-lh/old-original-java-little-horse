@@ -20,6 +20,7 @@ import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.LHDeployStatus;
+import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.util.LHUtil;
 
 public class BaseIdProcessor<T extends CoreMetadata>
@@ -69,7 +70,6 @@ implements Processor<String, T, String, AliasEvent> {
             OffsetInfo oi = new OffsetInfo(recordMeta, new Date(record.timestamp()));
 
             String key = OffsetInfo.getKey(recordMeta);
-            LHUtil.log("Putting ", key, oi.toString());
             kvStore.put(key, new Bytes(oi.toBytes()));
         }
 
@@ -122,7 +122,10 @@ implements Processor<String, T, String, AliasEvent> {
 
         // Store the actual data in the ID store:
         CoreMetadataEntry entry = new CoreMetadataEntry(newMeta, offset);
-        kvStore.put(newMeta.getId(), new Bytes(entry.toBytes()));
+        if (cls == WFRun.class) {
+            LHUtil.log("GOTIT:", newMeta.objectId);
+        }
+        kvStore.put(newMeta.getObjectId(), new Bytes(entry.toBytes()));
 
         // We need to remove aliases from the old and add from the new.
         Set<AliasIdentifier> newAliases = newMeta.getAliases();

@@ -39,17 +39,17 @@ import little.horse.common.util.LHUtil;
 
 @JsonIdentityInfo(
     generator = ObjectIdGenerators.PropertyGenerator.class,
-    property = "id",
+    property = "objectId",
     scope = WFRun.class
 )
 public class WFRun extends CoreMetadata {
     // These fields are in the actual JSON for the WFRunSchema object
-    public String id;
+    // public String objectId;
 
-    @Override
-    public String getId() {
-        return id;
-    }
+    // @Override
+    // public String getObjectId() {
+    //     return id;
+    // }
 
     public String wfSpecDigest;
     public String wfSpecName;
@@ -75,7 +75,7 @@ public class WFRun extends CoreMetadata {
     @JsonIgnore
     public void setWFSpec(WFSpec spec) {
         wfSpec = spec;
-        wfSpecDigest = wfSpec.getId();
+        wfSpecDigest = wfSpec.getObjectId();
         wfSpecName = wfSpec.name;
     }
 
@@ -155,7 +155,7 @@ public class WFRun extends CoreMetadata {
         WFEvent event = new WFEvent();
         event.setConfig(config);
         event.type = type;
-        event.wfRunId = id;
+        event.wfRunId = objectId;
         event.wfSpecId = wfSpecDigest;
         event.wfSpecName = wfSpecName;
         event.timestamp = LHUtil.now();
@@ -410,7 +410,7 @@ class WFRunApiStuff {
 
             } else {
                 response.objectId = guid;
-                event.wfSpecId = spec.getId();
+                event.wfSpecId = spec.getObjectId();
                 event.wfSpecName = spec.name;
                 event.wfSpec = spec;
                 event.record();
@@ -545,12 +545,12 @@ class WFRunApiStuff {
             }
 
             ExternalEventPayload payload = new ExternalEventPayload();
-            payload.externalEventDefId = evd.getId();
+            payload.externalEventDefId = evd.getObjectId();
             payload.externalEventDefName = evd.name;
             payload.content = eventContent;
 
             WFEvent wfEvent = new WFEvent();
-            wfEvent.wfRunId = wfRun.getId();
+            wfEvent.wfRunId = wfRun.getObjectId();
             wfEvent.wfSpecId = wfRun.wfSpecDigest;
             wfEvent.wfSpecName = wfRun.wfSpecName;
             wfEvent.type = WFEventType.EXTERNAL_EVENT;

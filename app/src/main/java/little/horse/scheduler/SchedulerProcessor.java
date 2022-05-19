@@ -190,7 +190,7 @@ public class SchedulerProcessor
             SchedulerOutput co = new SchedulerOutput();
             co.request = tsr;
             context.forward(new Record<String, SchedulerOutput>(
-                wfRun.getId(), co, timestamp
+                wfRun.getObjectId(), co, timestamp
             ));
         }
 
@@ -225,10 +225,10 @@ public class SchedulerProcessor
         SchedulerOutput co = new SchedulerOutput();
         co.wfRun = wfRun;
         context.forward(new Record<String, SchedulerOutput>(
-            wfRun.getId(), co, timestamp
+            wfRun.getObjectId(), co, timestamp
         ));
 
-        wfRunStore.put(wfRun.getId(), wfRun);
+        wfRunStore.put(wfRun.getObjectId(), wfRun);
     }
 
     private String getTimerKey(long timestamp) {

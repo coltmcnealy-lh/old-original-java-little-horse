@@ -30,7 +30,7 @@ public class TaskDef extends CoreMetadata {
     }
 
     @Override
-    public String getId() {
+    public String getObjectId() {
         return this.name;
     }
 
@@ -50,7 +50,7 @@ public class TaskDef extends CoreMetadata {
     private String k8sName;
     public String getK8sName() {
         if (k8sName == null) {
-            k8sName = LHUtil.toValidK8sName(getId());
+            k8sName = LHUtil.toValidK8sName(getObjectId());
         }
         return k8sName;
     }
@@ -130,7 +130,7 @@ public class TaskDef extends CoreMetadata {
         this.config = config;
 
         // ALl we gotta do is make sure the TaskDef exists.
-        TaskDef old = LHDatabaseClient.lookupMeta(getId(), config, TaskDef.class);
+        TaskDef old = LHDatabaseClient.lookupMeta(getObjectId(), config, TaskDef.class);
 
         if (old != null) {
             if (partitions != null && old.partitions != partitions) {

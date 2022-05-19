@@ -20,10 +20,10 @@ import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.DigestIgnore;
 import little.horse.common.objects.rundata.ThreadRun;
 import little.horse.common.objects.rundata.WFRun;
 import little.horse.common.objects.rundata.LHExecutionStatus;
+import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
 import little.horse.deployers.WorkflowDeployer;
 
@@ -69,7 +69,6 @@ public class WFSpec extends CoreMetadata {
 
     // Internal bookkeeping for validation
     @JsonIgnore
-    @DigestIgnore
     private HashMap<String, HashMap<String, WFRunVariableDef>> allVarDefs;
 
     /**
@@ -232,7 +231,7 @@ public class WFSpec extends CoreMetadata {
             throw new RuntimeException("TODO: Handle when the runRequest is invalid");
         }
 
-        wfRun.id = id;
+        wfRun.objectId = id;
         wfRun.wfSpecDigest = event.wfSpecId;
         wfRun.wfSpecName = event.wfSpecName;
         wfRun.setWFSpec(this);
@@ -376,7 +375,7 @@ public class WFSpec extends CoreMetadata {
     public String getEventTopic() {
         if (eventTopic == null) {
             eventTopic = config.getWFRunEventTopicPrefix() + name + "-"
-                + getId().substring(0, 8);
+                + getObjectId().substring(0, 8);
         }
         return eventTopic;
     }
@@ -386,7 +385,7 @@ public class WFSpec extends CoreMetadata {
 
     public String getK8sName() {
         if (k8sName == null) {
-            k8sName = LHUtil.toValidK8sName(name + "-" + getId().substring(0, 8));
+            k8sName = LHUtil.toValidK8sName(name + "-" + getObjectId().substring(0, 8));
         }
         return k8sName;
     }
@@ -399,13 +398,19 @@ public class WFSpec extends CoreMetadata {
     public HashSet<TaskDef> getAllTaskDefs() throws LHConnectionError {
         if (tqs != null) return tqs;
         tqs = new HashSet<>();
+        HashSet<String> tqNames = new HashSet<String>();
 
         for (ThreadSpec t: threadSpecs.values()) {
             for (Node n: t.nodes.values()) {
                 if (n.nodeType == NodeType.TASK) {
-                    tqs.add(n.taskDef);
+                    tqNames.add(n.taskDef.name);
                 }
             }
+        }
+        for (String taskDefName: tqNames) {
+            tqs.add(
+                LHDatabaseClient.lookupMeta(taskDefName, config, TaskDef.class)
+            );
         }
         return tqs;
     }

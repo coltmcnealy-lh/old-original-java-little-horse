@@ -156,9 +156,7 @@ class LHClient:
                 )
 
         for task_def in specs.task_def:
-            print("adding task def")
             self.add_task_def(task_def)
-            print("Done adding task def", flush=True)
 
         for external_event in specs.external_event_def:
             self.add_external_event_def(external_event)
@@ -196,11 +194,9 @@ class LHClient:
 
     def add_wf_spec(self, wf: WFSpecSchema):
         url = f'{self.url}/WFSpec'
-        print("adding wfspec")
         response = requests.post(
             url, json=json.loads(wf.json(by_alias=True))
         )
-        print("done with wfspec request", flush=True)
         try:
             response.raise_for_status()
         except Exception as exn:
@@ -208,6 +204,8 @@ class LHClient:
                 f"Got an exception: {exn}, {response.content.decode()}"
             )
             raise exn
+        print("Got id: ", response.json()['objectId'])
+        return response.json()['objectId']
 
     def add_task_def(self, td: TaskDefSchema):
         url = f'{self.url}/TaskDef'

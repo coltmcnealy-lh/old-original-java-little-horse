@@ -15,7 +15,6 @@ import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.DigestIgnore;
 import little.horse.common.objects.metadata.Node;
 import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHUtil;
@@ -41,7 +40,6 @@ public class Node extends BaseSchema {
     @JsonManagedReference
     public HashMap<String, VariableAssignment> variables;
 
-    @DigestIgnore
     @JsonBackReference
     public ThreadSpec threadSpec;
 
@@ -235,7 +233,7 @@ public class Node extends BaseSchema {
             ));
         }
 
-        taskDefId = taskDef.getId();
+        taskDefId = taskDef.getObjectId();
         taskDefName = taskDef.name;
     }
 
@@ -261,7 +259,7 @@ public class Node extends BaseSchema {
             ));
         }
         externalEventDefName = externalEventDef.name;
-        externalEventDefId = externalEventDef.getId();
+        externalEventDefId = externalEventDef.getObjectId();
     }
 
     private void validateSpawnThreadNode(DepInjContext config)

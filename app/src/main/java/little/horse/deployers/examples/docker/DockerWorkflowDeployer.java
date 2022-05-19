@@ -33,7 +33,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
         ArrayList<String> envList = new ArrayList<>();
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, spec.name);
-        env.put(DeployerConstants.WF_SPEC_ID_KEY, spec.getId());
+        env.put(DeployerConstants.WF_SPEC_ID_KEY, spec.getObjectId());
         env.put(Constants.ADVERTISED_PORT_KEY, "80");
         for (Map.Entry<String, String> envEntry: env.entrySet()) {
             envList.add(String.format(
@@ -43,7 +43,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
 
         HashMap<String, String> labels = new HashMap<>();
         labels.put("io.littlehorse/deployedBy", "true");
-        labels.put("io.littlehorse/wfSpecId", spec.getId());
+        labels.put("io.littlehorse/wfSpecId", spec.getObjectId());
         labels.put("io.littlehorse/wfSpecName", spec.name);
         labels.put("io.littlehorse/active", "true");
 
@@ -81,7 +81,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
         DockerClient client = ddConfig.getDockerClient();
         HashMap<String, String> labels = new HashMap<>();
         labels.put("io.littlehorse/deployedBy", "true");
-        labels.put("io.littlehorse/wfSpecId", spec.getId());
+        labels.put("io.littlehorse/wfSpecId", spec.getObjectId());
         labels.put("io.littlehorse/wfSpecName", spec.name);
 
         List<Container> containers = client.listContainersCmd().withLabelFilter(

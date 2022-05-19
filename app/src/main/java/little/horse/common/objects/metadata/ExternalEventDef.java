@@ -10,7 +10,7 @@ public class ExternalEventDef extends CoreMetadata {
     public static String typeName = "ExternalEventDef";
 
     @Override
-    public String getId() {
+    public String getObjectId() {
         return this.name;
     }
 

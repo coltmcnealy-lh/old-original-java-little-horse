@@ -90,7 +90,7 @@ public class TimerTopology {
         for (TaskDef tq: wfSpec.getAllTaskDefs()) {
             String procName = "Filter Processor " + tq.name;
 
-            LHUtil.log("Task queue", tq.getId());
+            LHUtil.log("Task queue", tq.getObjectId());
 
             topology.addProcessor(
                 procName,

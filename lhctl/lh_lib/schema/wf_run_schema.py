@@ -126,7 +126,7 @@ class ThreadRunMetaSchema(LHBaseModel):
 
 
 class WFRunSchema(LHBaseModel):
-    id: str
+    object_id: str
     wf_spec_name: str
     wf_spec_digest: str
     thread_runs: List[ThreadRunSchema]

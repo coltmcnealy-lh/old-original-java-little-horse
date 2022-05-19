@@ -42,7 +42,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         ArrayList<String> envList = new ArrayList<>();
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, spec.name);
-        env.put(DeployerConstants.TASK_DEF_ID_KEY, spec.getId());
+        env.put(DeployerConstants.TASK_DEF_ID_KEY, spec.getObjectId());
         env.put(DeployerConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
         env.put(DeployerConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
 
@@ -53,7 +53,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         HashMap<String, String> labels = new HashMap<>();
         labels.put("io.littlehorse/deployedBy", "true");
         labels.put("io.littlehorse/active", "true");
-        labels.put("io.littlehorse/taskDefId", spec.getId());
+        labels.put("io.littlehorse/taskDefId", spec.getObjectId());
 
         LHUtil.log("Got labels", labels);
 
@@ -66,7 +66,7 @@ public class DockerTaskDeployer implements TaskDeployer {
         CreateContainerCmd ccc = client.createContainerCmd(
             meta.dockerImage
         ).withEnv(envList).withName(
-            "lh-task-" + spec.getId()
+            "lh-task-" + spec.getObjectId()
         ).withLabels(labels);
 
         if (meta.taskType == TaskImplTypeEnum.JAVA) {

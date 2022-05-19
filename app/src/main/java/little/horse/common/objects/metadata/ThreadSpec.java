@@ -14,7 +14,6 @@ import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.DigestIgnore;
 import little.horse.common.util.json.JsonMapKey;
 
 
@@ -38,7 +37,6 @@ public class ThreadSpec extends BaseSchema {
     public ArrayList<Edge> edges;
 
     @JsonBackReference
-    @DigestIgnore
     public WFSpec wfSpec;
 
     @JsonManagedReference

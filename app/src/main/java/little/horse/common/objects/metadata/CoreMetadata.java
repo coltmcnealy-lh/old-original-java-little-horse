@@ -19,7 +19,7 @@ import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.DigestIgnore;
+import little.horse.common.util.LHUtil;
 
 public abstract class CoreMetadata extends BaseSchema {
     public String name;
@@ -27,11 +27,26 @@ public abstract class CoreMetadata extends BaseSchema {
     public LHDeployStatus status;
     public String statusMessage;
 
+    public String objectId;
+    public String getObjectId() {
+        if (objectId == null) {
+            objectId = LHUtil.generateGuid();
+        }
+        return objectId;
+    }
+
+    /**
+     * Just here for jackson stupidity. @humans: Don't call this.
+     */
+    public void setObjectId(String foo) {
+        objectId = foo;
+    }
+
+
     @JsonIgnore
     public static boolean onlyUseDefaultAPIforGET = false;
     public static void overridePostAPIEndpoints(Javalin app, DepInjContext config) {}
 
-    @DigestIgnore
     public Long lastUpdatedOffset;
 
     @JsonIgnore
@@ -143,7 +158,7 @@ public abstract class CoreMetadata extends BaseSchema {
     public Future<RecordMetadata> save() {
         ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
             getIdKafkaTopic(this.config, this.getClass()),
-            getId(),
+            getObjectId(),
             new Bytes(this.toBytes())
         );
         return this.config.send(record);
@@ -169,10 +184,4 @@ public abstract class CoreMetadata extends BaseSchema {
         out.add(i);
         return out;
     }
-
-    // Just here for Jackson, let's see if it works!
-    public String getObjectId() {
-        return getId();
-    }
-    public void setObjectId(String foobar) {}
 }

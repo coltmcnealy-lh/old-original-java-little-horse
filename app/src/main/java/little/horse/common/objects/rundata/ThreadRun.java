@@ -65,7 +65,6 @@ public class ThreadRun extends BaseSchema {
     public ArrayList<Integer> childThreadIds;
     public ArrayList<Integer> activeInterruptThreadIds;
     public ArrayList<Integer> handledInterruptThreadIds;
-    // public Integer exceptionHandlerThread = null;
 
     public String errorMessage;
 
@@ -92,7 +91,6 @@ public class ThreadRun extends BaseSchema {
         return wfRun.getWFSpec().threadSpecs.get(threadSpecName);
     }
 
-    @Override
     public String getId() {
         return String.valueOf(id);
     }
@@ -196,13 +194,13 @@ public class ThreadRun extends BaseSchema {
             dataToParse = result;
         } else if (var.wfRunMetadata != null) {
             if (var.wfRunMetadata == WFRunMetadataEnum.WF_RUN_GUID) {
-                return wfRun.id;
+                return wfRun.objectId;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_GUID) {
                 return wfRun.wfSpecDigest;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.WF_SPEC_NAME) {
                 return wfRun.wfSpecName;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_GUID) {
-                return String.valueOf(this.id) + "-"+ wfRun.id;
+                return String.valueOf(this.id) + "-"+ wfRun.objectId;
             } else if (var.wfRunMetadata == WFRunMetadataEnum.THREAD_ID) {
                 return Integer.valueOf(this.id);
             }
@@ -261,7 +259,7 @@ public class ThreadRun extends BaseSchema {
             tr.number = taskRuns.get(taskRuns.size() - 1).number + 1;
         }
         tr.nodeName = node.name;
-        tr.wfSpecId = wfRun.getWFSpec().getId();
+        tr.wfSpecId = wfRun.getWFSpec().getObjectId();
         tr.wfSpecName = wfRun.getWFSpec().name;
         tr.attemptNumber = attemptNumber;
 
@@ -742,9 +740,9 @@ public class ThreadRun extends BaseSchema {
         WFRunTimer timer = new WFRunTimer();
         timer.setConfig(config);
 
-        timer.wfRunId = wfRun.id;
+        timer.wfRunId = wfRun.objectId;
         timer.threadRunId = id;
-        timer.wfRunId = wfRun.id;
+        timer.wfRunId = wfRun.objectId;
         timer.taskRunId = tr.position;
 
         Calendar calendar = null;
@@ -802,7 +800,7 @@ public class ThreadRun extends BaseSchema {
         TaskScheduleRequest tsr = new TaskScheduleRequest();
         tsr.setConfig(config);
         tsr.taskDefName = node.taskDef.name;
-        tsr.wfRunId = wfRun.id;
+        tsr.wfRunId = wfRun.objectId;
         tsr.wfSpecId = wfRun.wfSpecDigest;
         tsr.wfSpecName = wfRun.wfSpecName;
         tsr.threadId = id;
@@ -836,7 +834,7 @@ public class ThreadRun extends BaseSchema {
                 timer.threadRunId = id;
                 timer.taskRunId = tr.position;
                 timer.nodeName = node.name;
-                timer.wfRunId = wfRun.id;
+                timer.wfRunId = wfRun.objectId;
                 timer.maturationTimestamp = timeoutTime.getTimeInMillis();
                 timers.add(timer);
             }
@@ -922,7 +920,7 @@ public class ThreadRun extends BaseSchema {
                     WFRunTimer timer = new WFRunTimer();
                     timer.nodeName = node.name;
                     timer.threadRunId = id;
-                    timer.wfRunId = wfRun.id;
+                    timer.wfRunId = wfRun.objectId;
                     timer.taskRunId = taskRuns.size();
                     timer.maturationTimestamp = cal.getTimeInMillis();
                     timers.add(timer);

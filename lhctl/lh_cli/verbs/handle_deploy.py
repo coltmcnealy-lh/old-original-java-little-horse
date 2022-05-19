@@ -54,4 +54,3 @@ class DEPLOYHandler():
             skip_build=ns.skip_build,
             docker_push_step=ns.docker_push_step
         )
-        print("Successfully deployed workflow.")

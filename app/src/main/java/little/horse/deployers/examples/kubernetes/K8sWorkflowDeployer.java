@@ -69,7 +69,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         dp.metadata.labels.put("app", kdConfig.getK8sName(spec));
         dp.metadata.labels.put("io.littlehorse/deployedBy", "true");
         dp.metadata.labels.put("io.littlehorse/active", "true");
-        dp.metadata.labels.put("io.littlehorse/wfSpecId", spec.getId());
+        dp.metadata.labels.put("io.littlehorse/wfSpecId", spec.getObjectId());
 
         Container container = new Container();
         container.name = kdConfig.getK8sName(spec);
@@ -102,7 +102,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
 
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, "wf-" + spec.name);
-        env.put(KDConstants.WF_SPEC_ID_KEY, spec.getId());
+        env.put(KDConstants.WF_SPEC_ID_KEY, spec.getObjectId());
         env.put(Constants.EXPOSE_KSTREAMS_HEALTH_KEY, "true");
         container.env = new ArrayList<EnvEntry>();
         for (Map.Entry<String, String> envEntry: env.entrySet()) {
@@ -113,7 +113,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
 
         HashMap<String, String> labels = new HashMap<>();
         labels.put("io.littlehorse/deployedBy", "true");
-        labels.put("io.littlehorse/wfSpecId", spec.getId());
+        labels.put("io.littlehorse/wfSpecId", spec.getObjectId());
         labels.put("io.littlehorse/wfSpecName", spec.name);
         labels.put("io.littlehorse/active", "true");
 
@@ -137,7 +137,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
 
     public void undeploy(WFSpec spec, DepInjContext config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
-        kdConfig.deleteK8sDeployment("io.littlehorse/wfSpecId", spec.getId());
+        kdConfig.deleteK8sDeployment("io.littlehorse/wfSpecId", spec.getObjectId());
     }
 
     public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {

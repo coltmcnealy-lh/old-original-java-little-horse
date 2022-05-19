@@ -63,7 +63,7 @@ public class K8sTaskDeployer implements TaskDeployer {
         dp.metadata.labels.put("app", kdConfig.getK8sName(spec));
         dp.metadata.labels.put("io.littlehorse/deployedBy", "true");
         dp.metadata.labels.put("io.littlehorse/active", "true");
-        dp.metadata.labels.put("io.littlehorse/taskDefId", spec.getId());
+        dp.metadata.labels.put("io.littlehorse/taskDefId", spec.getObjectId());
 
         Container container = new Container();
         container.name = kdConfig.getK8sName(spec);
@@ -85,7 +85,7 @@ public class K8sTaskDeployer implements TaskDeployer {
         env.put(
             Constants.KAFKA_APPLICATION_ID_KEY, "task-" + kdConfig.getK8sName(spec)
         );
-        env.put(KDConstants.TASK_DEF_ID_KEY, spec.getId());
+        env.put(KDConstants.TASK_DEF_ID_KEY, spec.getObjectId());
         env.put(KDConstants.TASK_EXECUTOR_META_KEY, meta.metadata);
         env.put(KDConstants.TASK_EXECUTOR_CLASS_KEY, meta.taskExecutorClassName);
 
@@ -110,7 +110,7 @@ public class K8sTaskDeployer implements TaskDeployer {
         template.metadata.labels.put("app", kdConfig.getK8sName(spec));
         template.metadata.labels.put("io.littlehorse/deployedBy", "true");
         template.metadata.labels.put("io.littlehorse/active", "true");
-        template.metadata.labels.put("io.littlehorse/taskDefId", spec.getId());
+        template.metadata.labels.put("io.littlehorse/taskDefId", spec.getObjectId());
 
         template.spec = new PodSpec();
         template.spec.containers = Arrays.asList(container);
@@ -125,14 +125,14 @@ public class K8sTaskDeployer implements TaskDeployer {
         dp.spec.selector.matchLabels.put("app", kdConfig.getK8sName(spec));
         dp.spec.selector.matchLabels.put("io.littlehorse/deployedBy", "true");
         dp.spec.selector.matchLabels.put("io.littlehorse/active", "true");
-        dp.spec.selector.matchLabels.put("io.littlehorse/taskDefId", spec.getId());
+        dp.spec.selector.matchLabels.put("io.littlehorse/taskDefId", spec.getObjectId());
 
         return dp;
     }
 
     public void undeploy(TaskDef spec, DepInjContext config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
-        kdConfig.deleteK8sDeployment("io.littlehorse/taskDefId", spec.getId());
+        kdConfig.deleteK8sDeployment("io.littlehorse/taskDefId", spec.getObjectId());
     }
 
     public void validate(TaskDef spec, DepInjContext config) throws LHValidationError {

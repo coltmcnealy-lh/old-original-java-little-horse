@@ -90,8 +90,6 @@ public class SchedulerTopology {
         for (TaskDef tq: wfSpec.getAllTaskDefs()) {
             String procName = "Filter Processor " + tq.name;
 
-            LHUtil.log("Task queue", tq.getId());
-
             topology.addProcessor(
                 procName,
                 () -> {return new SchedulerFanoutProcessor(tq);},
