@@ -23,6 +23,8 @@ public class TaskRun extends BaseSchema {
     public String nodeName;
     public String nodeId;
 
+    public int taskDefVersionNumber;
+
     public String workerId;
     public Object stdin;
     public int attemptNumber = 0;

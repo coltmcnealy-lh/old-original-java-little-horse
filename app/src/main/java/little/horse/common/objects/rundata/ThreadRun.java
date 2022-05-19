@@ -296,6 +296,7 @@ public class ThreadRun extends BaseSchema {
         tr.status = LHExecutionStatus.RUNNING;
         tr.startTime = trEvent.timestamp;
         tr.workerId = event.workerId;
+        tr.taskDefVersionNumber = trEvent.taskDefVersionNumber;
         tr.stdin = event.stdin;
     }
 
@@ -375,6 +376,7 @@ public class ThreadRun extends BaseSchema {
     throws LHConnectionError {
         TaskRun tr = taskRuns.get(trEvent.taskRunPosition);
         TaskRunEndedEvent event = trEvent.endedEvent;
+        tr.taskDefVersionNumber = trEvent.taskDefVersionNumber;
         if (tr.status != LHExecutionStatus.SCHEDULED 
             && tr.status != LHExecutionStatus.RUNNING
         ) {

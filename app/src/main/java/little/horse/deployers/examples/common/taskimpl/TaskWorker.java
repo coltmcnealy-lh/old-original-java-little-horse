@@ -121,6 +121,7 @@ public class TaskWorker {
         trs.workerId = "some-worker-id";
 
         TaskRunEvent tre = new TaskRunEvent();
+        tre.taskDefVersionNumber = taskDef.versionNumber;
         tre.startedEvent = trs;
         tre.taskRunPosition = schedReq.taskRunPosition;
         tre.timestamp = LHUtil.now();
@@ -178,6 +179,7 @@ public class TaskWorker {
         out.threadId = schedReq.threadId;
 
         TaskRunEvent tre2 = new TaskRunEvent();
+        tre2.taskDefVersionNumber = taskDef.versionNumber;
         tre2.endedEvent = out;
         tre2.taskRunPosition = schedReq.taskRunPosition;
         tre2.timestamp = LHUtil.now();

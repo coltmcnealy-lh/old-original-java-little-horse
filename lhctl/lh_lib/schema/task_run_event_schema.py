@@ -35,6 +35,7 @@ class TaskRunEndedEvent(LHBaseModel):
 
 
 class TaskRunEventSchema(LHBaseModel):
+    task_def_version_number: int
     thread_id: int
     task_run_position: int
     timestamp: datetime

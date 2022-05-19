@@ -48,6 +48,8 @@ class TaskRunSchema(LHBaseModel):
     thread_id: int
     attempt_number: int = 0
 
+    task_def_version_number: Optional[int] = None
+
     node_name: str
 
     worker_id: Optional[str] = None

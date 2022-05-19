@@ -135,6 +135,7 @@ class PythonTaskWorker:
             "thread_id": req.thread_id,
             "task_run_position": req.task_run_position,
             "timestamp": ts,
+            "task_def_version_number": self._task_def.version_number,
             "started_event": TaskRunStartedEvent(
                 worker_id=self._app_instance_id,
                 task_run_position=req.task_run_position,
@@ -196,6 +197,7 @@ class PythonTaskWorker:
                 "thread_id": req.thread_id,
                 "task_run_position": req.task_run_position,
                 "timestamp": ts,
+                "task_def_version_number": self._task_def.version_number,
                 "ended_event": ended_event,
             }).json(by_alias=True),
         }), req)
