@@ -5,15 +5,13 @@ cd ${SCRIPT_DIR}
 
 set -e
 
-../../../../docker/setup.sh
-
 docker-compose -p docker-test-harness -f docker-compose.pg.yml up -d
 
 # echo "If you just edited db_schema.py, I hope you already ran 'alembic revision --autogenerate'"
 
 sleep 5
 
-cd ${SCRIPT_DIR}/../..
+cd ${SCRIPT_DIR}/..
 
 alembic revision --autogenerate
 echo "Installing db schema now..."

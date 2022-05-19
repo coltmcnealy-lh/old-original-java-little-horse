@@ -33,6 +33,10 @@ class TESTHandler:
             help="Whether to deploy the specified test workflows."
         )
         parser.add_argument(
+            "--docker_push_step",
+            help="Executable file to run on each docker image to push it to cluster."
+        )
+        parser.add_argument(
             "--requests", "-r",
             help="Number of requests to run for each test case.",
             type=int,
@@ -63,7 +67,7 @@ class TESTHandler:
 
         if ns.deploy:
             for case in cases:
-                deploy_test(client, case)
+                deploy_test(client, case, ns.docker_push_step)
 
             time.sleep(16)
 

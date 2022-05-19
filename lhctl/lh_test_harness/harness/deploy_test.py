@@ -6,7 +6,7 @@ from lh_test_harness.test_utils import get_test_module_name, inject_test_to_task
 from lh_sdk.thread_spec_builder import Workflow
 
 
-def deploy_test(client: LHClient, test_name: str) -> None:
+def deploy_test(client: LHClient, test_name: str, docker_push_step: str) -> None:
     mod_name = get_test_module_name(test_name)
     module = importlib.import_module(mod_name)
     func = module.__dict__[test_name]
@@ -17,4 +17,4 @@ def deploy_test(client: LHClient, test_name: str) -> None:
     # for task_def in specs.task_def:
     #     inject_test_to_taskdef(task_def)
 
-    client.deploy_specs(specs)
+    client.deploy_specs(specs, docker_push_step=docker_push_step)
