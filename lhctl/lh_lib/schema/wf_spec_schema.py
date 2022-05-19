@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from typing import Any, List, Mapping, Optional, Union
 
@@ -168,6 +169,7 @@ class ThreadSpecSchema(LHBaseModel):
 
 
 class WFSpecSchema(LHBaseModel):
+    created: Optional[datetime] = None
     name: str
     status: LHDeployStatus = LHDeployStatus.STOPPED
     status_message: Optional[str] = None
@@ -182,6 +184,7 @@ class WFSpecSchema(LHBaseModel):
 
 
 class TaskDefSchema(LHBaseModel):
+    created: Optional[datetime] = None
     version_number: int = Field(default_factory=lambda: 0)
     required_vars: Optional[Mapping[str, WFRunVariableDefSchema]] = None
     partitions: int = 3
@@ -202,6 +205,7 @@ class TaskDefSchema(LHBaseModel):
 
 
 class ExternalEventDefSchema(LHBaseModel):
+    created: Optional[datetime] = None
     name: str
     status: LHDeployStatus = LHDeployStatus.RUNNING
 

@@ -2,6 +2,7 @@ package little.horse.common.objects.metadata;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +27,20 @@ public abstract class CoreMetadata extends BaseSchema {
     public LHDeployStatus desiredStatus;
     public LHDeployStatus status;
     public String statusMessage;
+
+    private Date created;
+    public Date getCreated() {
+        if (created == null) {
+            created = LHUtil.now();
+        }
+        return created;
+    }
+    /**
+     * ONLY TO BE CALLED BY JACKSON
+     */
+    public void setCreated(Date date) {
+        this.created = date;
+    }
 
     public String objectId;
     public String getObjectId() {

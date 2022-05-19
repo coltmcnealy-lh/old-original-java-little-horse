@@ -128,6 +128,7 @@ class ThreadRunMetaSchema(LHBaseModel):
 
 
 class WFRunSchema(LHBaseModel):
+    created: Optional[datetime] = None
     object_id: str
     wf_spec_name: str
     wf_spec_digest: str
