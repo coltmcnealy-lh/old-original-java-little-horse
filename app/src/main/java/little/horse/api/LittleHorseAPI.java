@@ -15,13 +15,15 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
-import little.horse.api.metadata.CoreMetadataAPI;
-import little.horse.api.metadata.MetadataTopologyBuilder;
+import little.horse.api.metadata.GETApi;
+import little.horse.api.metadata.ApiTopologyBuilder;
+import little.horse.api.metadata.POSTApi;
 import little.horse.api.util.APIStreamsContext;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.POSTable;
 import little.horse.common.objects.metadata.ExternalEventDef;
+import little.horse.common.objects.metadata.GETable;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.objects.rundata.WFRun;
@@ -33,48 +35,66 @@ import little.horse.common.util.LHUtil;
 public class LittleHorseAPI {
     private Javalin app; 
     private DepInjContext config;
-    private Set<CoreMetadataAPI<? extends CoreMetadata>> apis;
-
+    private Set<GETApi<? extends GETable>> getApis;
+    private Set<POSTApi<? extends POSTable>> postApis;
+    
     private KafkaStreams streams;
-
+    
+    @SuppressWarnings("unchecked")
     public LittleHorseAPI(DepInjContext config, Topology topology) {
         // The API is two components:
         // 1. The Javalin HTTP/REST Frontend
         // 2. The Kafka Streams Backend.
 
         this.config = config;
-        this.apis = new HashSet<>();
+        this.getApis = new HashSet<>();
+        this.postApis = new HashSet<>();
         
         // Frontend api component
         KStreamsStateListener listener = new KStreamsStateListener();
         this.app = LHUtil.createAppWithHealth(listener);
 
         // Kafka Streams component
-        List<Class<? extends CoreMetadata>> resources = Arrays.asList(
+        List<Class<? extends GETable>> resources = Arrays.asList(
             WFSpec.class, TaskDef.class,
             ExternalEventDef.class, WFRun.class
         );
         
-        for (Class<? extends CoreMetadata> cls: resources) {
+        for (Class<? extends GETable> cls: resources) {
             // Initialize the Kafka Streams stuff for that resource type
-            MetadataTopologyBuilder.addStuff(topology, config, cls);
+            ApiTopologyBuilder.addStuff(topology, config, cls);
         }
 
         this.streams = new KafkaStreams(topology, config.getStreamsConfig());
         this.streams.setStateListener(listener);
 
-        for (Class<? extends CoreMetadata> cls: resources) {
+        for (Class<? extends GETable> cls: resources) {
             // Now that the backing KafkaStreams is setup, let's add some routes.
-            addApi(cls);
+            addGETApi(cls);
+            if (POSTable.class.isAssignableFrom(cls)) {
+                addPOSTApi((Class<? extends POSTable>) cls);
+            }
         }
+
 
         // Adds a route used by the backend Kafka Streams app for sharded lookups.
         this.app.get("/storeBytes/{storeName}/{storeKey}", this::getBytesFromStore);
     }
 
-    private <T extends CoreMetadata> void addApi(Class<T> cls) {
-        apis.add(
-            new CoreMetadataAPI<T>(
+    private <T extends POSTable> void addPOSTApi(Class<T> cls) {
+        postApis.add(
+            new POSTApi<T>(
+                this.config,
+                cls,
+                new APIStreamsContext<>(streams, cls, config),
+                app
+            )
+        );
+    }
+
+    private <T extends GETable> void addGETApi(Class<T> cls) {
+        getApis.add(
+            new GETApi<T>(
                 this.config,
                 cls,
                 new APIStreamsContext<>(streams, cls, config),
@@ -110,13 +130,13 @@ public class LittleHorseAPI {
         int partitions = config.getDefaultPartitions();
         short replicationFactor = (short) config.getDefaultReplicas();
 
-        for (Class<? extends CoreMetadata> cls: Arrays.asList(
+        for (Class<? extends GETable> cls: Arrays.asList(
             WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
         )) {
             LHUtil.log("About to create topics for ", cls.getName());
             config.createKafkaTopic(
                 new NewTopic(
-                    CoreMetadata.getIdKafkaTopic(config, cls),
+                    POSTable.getIdKafkaTopic(config, cls),
                     partitions,
                     replicationFactor
                 )
@@ -124,7 +144,7 @@ public class LittleHorseAPI {
 
             config.createKafkaTopic(
                 new NewTopic(
-                    CoreMetadata.getAliasKafkaTopic(config, cls),
+                    POSTable.getIndexKafkaTopic(config, cls),
                     partitions,
                     replicationFactor
                 )

@@ -98,13 +98,15 @@ The repository has the following components:
 ### Where the Logic Is
 * Core API:
     * `BaseSchema.java` is a basic serializable class (through JSON dumping/loading) used to store all imporant data.
-    * `CoreMetadata.java` is a base for special metadata, such as all objects in the `PROGRAMMING_MODEL.md`, including `WFSpec`, `TaskDef`, `ExternalEventDef`, and `WFRun`. 
-    * `MetadataTopologyBuilder.java` is a generic class which initializes a Kafka Streams Topology for a specifc CoreMetadata type. It handles the CRUD operations for that type, and uses the associated CoreMetadata's implementation in order to produce side effects (eg deploying a Workflow).
-    * `CoreMetadataAPI.java` is the generic class that implements CRUD for Core Metadata in the REST API.
+    * `GETable.java` is a base for all resources that can be `GET`'ed from the API, including `WFSpec`, `TaskDef`, `ExternalEventDef`, and `WFRun`.
+    * `POSTable.java` is a base for all resources that can be `POST`ed to the API, including `WFSpec`, `TaskDef`, and `ExternalEventDef` (not `WFRun` and `TaskRun`).
+    * `ApiTopologyBuilder.java` is a generic class which initializes a Kafka Streams Topology for a specifc GETable type. It handles the CRUD operations for that type, and if the GETable also is a `POSTable`, it uses the associated POSTable's implementation in order to produce side effects (eg deploying a Workflow Scheduler or a Task Worker).
+    * `GETApi.java` is the generic class that implements `GET` endpoints for any `GETable` type.
+    * `POSTApi.java` is the generic class that implements `POST` endpoints for any `POSTABLE` type.
         * *Note: it is all put together in the `LittleHorseAPI.java` class.*
     * `APIStreamsContext.java` is the high-tech class used to turn Kafka Streams into a database, allowing for querying data partitioned across several RocksDB instances.
 * Workflow Scheduling Logic
-    * `SchedulerTopology.java` initializes the Kafka Streams Topology on the Workflow Worker process. This topology is the actual scheduler that sends task schedule requests to appropriate task queues, and updates the state of the WFRun in a Kafka Topic that is listened to by the CoreMetadata Topology on the Core LittleHorse API.
+    * `SchedulerTopology.java` initializes the Kafka Streams Topology on the Workflow Worker process. This topology is the actual scheduler that sends task schedule requests to appropriate task queues, and updates the state of the WFRun in a Kafka Topic that is listened to by the API Topology on the Core LittleHorse API.
     * `SchedulerProcessor.java` shepherds the actual scheduling. See how it gets inserted in `SchedulerTopology.java`.
     * `WFRun.java` and `ThreadRun.java` have the real potatoes of the actual state transition logic for what happens when an event (i.e. Task Completed) is processed.
 * Deployer Interfaces

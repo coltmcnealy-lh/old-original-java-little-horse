@@ -2,7 +2,7 @@ package little.horse.api.metadata;
 
 import little.horse.common.objects.BaseSchema;
 
-public class AliasEvent extends BaseSchema {
+public class IndexEvent extends BaseSchema {
     /**
      * The id of the associated CoreMetadata that's supposed to be aliased by this.
      */
@@ -11,7 +11,7 @@ public class AliasEvent extends BaseSchema {
     /**
      * Used to identify the actual alias.
      */
-    public AliasIdentifier identifier;
+    public IndexKeyRecord identifier;
 
     /**
      * Offset of the record in the CoreMetadata ID topic that produced this
@@ -22,7 +22,7 @@ public class AliasEvent extends BaseSchema {
     /**
      * Create a new alias, delete one, or just heartbeat.
      */
-    public AliasOperation operation;
+    public IndexOperation operation;
 
     /**
      * The total number of aliases that the CoreMetadata **should** have as of the
@@ -34,7 +34,7 @@ public class AliasEvent extends BaseSchema {
      */
     public int totalAliases;
 
-    public AliasEvent() {} // just there for the Jackson thing.
+    public IndexEvent() {} // just there for the Jackson thing.
 
     /**
      * Creates new CoreMetadataAlias.
@@ -46,9 +46,9 @@ public class AliasEvent extends BaseSchema {
      * @param totalAliases is the total number of aliases that were generated for this
      * CoreMetadata object from the sourceOffset.
      */
-    public AliasEvent(
-        String id, AliasIdentifier identifier,
-        Long sourceOffset, AliasOperation operation, int totalAliases
+    public IndexEvent(
+        String id, IndexKeyRecord identifier,
+        Long sourceOffset, IndexOperation operation, int totalAliases
     ) {
         this.identifier = identifier;
         this.objectId = id;

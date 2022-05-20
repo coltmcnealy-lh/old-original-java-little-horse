@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import little.horse.common.DepInjContext;
 
 // As of now, we don't have any fancy logic here, so it's literally just a CRUD api.
-public class ExternalEventDef extends CoreMetadata {
+public class ExternalEventDef extends POSTable {
     @JsonIgnore
     public static String typeName = "ExternalEventDef";
 
@@ -15,7 +15,7 @@ public class ExternalEventDef extends CoreMetadata {
     }
 
     @Override
-    public void processChange(CoreMetadata other) {
+    public void processChange(POSTable other) {
         // Nothing to do I believe.
         if (desiredStatus == LHDeployStatus.RUNNING) {
             status = LHDeployStatus.RUNNING;

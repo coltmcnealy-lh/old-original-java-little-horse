@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import little.horse.common.objects.BaseSchema;
 
-public class AliasEntryCollection extends BaseSchema {
+public class IndexEntryCollection extends BaseSchema {
     // We may put more stuff here later.
 
     /**
@@ -16,10 +16,10 @@ public class AliasEntryCollection extends BaseSchema {
      * It is a collection of backreferences to objects in the Guid store. Every object
      * here has the same value `aliasValue` for the alias `aliasName`.
      */
-    public ArrayList<AliasEntry> entries;
+    public ArrayList<IndexEntry> entries;
 
     @JsonIgnore
-    public AliasEntry getLatestEntry() {
+    public IndexEntry getLatestEntry() {
         return (entries.size() > 0) ? entries.get(entries.size() - 1) : null;
     }
 

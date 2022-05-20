@@ -59,7 +59,7 @@ public class DeployerConfig {
     public WFSpec lookupWFSpecOrDie(DepInjContext config) {
         WFSpec wfSpec = null;
         try {
-            wfSpec = LHDatabaseClient.lookupMetaNameOrId(
+            wfSpec = LHDatabaseClient.getByNameOrId(
                 this.getWFSpecId(), config, WFSpec.class
             );
         } catch (LHConnectionError exn) {
@@ -74,7 +74,7 @@ public class DeployerConfig {
     public TaskDef lookupTaskDefOrDie(DepInjContext config) {
         TaskDef taskDef = null;
         try {
-            taskDef = LHDatabaseClient.lookupMetaNameOrId(
+            taskDef = LHDatabaseClient.getByNameOrId(
                 this.getTaskDefId(), config, TaskDef.class
             );
         } catch (LHConnectionError exn) {

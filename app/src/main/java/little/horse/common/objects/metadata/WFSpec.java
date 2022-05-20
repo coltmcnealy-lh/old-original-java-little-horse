@@ -34,7 +34,7 @@ import little.horse.deployers.WorkflowDeployer;
     property = "name",
     scope = WFSpec.class
 )
-public class WFSpec extends CoreMetadata {
+public class WFSpec extends POSTable {
     @JsonIgnore
     public static String typeName = "wfSpec";
 
@@ -278,7 +278,7 @@ public class WFSpec extends CoreMetadata {
     }
 
     @Override
-    public void processChange(CoreMetadata old) throws LHConnectionError {
+    public void processChange(POSTable old) throws LHConnectionError {
         if (old != null && !(old instanceof WFSpec)) {
             throw new RuntimeException(
                 "Called processChange on a non-WFSpec"
@@ -409,7 +409,7 @@ public class WFSpec extends CoreMetadata {
         }
         for (String taskDefName: tqNames) {
             tqs.add(
-                LHDatabaseClient.lookupMeta(taskDefName, config, TaskDef.class)
+                LHDatabaseClient.getById(taskDefName, config, TaskDef.class)
             );
         }
         return tqs;

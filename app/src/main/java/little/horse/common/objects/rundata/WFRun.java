@@ -16,20 +16,19 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
-import little.horse.api.metadata.AliasIdentifier;
+import little.horse.api.metadata.IndexKeyRecord;
 import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
-import little.horse.common.events.WFEventId;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.events.WFRunRequest;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.CoreMetadata;
 import little.horse.common.objects.metadata.Edge;
 import little.horse.common.objects.metadata.ExternalEventDef;
+import little.horse.common.objects.metadata.GETable;
 import little.horse.common.objects.metadata.ThreadSpec;
 import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFSpec;
@@ -42,15 +41,7 @@ import little.horse.common.util.LHUtil;
     property = "objectId",
     scope = WFRun.class
 )
-public class WFRun extends CoreMetadata {
-    // These fields are in the actual JSON for the WFRunSchema object
-    // public String objectId;
-
-    // @Override
-    // public String getObjectId() {
-    //     return id;
-    // }
-
+public class WFRun extends GETable {
     public String wfSpecDigest;
     public String wfSpecName;
 
@@ -63,8 +54,6 @@ public class WFRun extends CoreMetadata {
 
     public LHFailureReason errorCode;
     public String errorMessage;
-
-    public ArrayList<WFEventId> history;  // Event Sourcing! Yay!
 
     public HashMap<String, ArrayList<ExternalEventCorrel>> correlatedEvents;
     public Stack<String> pendingInterrupts;
@@ -83,7 +72,7 @@ public class WFRun extends CoreMetadata {
     public WFSpec getWFSpec() throws LHConnectionError {
         if (wfSpec == null) {
             String id = (wfSpecDigest == null) ? wfSpecName : wfSpecDigest;
-            setWFSpec(LHDatabaseClient.lookupMetaNameOrId(id, config, WFSpec.class));
+            setWFSpec(LHDatabaseClient.getByNameOrId(id, config, WFSpec.class));
         }
         return wfSpec;
     }
@@ -314,17 +303,6 @@ public class WFRun extends CoreMetadata {
         return threadRuns.get(0);
     }
 
-    // Override the next two methods for the sake of compatibility with CoreMetadata,
-    // even though this isn't truly CoreMetadata.
-    @Override
-    public void validate(DepInjContext config) {}
-
-    @Override
-    public void processChange(CoreMetadata old) {}
-
-    @JsonIgnore
-    public static boolean onlyUseDefaultAPIforGET = false;
-
     public static WFRunApiStuff apiStuff;
 
     public static void overridePostAPIEndpoints(Javalin app, DepInjContext config) {
@@ -340,19 +318,19 @@ public class WFRun extends CoreMetadata {
     }
 
     @Override
-    public Set<AliasIdentifier> getAliases() {
-        HashSet<AliasIdentifier> out = new HashSet<>();
+    public Set<IndexKeyRecord> getAliases() {
+        HashSet<IndexKeyRecord> out = new HashSet<>();
 
         for (ThreadRun tr: threadRuns) {
             for (String varName: tr.variables.keySet()) {
-                AliasIdentifier i = new AliasIdentifier();
+                IndexKeyRecord i = new IndexKeyRecord();
                 Object varResult = tr.variables.get(varName);
                 if (! (varResult instanceof String)) {
                     continue;
                 }
                 String val = String.class.cast(varResult);
-                i.aliasName = varName;
-                i.aliasValue = val;
+                i.key = varName;
+                i.value = val;
                 out.add(i);
             }
         }
@@ -399,7 +377,7 @@ class WFRunApiStuff {
         event.timestamp = LHUtil.now();
 
         try {
-            WFSpec spec = LHDatabaseClient.lookupMetaNameOrId(
+            WFSpec spec = LHDatabaseClient.getByNameOrId(
                 request.wfSpecId,
                 config,
                 WFSpec.class
@@ -436,7 +414,9 @@ class WFRunApiStuff {
 
         try {
 
-            WFRun wfRun = LHDatabaseClient.lookupMetaNameOrId(wfRunGuid, config, WFRun.class);
+            WFRun wfRun = LHDatabaseClient.getByNameOrId(
+                wfRunGuid, config, WFRun.class
+            );
             if (wfRun == null) {
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
                 response.message = "Could not find provided wfRun with provided id.";
@@ -476,7 +456,7 @@ class WFRunApiStuff {
 
         try {
 
-            WFRun wfRun = LHDatabaseClient.lookupMetaNameOrId(wfRunGuid, config, WFRun.class);
+            WFRun wfRun = LHDatabaseClient.getByNameOrId(wfRunGuid, config, WFRun.class);
             if (wfRun == null) {
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
                 response.message = "Could not find provided wfRun with provided id.";
@@ -524,7 +504,7 @@ class WFRunApiStuff {
         LHRpcResponse<WFRun> response = new LHRpcResponse<>();
 
         try {
-            wfRun = LHDatabaseClient.lookupMetaNameOrId(wfRunId, config, WFRun.class);
+            wfRun = LHDatabaseClient.getByNameOrId(wfRunId, config, WFRun.class);
             if (wfRun == null) {
                 response.status = ResponseStatus.OBJECT_NOT_FOUND;
                 response.message = "Couldn't find wfRun with id " + wfRunId;
@@ -532,7 +512,7 @@ class WFRunApiStuff {
                 return;
             }
 
-            evd = LHDatabaseClient.lookupMetaNameOrId(
+            evd = LHDatabaseClient.getByNameOrId(
                 externalEventDefID, config, ExternalEventDef.class
             );
 

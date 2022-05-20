@@ -1,5 +1,5 @@
 /**
- * This, along with CoreMetadataAPI.java, is **almost** an implementation of a
+ * This, along with GETApi.java, is **almost** an implementation of a
  * full-blown database with indexes (the alias thing). It's not quite as robust as SQL
  * but it hopefully gets the job done.
  */
@@ -24,20 +24,20 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import little.horse.api.OffsetInfo;
-import little.horse.api.metadata.AliasEntryCollection;
-import little.horse.api.metadata.AliasIdentifier;
-import little.horse.api.metadata.CoreMetadataEntry;
+import little.horse.api.metadata.IndexEntryCollection;
+import little.horse.api.metadata.IndexKeyRecord;
+import little.horse.api.metadata.ResourceDbEntry;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.GETable;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHRpcCLient;
 import little.horse.common.util.LHRpcRawResponse;
 import little.horse.common.util.LHUtil;
 
-public class APIStreamsContext<T extends CoreMetadata> {
+public class APIStreamsContext<T extends GETable> {
     private KafkaStreams streams;
     private HostInfo thisHost;
     private Class<T> cls;
@@ -66,9 +66,9 @@ public class APIStreamsContext<T extends CoreMetadata> {
         );
 
         try {
-            CoreMetadataEntry entry = objBytes == null ? null : BaseSchema.fromBytes(
+            ResourceDbEntry entry = objBytes == null ? null : BaseSchema.fromBytes(
                 objBytes.get(),
-                CoreMetadataEntry.class,
+                ResourceDbEntry.class,
                 config
             );
             return entry == null ? null : BaseSchema.fromString(
@@ -144,21 +144,21 @@ public class APIStreamsContext<T extends CoreMetadata> {
         return Long.valueOf(String.valueOf(objBytes.get()));
     }
 
-    public AliasEntryCollection getTFromAlias(
+    public IndexEntryCollection getTFromAlias(
         String aliasKey, String aliasValue, boolean forceLocal
     ) throws LHConnectionError {
         String apiPath = T.getAliasSetPath(aliasKey, aliasValue, cls);
-        AliasIdentifier entryID = new AliasIdentifier(aliasKey, aliasValue);
+        IndexKeyRecord entryID = new IndexKeyRecord(aliasKey, aliasValue);
 
         Bytes aliasEntryCollectionBytes = queryStoreBytes(
-            T.getAliasStoreName(cls), entryID.getStoreKey(), forceLocal, apiPath
+            T.getIndexStoreName(cls), entryID.getStoreKey(), forceLocal, apiPath
         );
 
         try {
             if (aliasEntryCollectionBytes == null) return null;
 
             return BaseSchema.fromBytes(
-                aliasEntryCollectionBytes.get(), AliasEntryCollection.class, config
+                aliasEntryCollectionBytes.get(), IndexEntryCollection.class, config
             );
         } catch(LHSerdeError exn) {
             throw new RuntimeException("Somehow we got invalid crap in rocksdb");

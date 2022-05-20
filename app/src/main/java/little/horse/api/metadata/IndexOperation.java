@@ -1,6 +1,6 @@
 package little.horse.api.metadata;
 
-public enum AliasOperation {
+public enum IndexOperation {
     CREATE,
     HEARTBEAT,
     DELETE;

@@ -44,7 +44,7 @@ public class TaskWorker {
         DepInjContext config, String taskQueueName, JavaTask executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
-        this.taskDef = LHDatabaseClient.lookupMetaNameOrId(
+        this.taskDef = LHDatabaseClient.getByNameOrId(
             taskQueueName, config, TaskDef.class
         );
         this.executor = executor;

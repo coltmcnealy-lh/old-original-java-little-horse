@@ -2,7 +2,7 @@ from argparse import _SubParsersAction, ArgumentParser, Namespace
 import json
 from typing import Any, Generic, Mapping, TypeVar
 
-from lh_lib.client import AliasEntryCollectionSchema, LHClient
+from lh_lib.client import IndexEntryCollectionSchema, LHClient
 from lh_lib.schema import RESOURCE_TYPES
 from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
 from lh_lib.schema.wf_run_schema import ThreadRunSchema, WFRunSchema
@@ -46,13 +46,13 @@ class SEARCHHandler:
 
         rt_schema = RESOURCE_TYPES[rt_name]
 
-        r: LHRPCResponseSchema[AliasEntryCollectionSchema] = client.search_for_alias(
+        r: LHRPCResponseSchema[IndexEntryCollectionSchema] = client.search_for_alias(
             rt_schema,
             ns.label_key,
             ns.label_value,
         )
 
         if r.result is None:
-            r.result = AliasEntryCollectionSchema(entries=[])
+            r.result = IndexEntryCollectionSchema(entries=[])
 
         print(json.dumps([obj.object_id for obj in r.result.entries]))

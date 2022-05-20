@@ -10,7 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.POSTable;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.LHDatabaseClient;
@@ -68,7 +68,7 @@ public class KDConfig {
     public WFSpec lookupWFSpecOrDie(DepInjContext config) {
         WFSpec wfSpec = null;
         try {
-            wfSpec = LHDatabaseClient.lookupMetaNameOrId(
+            wfSpec = LHDatabaseClient.getByNameOrId(
                 this.getWFSpecId(), config, WFSpec.class
             );
         } catch (LHConnectionError exn) {
@@ -83,7 +83,7 @@ public class KDConfig {
     public TaskDef lookupTaskDefOrDie(DepInjContext config) {
         TaskDef taskDef = null;
         try {
-            taskDef = LHDatabaseClient.lookupMetaNameOrId(
+            taskDef = LHDatabaseClient.getByNameOrId(
                 this.getTaskDefId(), config, TaskDef.class
             );
         } catch (LHConnectionError exn) {
@@ -95,7 +95,7 @@ public class KDConfig {
         return taskDef;
     }
 
-    public String getK8sName(CoreMetadata obj) {
+    public String getK8sName(POSTable obj) {
         return LHUtil.toValidK8sName(k8sNamePrefix + "-" + obj.name);
     }
 

@@ -128,7 +128,7 @@ public class Node extends BaseSchema {
         if (externalEventDefId != null || externalEventDefName != null) {
             String eedGuid = (externalEventDefId == null) ?
                 externalEventDefName : externalEventDefId;
-            externalEventDef = LHDatabaseClient.lookupMetaNameOrId(
+            externalEventDef = LHDatabaseClient.getByNameOrId(
                 eedGuid, config, ExternalEventDef.class
             );
         }
@@ -185,7 +185,6 @@ public class Node extends BaseSchema {
             }
         }
 
-        // We may have some leaf-level CoreMetadata objects here...
         if (nodeType == NodeType.TASK) {
             validateTaskNode(config);
         } else if (nodeType == NodeType.EXTERNAL_EVENT) {
@@ -222,7 +221,7 @@ public class Node extends BaseSchema {
             ));
         }
 
-        taskDef = LHDatabaseClient.lookupMetaNameOrId(
+        taskDef = LHDatabaseClient.getByNameOrId(
             taskDefKey, config, TaskDef.class
         );
 
@@ -248,7 +247,7 @@ public class Node extends BaseSchema {
                 name, threadSpec.name
             ));
         }
-        externalEventDef = LHDatabaseClient.lookupMetaNameOrId(
+        externalEventDef = LHDatabaseClient.getByNameOrId(
             eedKey, config, ExternalEventDef.class
         );
 

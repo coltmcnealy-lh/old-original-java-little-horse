@@ -67,7 +67,6 @@ public class ThreadSpec extends BaseSchema {
         }
 
         entrypointNodeName = calculateEntrypointNode();
-        // There are no leaf CoreMetadata here, so we go on.
     }
 
     private void validateEdge(Edge edge) throws LHValidationError {

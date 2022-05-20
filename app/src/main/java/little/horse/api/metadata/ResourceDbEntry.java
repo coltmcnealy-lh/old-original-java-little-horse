@@ -4,20 +4,20 @@ import java.util.Set;
 
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.GETable;
 
-public class CoreMetadataEntry extends BaseSchema {
-    public Set<AliasIdentifier> aliasIdentifiers;
+public class ResourceDbEntry extends BaseSchema {
+    public Set<IndexKeyRecord> aliasIdentifiers;
     public long latestSourceOffset;
     public String content;
 
-    public CoreMetadataEntry(CoreMetadata meta, long offset) {
+    public ResourceDbEntry(GETable meta, long offset) {
         this.content = meta.toString();
         this.aliasIdentifiers = meta.getAliases();
         this.latestSourceOffset = offset;
     }
     
-    public CoreMetadataEntry(DepInjContext config) {}
+    public ResourceDbEntry(DepInjContext config) {}
 
-    public CoreMetadataEntry() {}
+    public ResourceDbEntry() {}
 }

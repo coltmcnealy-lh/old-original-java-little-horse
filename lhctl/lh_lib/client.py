@@ -18,14 +18,14 @@ from lh_lib.schema import *
 T = TypeVar("T")
 
 
-class AliasEntrySchema(LHBaseModel):
+class IndexEntrySchema(LHBaseModel):
     object_id: str
     first_offset: Optional[int] = None
     most_recent_offset: Optional[int] = None
 
 
-class AliasEntryCollectionSchema(LHBaseModel):
-    entries: List[AliasEntrySchema]
+class IndexEntryCollectionSchema(LHBaseModel):
+    entries: List[IndexEntrySchema]
 
 
 class LHClient:
@@ -71,7 +71,7 @@ class LHClient:
         if first_try.result is not None:
             return first_try
 
-        alias_response: LHRPCResponseSchema[AliasEntryCollectionSchema] =\
+        alias_response: LHRPCResponseSchema[IndexEntryCollectionSchema] =\
             self.search_for_alias(
             resource_type,
             "name",
@@ -107,7 +107,7 @@ class LHClient:
         resource_type: type,
         key: str,
         val: str,
-    ) -> LHRPCResponseSchema[AliasEntryCollectionSchema]:
+    ) -> LHRPCResponseSchema[IndexEntryCollectionSchema]:
         resource_type_name = RESOURCE_TYPES_INV[resource_type]
 
         url = f"{self.url}/{resource_type_name}Alias/{key}/{val}"
@@ -116,7 +116,7 @@ class LHClient:
 
         intermediate = LHRPCResponseSchema(**response.json())
         if intermediate.result is not None:
-            intermediate.result = AliasEntryCollectionSchema(
+            intermediate.result = IndexEntryCollectionSchema(
                 **intermediate.result
             )
         return intermediate

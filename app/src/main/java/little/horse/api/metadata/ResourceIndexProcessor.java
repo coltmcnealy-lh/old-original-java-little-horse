@@ -9,27 +9,27 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.GETable;
 import little.horse.common.util.Constants;
 
-public class BaseAliasProcessor<T extends CoreMetadata>
-implements Processor<String, AliasEvent, Void, Void> {
+public class ResourceIndexProcessor<T extends GETable>
+implements Processor<String, IndexEvent, Void, Void> {
     private KeyValueStore<String, Bytes> kvStore;
     private DepInjContext config;
     private Class<T> cls;
 
-    public BaseAliasProcessor(Class<T> cls, DepInjContext config) {
+    public ResourceIndexProcessor(Class<T> cls, DepInjContext config) {
         this.cls = cls;
         this.config = config;
     }
 
     @Override
     public void init(final ProcessorContext<Void, Void> context) {
-        this.kvStore = context.getStateStore(T.getAliasStoreName(cls));
+        this.kvStore = context.getStateStore(T.getIndexStoreName(cls));
     }
 
     @Override
-    public void process(final Record<String, AliasEvent> record) {
+    public void process(final Record<String, IndexEvent> record) {
         try {
             processHelper(record);
         } catch (LHSerdeError exn) {
@@ -38,14 +38,14 @@ implements Processor<String, AliasEvent, Void, Void> {
         }
     }
 
-    private void processHelper(final Record<String, AliasEvent> record) throws LHSerdeError {
-        AliasEvent ae = record.value();
+    private void processHelper(final Record<String, IndexEvent> record) throws LHSerdeError {
+        IndexEvent ae = record.value();
 
         if (ae == null) {
             throw new RuntimeException("WTF?");
         }
 
-        AliasIdentifier ai = ae.identifier;
+        IndexKeyRecord ai = ae.identifier;
 
         String storeKey = ai.getStoreKey();
         if (!storeKey.equals(record.key())) {
@@ -53,11 +53,11 @@ implements Processor<String, AliasEvent, Void, Void> {
         }
 
         Bytes aliasBytes = kvStore.get(storeKey);
-        AliasEntryCollection entries = aliasBytes != null ? BaseSchema.fromBytes(
-            aliasBytes.get(), AliasEntryCollection.class, config
+        IndexEntryCollection entries = aliasBytes != null ? BaseSchema.fromBytes(
+            aliasBytes.get(), IndexEntryCollection.class, config
         ) : null;
 
-        if (ae.operation == AliasOperation.DELETE) {
+        if (ae.operation == IndexOperation.DELETE) {
             if (entries == null) {
                 throw new RuntimeException(
                     "Shouldn't have call to delete for nonexistent entry."
@@ -79,9 +79,9 @@ implements Processor<String, AliasEvent, Void, Void> {
                 kvStore.put(storeKey, new Bytes(entries.toBytes()));
             }
 
-        } else if (ae.operation == AliasOperation.CREATE) {
+        } else if (ae.operation == IndexOperation.CREATE) {
             if (entries == null) {
-                entries = new AliasEntryCollection();
+                entries = new IndexEntryCollection();
             }
 
             Integer idx = entries.getIndexForGuid(ae.objectId);
@@ -91,7 +91,7 @@ implements Processor<String, AliasEvent, Void, Void> {
                 );
             }
 
-            AliasEntry entry = new AliasEntry();
+            IndexEntry entry = new IndexEntry();
             entry.firstOffset = ae.sourceOffset;
             entry.mostRecentOffset = ae.sourceOffset;
             entry.objectId = ae.objectId;
@@ -99,7 +99,7 @@ implements Processor<String, AliasEvent, Void, Void> {
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));
 
-        } else if (ae.operation == AliasOperation.HEARTBEAT) {
+        } else if (ae.operation == IndexOperation.HEARTBEAT) {
             if (entries == null) {
                 throw new RuntimeException(
                     "Shouldn't have call to heartbeat for nonexistent entry."
@@ -114,7 +114,7 @@ implements Processor<String, AliasEvent, Void, Void> {
                 );
             }
 
-            AliasEntry entry = entries.entries.get(idx);
+            IndexEntry entry = entries.entries.get(idx);
             entry.mostRecentOffset = ae.sourceOffset;
 
             kvStore.put(storeKey, new Bytes(entries.toBytes()));

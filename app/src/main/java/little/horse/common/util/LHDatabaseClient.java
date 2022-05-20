@@ -1,10 +1,10 @@
 package little.horse.common.util;
 
 import little.horse.api.ResponseStatus;
-import little.horse.api.metadata.AliasEntryCollection;
+import little.horse.api.metadata.IndexEntryCollection;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
-import little.horse.common.objects.metadata.CoreMetadata;
+import little.horse.common.objects.metadata.GETable;
 
 
 /**
@@ -19,7 +19,7 @@ import little.horse.common.objects.metadata.CoreMetadata;
  */
 public class LHDatabaseClient {
 
-    public static<T extends CoreMetadata> T lookupMetaNameOrId(
+    public static<T extends GETable> T getByNameOrId(
         String idOrName, DepInjContext config, Class<T> cls
     ) throws LHConnectionError {
 
@@ -31,8 +31,8 @@ public class LHDatabaseClient {
             // Try to look up by name.
             url = config.getAPIUrlFor(T.getAliasPath(cls)) + "/name/" + idOrName;
 
-            LHRpcResponse<AliasEntryCollection> entries = client.getResponse(
-                url, AliasEntryCollection.class
+            LHRpcResponse<IndexEntryCollection> entries = client.getResponse(
+                url, IndexEntryCollection.class
             );
             if (entries.status == ResponseStatus.OBJECT_NOT_FOUND) return null;
             
@@ -44,7 +44,7 @@ public class LHDatabaseClient {
         return response.result;
     }
 
-    public static<T extends CoreMetadata> T lookupMeta(
+    public static<T extends GETable> T getById(
         String id, DepInjContext config, Class<T> cls
     ) throws LHConnectionError {
 

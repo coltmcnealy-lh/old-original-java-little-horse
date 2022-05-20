@@ -141,7 +141,5 @@ class WFRunSchema(LHBaseModel):
     error_code: Optional[LHFailureReasonEnum] = None
     error_message: Optional[str] = None
 
-    history: Optional[List[WFEventIdSchema]] = None
-
     correlated_events: Optional[Mapping[str, List[ExternalEventCorrelSchema]]] = None
     pending_interrupts: Optional[List[str]] = None

@@ -14,7 +14,7 @@ import little.horse.common.util.LHUtil;
 import little.horse.deployers.TaskDeployer;
 
 
-public class TaskDef extends CoreMetadata {
+public class TaskDef extends POSTable {
     public HashMap<String, WFRunVariableDef> requiredVars;
     private Integer partitions = null;
 
@@ -84,7 +84,7 @@ public class TaskDef extends CoreMetadata {
         return LHUtil.loadClass(getTaskDeployerClassName());
     }
 
-    public void processChange(CoreMetadata old) throws LHConnectionError {
+    public void processChange(POSTable old) throws LHConnectionError {
         if (old != null && !(old instanceof TaskDef)) {
             throw new RuntimeException(
                 "Whatever code made this call is nincompoop."
@@ -134,7 +134,7 @@ public class TaskDef extends CoreMetadata {
         this.config = config;
 
         // ALl we gotta do is make sure the TaskDef exists.
-        TaskDef old = LHDatabaseClient.lookupMeta(getObjectId(), config, TaskDef.class);
+        TaskDef old = LHDatabaseClient.getById(getObjectId(), config, TaskDef.class);
 
         if (old != null) {
             if (partitions != null && old.partitions != partitions) {
