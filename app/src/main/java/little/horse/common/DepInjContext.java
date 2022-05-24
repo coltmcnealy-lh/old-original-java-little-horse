@@ -320,6 +320,7 @@ public class DepInjContext {
     }
 
     public String getAdvertisedUrl() {
+
         return String.format(
             "%s://%s:%d",
             getAdvertisedProto(),

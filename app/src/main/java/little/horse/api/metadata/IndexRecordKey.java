@@ -1,9 +1,12 @@
 package little.horse.api.metadata;
 
+import little.horse.common.objects.BaseSchema;
 
-public class IndexRecordKey {
+public class IndexRecordKey extends BaseSchema {
     public String label;
     public String objectId;
+
+    public IndexRecordKey() {}
 
     public IndexRecordKey(String label, String objId) {
         this.label = label;

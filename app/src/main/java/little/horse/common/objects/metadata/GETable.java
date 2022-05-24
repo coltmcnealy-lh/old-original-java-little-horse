@@ -65,11 +65,11 @@ public abstract class GETable extends BaseSchema {
 
     public static<T extends GETable> String getSearchPath(
         String key, String value, Class<T> cls) {
-        return "/search" + cls.getSimpleName() + "/" + key + "/" + value;
+        return "/search/" + cls.getSimpleName() + "/" + key + "/" + value;
     }
 
     public static<T extends GETable> String getListPath(Class<T> cls) {
-        return "/search/" + cls.getSimpleName();
+        return "/list/" + cls.getSimpleName();
     }
 
     public static<T extends GETable> String getInternalWaitAPIPath(

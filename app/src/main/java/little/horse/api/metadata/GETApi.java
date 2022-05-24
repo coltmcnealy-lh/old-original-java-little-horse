@@ -155,7 +155,6 @@ public class GETApi<T extends GETable> {
 
 
         ctx.json(response);
-        throw new RuntimeException("implement me!");
     }
 
     public void internalWaitForProcessing(Context ctx) {

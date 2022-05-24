@@ -110,7 +110,7 @@ class LHClient:
     ) -> LHRPCResponseSchema[IndexEntryCollectionSchema]:
         resource_type_name = RESOURCE_TYPES_INV[resource_type]
 
-        url = f"{self.url}/{resource_type_name}Alias/{key}/{val}"
+        url = f"{self.url}/search/{resource_type_name}/{key}/{val}"
         response = requests.get(url)
         response.raise_for_status()
 

@@ -80,18 +80,20 @@ public class APIStreamsContext<T extends GETable> {
         }
     }
 
+    // MAJOR TODO: THIS IS REALLY NOT GOOD
     private static String getFirstKey() {
         StringBuilder out = new StringBuilder();
-        for (int i = 0; i < 100; i++) {
-            out.append(0x00);
+        for (int i = 0; i < 5; i++) {
+            out.append((char) 0x00);
         }
         return out.toString();
     }
 
+    // MAJOR TODO: THIS IS REALLY NOT GOOD
     private static String getLastKey() {
         StringBuilder out = new StringBuilder();
-        for (int i = 0; i < 100; i++) {
-            out.append(0xff);
+        for (int i = 0; i < 5; i++) {
+            out.append((char) 0x7E);
         }
         return out.toString();
     }
@@ -114,7 +116,7 @@ public class APIStreamsContext<T extends GETable> {
     }
 
     private RangeQueryResponse iterBetweenKeysLocal(
-        String start, String end, int limit, Map<Integer, String> bookmarkMap
+        String start, String end, int limit, Map<String, String> bookmarkMap
     ) {
         if (end == null) end = getLastKey();
 
@@ -131,7 +133,9 @@ public class APIStreamsContext<T extends GETable> {
                     kv.value.get(), IndexEntry.class, config
                 );
 
-                String smallestKey = bookmarkMap.get(lastEntry.partition);
+                String smallestKey = bookmarkMap.get(
+                    String.valueOf(lastEntry.partition)
+                );
                 if (smallestKey != null &&
                     smallestKey.compareTo(lastEntry.objectId) <= 0
                 ) {
@@ -142,8 +146,10 @@ public class APIStreamsContext<T extends GETable> {
                     continue;
                 }
 
-                out.objectIds.add(kv.key);
-                out.partitionBookmarks.put(lastEntry.partition, lastEntry.objectId);
+                out.objectIds.add(kv.key.substring(kv.key.lastIndexOf(";") + 1));
+                out.partitionBookmarks.put(
+                    String.valueOf(lastEntry.partition), lastEntry.objectId
+                );
             }
         } catch (LHSerdeError exn) {
             // Nothing to do since this isn't possible;
@@ -159,7 +165,7 @@ public class APIStreamsContext<T extends GETable> {
         String start, String end, int limit, String token, boolean forceLocal
     ) throws LHConnectionError {
 
-        Map<Integer, String> bookmarkMap = RangeQueryResponse.tokenToBookmarkMap(
+        Map<String, String> bookmarkMap = RangeQueryResponse.tokenToBookmarkMap(
             token, config
         );
         if (end == null) {
@@ -185,13 +191,14 @@ public class APIStreamsContext<T extends GETable> {
             String host = meta.host();
             int port = meta.port();
             String url = String.format(
-                "%s:%d%s",
+                "http://%s:%d%s",
                 host,
                 port,
                 T.getInternalIterAPIPath(
                     start, end, token, String.valueOf(limit), cls
                 )
             );
+            LHUtil.log("\n\n\n\n", url, "\n\n\n\n");
 
             LHRpcResponse<RangeQueryResponse> resp = new LHRpcClient(
                 config

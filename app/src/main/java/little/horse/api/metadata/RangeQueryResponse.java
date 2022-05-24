@@ -16,7 +16,7 @@ public class RangeQueryResponse extends BaseSchema {
     public List<String> objectIds;
 
     @JsonIgnore
-    public Map<Integer, String> partitionBookmarks;
+    public Map<String, String> partitionBookmarks;
 
     public String getToken() {
         return RangeQueryResponse.bookmarkMapToString(partitionBookmarks);
@@ -31,7 +31,7 @@ public class RangeQueryResponse extends BaseSchema {
         return lowestKeySeen(partitionBookmarks);
     }
 
-    public static String lowestKeySeen(Map<Integer, String> bookmarkMap) {
+    public static String lowestKeySeen(Map<String, String> bookmarkMap) {
         String lowest = null;
         for (String val: bookmarkMap.values()) {
             if (lowest == null || val.compareTo(lowest) < 0) {
@@ -47,11 +47,11 @@ public class RangeQueryResponse extends BaseSchema {
     }
 
     @SuppressWarnings("unchecked")
-    public static Map<Integer, String> tokenToBookmarkMap(
+    public static Map<String, String> tokenToBookmarkMap(
         String token, DepInjContext config
     ) {
-        if (token == null) {
-            return new HashMap<Integer,String>();
+        if (token == null || token.equals("null")) {
+            return new HashMap<String, String>();
 
         } else {
             return Map.class.cast(LHUtil.stringToObj(
@@ -61,7 +61,7 @@ public class RangeQueryResponse extends BaseSchema {
         }
     }
 
-    public static String bookmarkMapToString(Map<Integer, String> bookmarkMap) {
+    public static String bookmarkMapToString(Map<String, String> bookmarkMap) {
         return Base64.getEncoder().encodeToString(
             LHUtil.objToString(bookmarkMap).getBytes()
         );
@@ -70,10 +70,15 @@ public class RangeQueryResponse extends BaseSchema {
     public RangeQueryResponse add(RangeQueryResponse other) {
         RangeQueryResponse out = new RangeQueryResponse();
 
-        for (Map.Entry<Integer, String> e : partitionBookmarks.entrySet()) {
+        for (Map.Entry<String, String> e : partitionBookmarks.entrySet()) {
             out.partitionBookmarks.put(e.getKey(), e.getValue());
         }
-        for (Map.Entry<Integer, String> e : other.partitionBookmarks.entrySet()) {
+
+        LHUtil.log("\n\n\n", other, "\n\n\n\n");
+
+        for (Map.Entry<String, String> e : other.partitionBookmarks.entrySet()) {
+            LHUtil.log(e.getKey(), e.getValue());
+            LHUtil.log(e.getKey().getClass());
             out.partitionBookmarks.put(e.getKey(), e.getValue());
         }
 

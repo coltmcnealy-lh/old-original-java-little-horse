@@ -40,7 +40,7 @@ public class LHUtil {
     private static ObjectMapper mapper = null;
 
     public static String generateGuid() {
-        return UUID.randomUUID().toString();
+        return UUID.randomUUID().toString().replaceAll("-", "");
     }
 
     public static ObjectMapper getObjectMapper(DepInjContext cfg) {
