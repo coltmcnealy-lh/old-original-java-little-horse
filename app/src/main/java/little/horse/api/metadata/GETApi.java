@@ -1,7 +1,5 @@
 package little.horse.api.metadata;
 
-import java.util.ArrayList;
-
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
@@ -22,25 +20,26 @@ public class GETApi<T extends GETable> {
         this.cls = cls;
         this.streamsContext = context;
 
-        // GET /wfSpec/{id}
-        app.get(T.getAPIPath("/{id}", cls), this::get);
+        // GET /T/{id}
+        app.get(T.getAPIPath("/{id}", cls), this::publicGet);
 
-        // GET /wfSpecAlias/{aliasKey}/{aliasValue}
-        app.get(T.getAliasPath("{aliasKey}", "{aliasValue}", cls), this::getAlias);
+        // GET /search/T/{key}/{value}
+        app.get(T.getSearchPath("{key}", "{value}", cls), this::publicSearch);
 
-        // GET /wfSpecOffset/{id}/{offset}/{partition}
+        // GET /internal/waitFor/T/{id}/{offset}/{partition}
         app.get(
-            T.getWaitForAPIPath("{id}", "{offset}", "{partition}", cls),
-            this::waitForProcessing
+            T.getInternalWaitAPIPath("{id}", "{offset}", "{partition}", cls),
+            this::internalWaitForProcessing
         );
 
-        // GET /WFSpecAll
-        app.get(T.getAllAPIPath(cls), this::getAll);
-
+        // GET /internal/iter/T/{start}/{end}
         app.get(
-            T.getAliasSetPath("{aliasKey}", "{aliasValue}", cls),
-            this::getAliasCollection
+            T.getInternalIterAPIPath("{start}", "{end}", "{token}", cls),
+            this::internalIter
         );
+
+        // GET /internal
+        app.get(T.getListPath(cls), this::publicList);
 
         // This code is kind of ugly, but we want the WFRun to have non-standard
         // POST'ing abilities.
@@ -49,8 +48,7 @@ public class GETApi<T extends GETable> {
         }
     }
 
-    public void get(Context ctx) {
-
+    public void publicGet(Context ctx) {
         boolean forceLocal = ctx.queryParamAsClass(
             "forceLocal", Boolean.class
         ).getOrDefault(false);
@@ -58,9 +56,8 @@ public class GETApi<T extends GETable> {
         String id = ctx.pathParam("id");
 
         LHRpcResponse<T> response = new LHRpcResponse<>();
-
         try {
-            response.result = getFromId(id, forceLocal);
+            response.result = streamsContext.getTFromId(id, forceLocal);
             if (response.result == null) {
                 response.message = "Could not find " + cls.getTypeName() +
                     " with id " + id;
@@ -82,48 +79,23 @@ public class GETApi<T extends GETable> {
         ctx.json(response);
     }
 
-    // TODO: in the future, we're gonna want to validate whether the provided alias
-    // name (i.e. search key) is valid for this T.
-    public void getAlias(Context ctx) {
-        String aliasKey = ctx.pathParam("aliasKey");
-        String aliasValue = ctx.pathParam("aliasValue");
+    public void publicSearch(Context ctx) {
+        String key = ctx.pathParam("key");
+        String value = ctx.pathParam("value");
 
-        boolean forceLocal = ctx.queryParamAsClass(
-            "forceLocal", Boolean.class
-        ).getOrDefault(false);        
+        String pastToken = ctx.queryParamAsClass(
+            "token", String.class
+        ).getOrDefault(null);
 
-        LHRpcResponse<IndexEntryCollection> response = new LHRpcResponse<>();
+        int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(30);
+
+        LHRpcResponse<RangeQueryResponse> response = new LHRpcResponse<>();
 
         try {
-            IndexEntryCollection collection = streamsContext.getTFromAlias(
-                aliasKey, aliasValue, forceLocal
+            RangeQueryResponse result = streamsContext.search(
+                key, value, pastToken, limit
             );
-
-            if (collection == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "No objects found matching search criteria.";
-            } else {
-                if (collection.entries.size() == 0) {
-                    throw new RuntimeException(
-                        "This shouldn't be possible, see BaseAliasProcessor.java"
-                    );
-                }
-
-                // AliasEntry entry = collection.entries.get(
-                //     collection.entries.size() - 1
-                // );
-
-                // response.result = streamsContext.getTFromId(
-                //     entry.objectId, forceLocal
-                // );
-                response.result = collection;
-                if (response.result != null) {
-                    response.status = ResponseStatus.OK;
-                } else {
-                    response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                    response.message = "obj deleted and idx will follow soon.";
-                }
-            }
+            response.result = result;
 
         } catch (LHConnectionError exn) {
             exn.printStackTrace();
@@ -131,44 +103,24 @@ public class GETApi<T extends GETable> {
                 "Had an internal retriable connection error: " + exn.getMessage();
             response.status = ResponseStatus.INTERNAL_ERROR;
             ctx.status(500);
-
         }
 
         ctx.json(response);
     }
 
-    public void getAliasCollection(Context ctx) {
-        String aliasKey = ctx.pathParam("aliasKey");
-        String aliasValue = ctx.pathParam("aliasValue");
+    public void publicList(Context ctx) {
+        String pastToken = ctx.queryParamAsClass(
+            "token", String.class
+        ).getOrDefault(null);
 
-        boolean forceLocal = ctx.queryParamAsClass(
-            "forceLocal", Boolean.class
-        ).getOrDefault(false);        
-
-        LHRpcResponse<IndexEntryCollection> response = new LHRpcResponse<>();
+        int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(30);
+        LHRpcResponse<RangeQueryResponse> response = new LHRpcResponse<>();
 
         try {
-            IndexEntryCollection collection = streamsContext.getTFromAlias(
-                aliasKey, aliasValue, forceLocal
+            RangeQueryResponse result = streamsContext.list(
+                pastToken, limit
             );
-
-            if (collection == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "No objects found matching search criteria.";
-                response.result = new IndexEntryCollection();
-                response.result.entries = new ArrayList<>();
-
-            } else {
-                if (collection.entries.size() == 0) {
-                    throw new RuntimeException(
-                        "This shouldn't be possible, see BaseAliasProcessor.java"
-                    );
-                }
-
-                response.result = collection;
-                response.status = ResponseStatus.OK;
-                response.objectId = null;
-            }
+            response.result = result;
 
         } catch (LHConnectionError exn) {
             exn.printStackTrace();
@@ -176,13 +128,37 @@ public class GETApi<T extends GETable> {
                 "Had an internal retriable connection error: " + exn.getMessage();
             response.status = ResponseStatus.INTERNAL_ERROR;
             ctx.status(500);
-
         }
 
         ctx.json(response);
+
     }
 
-    public void waitForProcessing(Context ctx) {
+    public void internalIter(Context ctx) {
+        LHRpcResponse<RangeQueryResponse> response = new LHRpcResponse<>();
+        String start = ctx.pathParam("start");
+        String end = ctx.pathParam("end");
+        String token = ctx.pathParam("token");
+        int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(30);
+
+        try {
+            response.result = streamsContext.iterBetweenKeys(
+                start, end, limit, token, true
+            );
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            response.message =
+                "Had an internal retriable connection error: " + exn.getMessage();
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            ctx.status(500);
+        }
+
+
+        ctx.json(response);
+        throw new RuntimeException("implement me!");
+    }
+
+    public void internalWaitForProcessing(Context ctx) {
         // TODO: Need to add timeout capabilities to this.
 
         String id = ctx.pathParam("id");
@@ -196,8 +172,8 @@ public class GETApi<T extends GETable> {
 
         try {
             streamsContext.waitForProcessing(
-                id, offset, partition, forceLocal, T.getWaitForAPIPath(
-                    id, offset, partition, cls
+                id, offset, partition, forceLocal, T.getInternalWaitAPIPath(
+                    id, String.valueOf(offset), String.valueOf(partition), cls
                 )
             );
             response.status = ResponseStatus.OK;
@@ -212,32 +188,5 @@ public class GETApi<T extends GETable> {
         }
 
         ctx.json(response);
-    }
-
-    public void getAll(Context ctx) {
-        boolean forceLocal = ctx.queryParamAsClass(
-            "forceLocal", Boolean.class
-        ).getOrDefault(false);
-
-        try {
-            ArrayList<String> out = streamsContext.getAllIds(forceLocal);
-            ctx.json(out);
-        } catch(LHConnectionError exn) {
-            ctx.status(500);
-        }
-    }
-
-    /**
-     * Get a T from RocksDB (the ID store) with the provided ID. If `forceLocal` is
-     * set to true, then the underlying query answer is NOT allowed to query other
-     * stores--i.e. it must be found on THIS INSTANCE's RocksDB.
-     * @param id the id to query for.
-     * @param forceLocal whether to restrict the query to the RocksDB instance on
-     * this host.
-     * @return the T if it is found; otherwise null.
-     * @throws LHConnectionError if we have an orzdash.
-     */
-    private T getFromId(String id, boolean forceLocal) throws LHConnectionError {
-        return streamsContext.getTFromId(id, forceLocal);
     }
 }

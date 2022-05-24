@@ -1,7 +1,7 @@
 package little.horse.common.util;
 
 import little.horse.api.ResponseStatus;
-import little.horse.api.metadata.IndexEntryCollection;
+import little.horse.api.metadata.RangeQueryResponse;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.GETable;
@@ -23,21 +23,21 @@ public class LHDatabaseClient {
         String idOrName, DepInjContext config, Class<T> cls
     ) throws LHConnectionError {
 
-        LHRpcCLient client = new LHRpcCLient(config);
+        LHRpcClient client = new LHRpcClient(config);
         String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + idOrName;
         LHRpcResponse<T> response = client.getResponse(url, cls);
 
         if (response.result == null) {
             // Try to look up by name.
-            url = config.getAPIUrlFor(T.getAliasPath(cls)) + "/name/" + idOrName;
+            url = config.getAPIUrlFor(T.getSearchPath("name", idOrName, cls));
 
-            LHRpcResponse<IndexEntryCollection> entries = client.getResponse(
-                url, IndexEntryCollection.class
+            LHRpcResponse<RangeQueryResponse> entries = client.getResponse(
+                url, RangeQueryResponse.class
             );
             if (entries.status == ResponseStatus.OBJECT_NOT_FOUND) return null;
             
             url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/";
-            url += entries.result.getLatestEntry().objectId;
+            url += entries.result.objectIds.get(entries.result.objectIds.size() - 1);
 
             response = client.getResponse(url, cls);
         }
@@ -48,7 +48,7 @@ public class LHDatabaseClient {
         String id, DepInjContext config, Class<T> cls
     ) throws LHConnectionError {
 
-        LHRpcCLient client = new LHRpcCLient(config);
+        LHRpcClient client = new LHRpcClient(config);
         String url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/" + id;
         LHRpcResponse<T> response = client.getResponse(url, cls);
 

@@ -1,0 +1,86 @@
+package little.horse.api.metadata;
+
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import little.horse.common.DepInjContext;
+import little.horse.common.objects.BaseSchema;
+import little.horse.common.util.LHUtil;
+
+public class RangeQueryResponse extends BaseSchema {
+    public List<String> objectIds;
+
+    @JsonIgnore
+    public Map<Integer, String> partitionBookmarks;
+
+    public String getToken() {
+        return RangeQueryResponse.bookmarkMapToString(partitionBookmarks);
+    }
+
+    public void setToken(String token) {
+        partitionBookmarks = RangeQueryResponse.tokenToBookmarkMap(token, config);
+    }
+
+    @JsonIgnore
+    public String lowestKeySeen() {
+        return lowestKeySeen(partitionBookmarks);
+    }
+
+    public static String lowestKeySeen(Map<Integer, String> bookmarkMap) {
+        String lowest = null;
+        for (String val: bookmarkMap.values()) {
+            if (lowest == null || val.compareTo(lowest) < 0) {
+                lowest = val;
+            }
+        }
+        return lowest;
+    }
+
+    public RangeQueryResponse() {
+        objectIds = new ArrayList<>();
+        partitionBookmarks = new HashMap<>();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Map<Integer, String> tokenToBookmarkMap(
+        String token, DepInjContext config
+    ) {
+        if (token == null) {
+            return new HashMap<Integer,String>();
+
+        } else {
+            return Map.class.cast(LHUtil.stringToObj(
+                new String(Base64.getDecoder().decode(token)),
+                config
+            ));
+        }
+    }
+
+    public static String bookmarkMapToString(Map<Integer, String> bookmarkMap) {
+        return Base64.getEncoder().encodeToString(
+            LHUtil.objToString(bookmarkMap).getBytes()
+        );
+    }
+
+    public RangeQueryResponse add(RangeQueryResponse other) {
+        RangeQueryResponse out = new RangeQueryResponse();
+
+        for (Map.Entry<Integer, String> e : partitionBookmarks.entrySet()) {
+            out.partitionBookmarks.put(e.getKey(), e.getValue());
+        }
+        for (Map.Entry<Integer, String> e : other.partitionBookmarks.entrySet()) {
+            out.partitionBookmarks.put(e.getKey(), e.getValue());
+        }
+
+        out.objectIds = new ArrayList<>();
+        out.objectIds.addAll(objectIds);
+        out.objectIds.addAll(other.objectIds);
+
+        return out;
+    }
+}

@@ -11,7 +11,7 @@ public class IndexEvent extends BaseSchema {
     /**
      * Used to identify the actual alias.
      */
-    public IndexKeyRecord identifier;
+    public IndexRecordKey indexKey;
 
     /**
      * Offset of the record in the CoreMetadata ID topic that produced this
@@ -20,19 +20,9 @@ public class IndexEvent extends BaseSchema {
     public Long sourceOffset;
 
     /**
-     * Create a new alias, delete one, or just heartbeat.
+     * Create a new entry in the index or delete it.
      */
     public IndexOperation operation;
-
-    /**
-     * The total number of aliases that the CoreMetadata **should** have as of the
-     * message with offset `sourceOffset`. Therefore, it is also the number of
-     * AliasEvents of CREATE or HEARTBEAT that we will see for a given sourceOffset.
-     * 
-     * Once we have seen `totalAliases` events, we know that we're up to date. We
-     * intentionally send the DELETE events first to guarantee this.
-     */
-    public int totalAliases;
 
     public IndexEvent() {} // just there for the Jackson thing.
 
@@ -47,13 +37,12 @@ public class IndexEvent extends BaseSchema {
      * CoreMetadata object from the sourceOffset.
      */
     public IndexEvent(
-        String id, IndexKeyRecord identifier,
-        Long sourceOffset, IndexOperation operation, int totalAliases
+        String id, IndexRecordKey identifier,
+        Long sourceOffset, IndexOperation operation
     ) {
-        this.identifier = identifier;
+        this.indexKey = identifier;
         this.objectId = id;
         this.sourceOffset = sourceOffset;
         this.operation = operation;
-        this.totalAliases = totalAliases;
     }
 }

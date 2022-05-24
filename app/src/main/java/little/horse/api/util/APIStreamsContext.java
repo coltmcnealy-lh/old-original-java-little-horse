@@ -6,9 +6,7 @@
 
 package little.horse.api.util;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.kafka.common.serialization.Serdes;
@@ -24,17 +22,17 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import little.horse.api.OffsetInfo;
-import little.horse.api.metadata.IndexEntryCollection;
-import little.horse.api.metadata.IndexKeyRecord;
+import little.horse.api.metadata.IndexEntry;
+import little.horse.api.metadata.RangeQueryResponse;
 import little.horse.api.metadata.ResourceDbEntry;
 import little.horse.common.DepInjContext;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.GETable;
-import little.horse.common.util.Constants;
-import little.horse.common.util.LHRpcCLient;
+import little.horse.common.util.LHRpcClient;
 import little.horse.common.util.LHRpcRawResponse;
+import little.horse.common.util.LHRpcResponse;
 import little.horse.common.util.LHUtil;
 
 public class APIStreamsContext<T extends GETable> {
@@ -82,87 +80,128 @@ public class APIStreamsContext<T extends GETable> {
         }
     }
 
-    public ArrayList<String> getAllIds(boolean forceLocal) throws LHConnectionError {
-        ReadOnlyKeyValueStore<String, Bytes> store = getStore(T.getIdStoreName(
-            cls
-        ));
+    private static String getFirstKey() {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < 100; i++) {
+            out.append(0x00);
+        }
+        return out.toString();
+    }
 
-        ArrayList<String> out = new ArrayList<>();
+    private static String getLastKey() {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < 100; i++) {
+            out.append(0xff);
+        }
+        return out.toString();
+    }
 
-        if (forceLocal) {
-            KeyValueIterator<String, Bytes> allIter = null;
-            allIter = store.all();
-            try {
-                while (allIter.hasNext()) {
-                    KeyValue<String, Bytes> kv = allIter.next();
-                    if (!kv.key.equals(Constants.LATEST_OFFSET_ROCKSDB_KEY)) {
-                        out.add(kv.key);
-                    }
-                }
-            } finally {
-                if (allIter != null) allIter.close();;
-            }
+    public RangeQueryResponse search(
+        String key, String value, String token, int limit
+    ) throws LHConnectionError {
 
-        } else {
-            for (StreamsMetadata meta: streams.metadataForAllStreamsClients()) {
-                String host = meta.host();
-                int port = meta.port();
-                String url = String.format(
-                    "http://%s:%d%s?%s=true",
-                    host,
-                    port,
-                    T.getAllAPIPath(cls),
-                    Constants.FORCE_LOCAL
+        String start = key + "__" + value;
+        String end = start + getLastKey();
+        return iterBetweenKeys(start, end, limit, token, false);
+    }
+
+    public RangeQueryResponse list(
+        String token, int limit
+    ) throws LHConnectionError {
+        String start = "created__";
+        String end = start + getLastKey();
+        return iterBetweenKeys(start, end, limit, token, false);
+    }
+
+    private RangeQueryResponse iterBetweenKeysLocal(
+        String start, String end, int limit, Map<Integer, String> bookmarkMap
+    ) {
+        if (end == null) end = getLastKey();
+
+        RangeQueryResponse out = new RangeQueryResponse();
+        ReadOnlyKeyValueStore<String, Bytes> store = getStore(
+            T.getIndexStoreName(cls)
+        );
+        KeyValueIterator<String, Bytes> iter = store.range(start, end);
+
+        try {
+            while (iter.hasNext() && out.objectIds.size() < limit) {
+                KeyValue<String, Bytes> kv = iter.next();
+                IndexEntry lastEntry = BaseSchema.fromBytes(
+                    kv.value.get(), IndexEntry.class, config
                 );
-                byte[] rawResponse = new LHRpcCLient(config).getResponse(url);
-                try {
-                    List<?> rawList = LHUtil.getObjectMapper(config).readValue(
-                        rawResponse, List.class
+
+                String smallestKey = bookmarkMap.get(lastEntry.partition);
+                if (smallestKey != null &&
+                    smallestKey.compareTo(lastEntry.objectId) <= 0
+                ) {
+                    LHUtil.log(
+                        "Partition", lastEntry.partition, "has seen ",
+                        smallestKey, "So we skip", lastEntry.objectId
                     );
-                    for (Object thing: rawList) {
-                        String id = String.class.cast(thing);
-                        out.add(id);
-                    }
-                } catch (IOException exn) {
-                    throw new LHConnectionError(exn, "got bad remote response");
+                    continue;
                 }
+
+                out.objectIds.add(kv.key);
+                out.partitionBookmarks.put(lastEntry.partition, lastEntry.objectId);
             }
+        } catch (LHSerdeError exn) {
+            // Nothing to do since this isn't possible;
+            throw new RuntimeException(exn);
+        } finally {
+            iter.close();
         }
 
         return out;
     }
 
-    public Long getOffsetIDStore(String id, boolean forceLocal, String apiPath)
-    throws LHConnectionError {
-        // Need the ID in order to figure out the partition thing.
-        Bytes objBytes = queryStoreBytes(
-            T.getIdStoreName(cls), Constants.LATEST_OFFSET_ROCKSDB_KEY, forceLocal,
-            apiPath, id
-        );
-        if (objBytes == null) return null;
-
-        return Long.valueOf(String.valueOf(objBytes.get()));
-    }
-
-    public IndexEntryCollection getTFromAlias(
-        String aliasKey, String aliasValue, boolean forceLocal
+    public RangeQueryResponse iterBetweenKeys(
+        String start, String end, int limit, String token, boolean forceLocal
     ) throws LHConnectionError {
-        String apiPath = T.getAliasSetPath(aliasKey, aliasValue, cls);
-        IndexKeyRecord entryID = new IndexKeyRecord(aliasKey, aliasValue);
 
-        Bytes aliasEntryCollectionBytes = queryStoreBytes(
-            T.getIndexStoreName(cls), entryID.getStoreKey(), forceLocal, apiPath
+        Map<Integer, String> bookmarkMap = RangeQueryResponse.tokenToBookmarkMap(
+            token, config
         );
-
-        try {
-            if (aliasEntryCollectionBytes == null) return null;
-
-            return BaseSchema.fromBytes(
-                aliasEntryCollectionBytes.get(), IndexEntryCollection.class, config
-            );
-        } catch(LHSerdeError exn) {
-            throw new RuntimeException("Somehow we got invalid crap in rocksdb");
+        if (end == null) {
+            end = getLastKey();
         }
+        if (start == null) {
+            if (RangeQueryResponse.lowestKeySeen(bookmarkMap) != null) {
+                start = RangeQueryResponse.lowestKeySeen(bookmarkMap);
+            } else {
+                start = getFirstKey();
+            }
+        }
+
+        if (forceLocal) {
+            return iterBetweenKeysLocal(
+                start, end, limit,
+                RangeQueryResponse.tokenToBookmarkMap(token, config)
+            );
+        }
+
+        RangeQueryResponse out = new RangeQueryResponse();
+        for (StreamsMetadata meta: streams.metadataForAllStreamsClients()) {
+            String host = meta.host();
+            int port = meta.port();
+            String url = String.format(
+                "%s:%d%s",
+                host,
+                port,
+                T.getInternalIterAPIPath(
+                    start, end, token, String.valueOf(limit), cls
+                )
+            );
+
+            LHRpcResponse<RangeQueryResponse> resp = new LHRpcClient(
+                config
+            ).getResponse(url, RangeQueryResponse.class);
+
+            if (resp.result != null) {
+                out = out.add(resp.result);
+            }
+        }
+        return out;
     }
 
     public void waitForProcessing(
@@ -179,6 +218,7 @@ public class APIStreamsContext<T extends GETable> {
                 T.getIdKafkaTopic(config, cls),
                 partition
             );
+            // TODO: Need to add a timeout to this.
             while (true) {
                 Bytes b = getStore(T.getIdStoreName(cls)).get(
                     offsetInfoKey
@@ -217,7 +257,7 @@ public class APIStreamsContext<T extends GETable> {
             LHUtil.log(
                 "Calling wait externally to", url, "from", thisHost.host()
             );
-            new LHRpcCLient(config).getResponse(url, cls);
+            new LHRpcClient(config).getResponse(url, cls);
         }
     }
 
@@ -253,7 +293,6 @@ public class APIStreamsContext<T extends GETable> {
             return getStore(storeName).get(storeKey);
 
         } else {
-
             try {
                 return queryRemote(
                     storeKey, storeName, metadata.activeHost()
@@ -276,13 +315,13 @@ public class APIStreamsContext<T extends GETable> {
         String remoteHost = hostInfo.host();
         int remotePort = hostInfo.port();
         String url = String.format(
-            "http://%s:%d/storeBytes/%s/%s",
+            "http://%s:%d/internal/storeBytes/%s/%s",
             remoteHost,
             remotePort,
             storeName,
             storeKey
         );
-        LHRpcCLient client = new LHRpcCLient(config);
+        LHRpcClient client = new LHRpcClient(config);
         LHRpcRawResponse response = client.getRawResponse(url);
 
         switch (response.status) {

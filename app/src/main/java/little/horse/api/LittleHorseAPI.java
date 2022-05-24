@@ -76,9 +76,11 @@ public class LittleHorseAPI {
             }
         }
 
-
         // Adds a route used by the backend Kafka Streams app for sharded lookups.
-        this.app.get("/storeBytes/{storeName}/{storeKey}", this::getBytesFromStore);
+        this.app.get(
+            "/internal/storeBytes/{storeName}/{storeKey}",
+            this::getBytesFromStore
+        );
     }
 
     private <T extends POSTable> void addPOSTApi(Class<T> cls) {

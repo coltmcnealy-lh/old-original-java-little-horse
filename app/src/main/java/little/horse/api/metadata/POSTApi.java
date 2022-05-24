@@ -52,8 +52,9 @@ public class POSTApi<T extends POSTable> {
             RecordMetadata record = t.save().get();
             streamsContext.waitForProcessing(
                 t.getObjectId(), record.offset(), record.partition(), false,
-                T.getWaitForAPIPath(
-                    t.getObjectId(), record.offset(), record.partition(), cls
+                T.getInternalWaitAPIPath(
+                    t.getObjectId(), String.valueOf(record.offset()),
+                    String.valueOf(record.partition()), cls
                 )
             );
 
@@ -101,8 +102,9 @@ public class POSTApi<T extends POSTable> {
                 streamsContext.waitForProcessing(
                     result.result.getObjectId(), record.offset(),
                     record.partition(), false,
-                    T.getWaitForAPIPath(
-                        id, record.offset(), record.partition(), cls
+                    T.getInternalWaitAPIPath(
+                        id, String.valueOf(record.offset()),
+                        String.valueOf(record.partition()), cls
                     )
                 );
                 result.status = ResponseStatus.OK;

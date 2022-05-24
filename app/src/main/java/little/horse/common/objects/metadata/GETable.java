@@ -1,10 +1,7 @@
 package little.horse.common.objects.metadata;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -14,7 +11,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.utils.Bytes;
 
-import little.horse.api.metadata.IndexKeyRecord;
+import little.horse.api.metadata.IndexRecordKey;
 import little.horse.common.DepInjContext;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
@@ -31,6 +28,11 @@ public abstract class GETable extends BaseSchema {
     @JsonIgnore
     public static<T extends GETable> String getLHTypeName(Class<T> cls) {
         return cls.getSimpleName();
+    }
+
+    @JsonIgnore
+    public static <T extends GETable> String getAPIPath(Class<T> cls) {
+        return "/" + cls.getSimpleName();
     }
 
     @JsonIgnore
@@ -57,67 +59,44 @@ public abstract class GETable extends BaseSchema {
         return getIdStoreName(cls) + "__index";
     }
 
-    public static<T extends GETable> String getAPIPath(Class<T> cls) {
-        return "/" + T.getLHTypeName(cls);
-    }
-
     public static<T extends GETable> String getAPIPath(String id, Class<T> cls) {
-        return getAPIPath(cls) + "/" + id;
+        return "/" + cls.getSimpleName() + "/" + id;
     }
 
-    public static<T extends GETable> String getAliasSetPath(Class<T> cls) {
-        return getAPIPath(cls) + "AliasSet";
+    public static<T extends GETable> String getSearchPath(
+        String key, String value, Class<T> cls) {
+        return "/search" + cls.getSimpleName() + "/" + key + "/" + value;
     }
 
-    public static<T extends GETable> String getAliasPath(Class<T> cls) {
-        return getAPIPath(cls) + "Alias";
+    public static<T extends GETable> String getListPath(Class<T> cls) {
+        return "/search/" + cls.getSimpleName();
     }
 
-    public static<T extends GETable> String getAllAPIPath(Class<T> cls) {
-        return getAPIPath(cls) + "All";
-    }
-
-    public static<T extends GETable> String getAliasPath(
-        String aliasName, String aliasValue, Class<T> cls) {
-        return getAliasPath(cls) + "/" + aliasName + "/" + aliasValue;
-    }
-
-    public static<T extends GETable> String getAliasSetPath(
-        String aliasName, String aliasValue, Class<T> cls) {
-        return getAliasSetPath(cls) + "/" + aliasName + "/" + aliasValue;
-    }
-
-    public static<T extends GETable> String getAliasPath(
-        Map<String, String> aliases, Class<T> cls
-    ) {
-        String path = getAliasPath(cls);
-        if (aliases.size() == 0) return path;
-
-        path += "?";
-
-        for (Map.Entry<String, String> param: aliases.entrySet()) {
-            try {
-                path += URLEncoder.encode(param.getKey(), "x-www-form-urlencoded");
-            } catch(UnsupportedEncodingException exn) {
-                exn.printStackTrace();
-            }
-            path += "&";
-        }
-
-        return path.substring(0, path.length() - 1);
-    }
-
-    public static<T extends GETable> String getWaitForAPIPath(
+    public static<T extends GETable> String getInternalWaitAPIPath(
         String id, String offset, String partition, Class<T> cls
     ) {
-        return getAPIPath(cls) + "Offset/" + id + "/" + offset + "/" + partition;
+        return String.format(
+            "/internal/waitFor/%s/%s/%s/%s",
+            cls.getSimpleName(), id, offset, partition
+        );
     }
 
-    public static<T extends GETable> String getWaitForAPIPath(
-        String id, long offset, int partition, Class<T> cls
+    public static <T extends GETable> String getInternalIterAPIPath(
+        String start, String end, String token, Class<T> cls
     ) {
-        return getAPIPath(cls) + "Offset/" + id + "/" + String.valueOf(offset)
-            + "/" + String.valueOf(partition);
+        return String.format(
+            "/internal/%s/iter/%s/%s/%s",
+            cls.getSimpleName(), start, end, token
+        );
+    }
+
+    public static <T extends GETable> String getInternalIterAPIPath(
+        String start, String end, String token, String limit, Class<T> cls
+    ) {
+        return String.format(
+            "/internal/%s/iter/%s/%s/%s",
+            cls.getSimpleName(), start, end, token
+        ) + "?limit=" + limit;
     }
 
     @JsonIgnore
@@ -139,12 +118,15 @@ public abstract class GETable extends BaseSchema {
         return config.send(record);
     }
 
-    public Set<IndexKeyRecord> getAliases() {
-        HashSet<IndexKeyRecord> out = new HashSet<>();
-        IndexKeyRecord i = new IndexKeyRecord();
-        i.key = "name";
-        i.value = name;
-        out.add(i);
+    public Set<IndexRecordKey> getIndexEntries() {
+        HashSet<IndexRecordKey> out = new HashSet<>();
+
+        // Make things searchable by name
+        out.add(new IndexRecordKey("name__" + name, objectId));
+
+        // Make thing searchable by timestamp
+        out.add(new IndexRecordKey("created__" + getCreated().getTime(), objectId));
+
         return out;
     }
 

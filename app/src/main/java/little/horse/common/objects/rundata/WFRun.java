@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
-import little.horse.api.metadata.IndexKeyRecord;
+import little.horse.api.metadata.IndexRecordKey;
 import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
@@ -318,19 +318,18 @@ public class WFRun extends GETable {
     }
 
     @Override
-    public Set<IndexKeyRecord> getAliases() {
-        HashSet<IndexKeyRecord> out = new HashSet<>();
+    public Set<IndexRecordKey> getIndexEntries() {
+        HashSet<IndexRecordKey> out = new HashSet<>();
 
         for (ThreadRun tr: threadRuns) {
             for (String varName: tr.variables.keySet()) {
-                IndexKeyRecord i = new IndexKeyRecord();
                 Object varResult = tr.variables.get(varName);
                 if (! (varResult instanceof String)) {
                     continue;
                 }
-                String val = String.class.cast(varResult);
-                i.key = varName;
-                i.value = val;
+                IndexRecordKey i = new IndexRecordKey(
+                    "var_" + varName, String.class.cast(varResult)
+                );
                 out.add(i);
             }
         }

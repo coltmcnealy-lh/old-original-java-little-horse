@@ -10,10 +10,10 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class LHRpcCLient {
+public class LHRpcClient {
     private DepInjContext config;
 
-    public LHRpcCLient(DepInjContext config) {
+    public LHRpcClient(DepInjContext config) {
         this.config = config;
     }
 

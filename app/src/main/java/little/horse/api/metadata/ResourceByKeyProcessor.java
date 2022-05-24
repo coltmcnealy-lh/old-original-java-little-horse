@@ -115,24 +115,21 @@ implements Processor<String, T, String, IndexEvent> {
         kvStore.put(newMeta.getObjectId(), new Bytes(entry.toBytes()));
 
         // We need to remove aliases from the old and add from the new.
-        Set<IndexKeyRecord> newAliases = newMeta.getAliases();
-        Set<IndexKeyRecord> oldAliases = old == null ? new HashSet<>()
-            : old.getAliases();
+        Set<IndexRecordKey> newAliases = newMeta.getIndexEntries();
+        Set<IndexRecordKey> oldAliases = old == null ? new HashSet<>()
+            : old.getIndexEntries();
 
-        int totalAliases = newAliases.size();
-
-        for (IndexKeyRecord ali: oldAliases) {
+        for (IndexRecordKey ali: oldAliases) {
             if (!newAliases.contains(ali)) {
                 // Need to remove it.
                 IndexEvent removeEvent = new IndexEvent(
                     record.key(),
                     ali,
                     offset,
-                    IndexOperation.DELETE,
-                    totalAliases
+                    IndexOperation.DELETE
                 );
                 Record<String, IndexEvent> ar = new Record<String, IndexEvent>(
-                    ali.getStoreKey(),
+                    ali.toString(),
                     removeEvent,
                     record.timestamp()
                 );
@@ -141,17 +138,16 @@ implements Processor<String, T, String, IndexEvent> {
         }
 
         // Now, create new ones.
-        for (IndexKeyRecord ali: newAliases) {
+        for (IndexRecordKey ali: newAliases) {
             if (!oldAliases.contains(ali)) {
                 IndexEvent createAliasEvent = new IndexEvent(
                     record.key(),
                     ali,
                     offset,
-                    IndexOperation.CREATE,
-                    totalAliases
+                    IndexOperation.CREATE
                 );
                 Record<String, IndexEvent> ar = new Record<String, IndexEvent>(
-                    ali.getStoreKey(),
+                    ali.toString(),
                     createAliasEvent,
                     record.timestamp()
                 );
@@ -174,18 +170,16 @@ implements Processor<String, T, String, IndexEvent> {
         }
 
         // Remove all of the aliases.
-        Set<IndexKeyRecord> aliases = old.getAliases();
-        int totalAliases = aliases.size();
-        for (IndexKeyRecord ali: aliases) {
+        Set<IndexRecordKey> aliases = old.getIndexEntries();
+        for (IndexRecordKey ali: aliases) {
             IndexEvent aliasEvent = new IndexEvent(
                 record.key(),
                 ali,
                 offset,
-                IndexOperation.DELETE,
-                totalAliases
+                IndexOperation.DELETE
             );
             Record<String, IndexEvent> ar = new Record<String, IndexEvent>(
-                ali.getStoreKey(),
+                ali.toString(),
                 aliasEvent,
                 record.timestamp()
             );
