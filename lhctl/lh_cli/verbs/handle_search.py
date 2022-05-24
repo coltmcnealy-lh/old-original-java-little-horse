@@ -2,7 +2,7 @@ from argparse import _SubParsersAction, ArgumentParser, Namespace
 import json
 from typing import Any, Generic, Mapping, TypeVar
 
-from lh_lib.client import IndexEntryCollectionSchema, LHClient
+from lh_lib.client import RangeQueryResultSchema, LHClient
 from lh_lib.schema import RESOURCE_TYPES
 from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
 from lh_lib.schema.wf_run_schema import ThreadRunSchema, WFRunSchema
@@ -38,6 +38,10 @@ class SEARCHHandler:
             "label_value",
             help="Value of label to search for..",
         )
+        parser.add_argument(
+            "--raw-json", "-r", action="store_true",
+            help="Print raw json result"
+        )
 
         parser.set_defaults(func=self.search)
 
@@ -46,13 +50,17 @@ class SEARCHHandler:
 
         rt_schema = RESOURCE_TYPES[rt_name]
 
-        r: LHRPCResponseSchema[IndexEntryCollectionSchema] = client.search_for_alias(
+        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.search_for_alias(
             rt_schema,
             ns.label_key,
             ns.label_value,
         )
 
         if r.result is None:
-            r.result = IndexEntryCollectionSchema(entries=[])
+            r.result = RangeQueryResultSchema(object_ids=[])
 
-        print(json.dumps([obj.object_id for obj in r.result.entries]))
+        if ns.raw_json:
+            print(r.result.json(by_alias=True))
+        else:
+            for obj_id in r.result.object_ids:
+                print(obj_id)

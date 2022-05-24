@@ -14,6 +14,6 @@ T = TypeVar('T')
 
 class LHRPCResponseSchema(LHBaseModel, Generic[T]):
     message: Optional[str] = None
-    status: ResponseStatusEnum
+    status: Optional[ResponseStatusEnum] = None
     object_id: Optional[str] = None
     result: Optional[T] = None

@@ -32,5 +32,5 @@ if [ -z $1 ]
 then
     echo "Add any random string as an argument to follow logs"
 else
-    docker logs -f little-horse-api
+    docker logs -f little-horse-api-0
 fi

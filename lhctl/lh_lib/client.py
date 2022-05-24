@@ -24,8 +24,9 @@ class IndexEntrySchema(LHBaseModel):
     most_recent_offset: Optional[int] = None
 
 
-class IndexEntryCollectionSchema(LHBaseModel):
-    entries: List[IndexEntrySchema]
+class RangeQueryResultSchema(LHBaseModel):
+    token: Optional[str] = None
+    object_ids: List[str]
 
 
 class LHClient:
@@ -71,15 +72,15 @@ class LHClient:
         if first_try.result is not None:
             return first_try
 
-        alias_response: LHRPCResponseSchema[IndexEntryCollectionSchema] =\
+        idx_response: LHRPCResponseSchema[RangeQueryResultSchema] =\
             self.search_for_alias(
             resource_type,
             "name",
             resource_id,
         )
 
-        if alias_response.result is not None and len(alias_response.result.entries):
-            new_id = alias_response.result.entries[0].object_id
+        if idx_response.result is not None and len(idx_response.result.object_ids):
+            new_id = idx_response.result.object_ids[0]
             return self.get_resource_by_id(resource_type, new_id)
 
         return first_try  # an empty one ):
@@ -107,7 +108,7 @@ class LHClient:
         resource_type: type,
         key: str,
         val: str,
-    ) -> LHRPCResponseSchema[IndexEntryCollectionSchema]:
+    ) -> LHRPCResponseSchema[RangeQueryResultSchema]:
         resource_type_name = RESOURCE_TYPES_INV[resource_type]
 
         url = f"{self.url}/search/{resource_type_name}/{key}/{val}"
@@ -116,7 +117,7 @@ class LHClient:
 
         intermediate = LHRPCResponseSchema(**response.json())
         if intermediate.result is not None:
-            intermediate.result = IndexEntryCollectionSchema(
+            intermediate.result = RangeQueryResultSchema(
                 **intermediate.result
             )
         return intermediate
