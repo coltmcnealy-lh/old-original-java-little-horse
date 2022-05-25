@@ -102,7 +102,8 @@ public class APIStreamsContext<T extends GETable> {
         String key, String value, String token, int limit
     ) throws LHConnectionError {
 
-        String start = key + "__" + value;
+        // TODO: Move this to some class somewhere so that we can do escaping.
+        String start = key + "__" + value + ";";
         String end = start + getLastKey();
         return iterBetweenKeys(start, end, limit, token, false);
     }
@@ -121,6 +122,7 @@ public class APIStreamsContext<T extends GETable> {
         if (end == null) end = getLastKey();
 
         RangeQueryResponse out = new RangeQueryResponse();
+        out.partitionBookmarks = bookmarkMap;
         ReadOnlyKeyValueStore<String, Bytes> store = getStore(
             T.getIndexStoreName(cls)
         );
@@ -137,12 +139,8 @@ public class APIStreamsContext<T extends GETable> {
                     String.valueOf(lastEntry.partition)
                 );
                 if (smallestKey != null &&
-                    smallestKey.compareTo(lastEntry.objectId) <= 0
+                    smallestKey.compareTo(lastEntry.objectId) >= 0
                 ) {
-                    LHUtil.log(
-                        "Partition", lastEntry.partition, "has seen ",
-                        smallestKey, "So we skip", lastEntry.objectId
-                    );
                     continue;
                 }
 
@@ -198,7 +196,6 @@ public class APIStreamsContext<T extends GETable> {
                     start, end, token, String.valueOf(limit), cls
                 )
             );
-            LHUtil.log("\n\n\n\n", url, "\n\n\n\n");
 
             LHRpcResponse<RangeQueryResponse> resp = new LHRpcClient(
                 config

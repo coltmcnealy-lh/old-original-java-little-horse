@@ -97,6 +97,12 @@ public class GETApi<T extends GETable> {
             );
             response.result = result;
 
+            if (response.result == null || response.result.objectIds.size() == 0) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+            } else {
+                response.status = ResponseStatus.OK;
+            }
+
         } catch (LHConnectionError exn) {
             exn.printStackTrace();
             response.message =

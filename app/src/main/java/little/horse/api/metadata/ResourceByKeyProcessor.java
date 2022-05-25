@@ -109,9 +109,6 @@ implements Processor<String, T, String, IndexEvent> {
 
         // Store the actual data in the ID store:
         ResourceDbEntry entry = new ResourceDbEntry(newMeta, offset);
-        if (cls == WFRun.class) {
-            LHUtil.log("GOTIT:", newMeta.objectId);
-        }
         kvStore.put(newMeta.getObjectId(), new Bytes(entry.toBytes()));
 
         // We need to remove aliases from the old and add from the new.

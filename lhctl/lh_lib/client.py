@@ -73,7 +73,7 @@ class LHClient:
             return first_try
 
         idx_response: LHRPCResponseSchema[RangeQueryResultSchema] =\
-            self.search_for_alias(
+            self.search(
             resource_type,
             "name",
             resource_id,
@@ -103,16 +103,24 @@ class LHClient:
 
         return out
 
-    def search_for_alias(
+    def search(
         self,
         resource_type: type,
         key: str,
         val: str,
+        limit: Optional[int] = None,
+        token: Optional[str] = None,
     ) -> LHRPCResponseSchema[RangeQueryResultSchema]:
         resource_type_name = RESOURCE_TYPES_INV[resource_type]
 
         url = f"{self.url}/search/{resource_type_name}/{key}/{val}"
-        response = requests.get(url)
+        params = {}
+        if token is not None:
+            params['token'] = token
+        if limit is not None:
+            params['limit'] = str(limit)
+
+        response = requests.get(url, params=params)
         response.raise_for_status()
 
         intermediate = LHRPCResponseSchema(**response.json())

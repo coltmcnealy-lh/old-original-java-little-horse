@@ -39,6 +39,14 @@ class SEARCHHandler:
             help="Value of label to search for..",
         )
         parser.add_argument(
+            "--limit", "-l", type=int, default=10,
+            help="Limit number of records for this page."
+        )
+        parser.add_argument(
+            "--token", "-t",
+            help="Iterator token for paginated searches."
+        )
+        parser.add_argument(
             "--raw-json", "-r", action="store_true",
             help="Print raw json result"
         )
@@ -50,10 +58,12 @@ class SEARCHHandler:
 
         rt_schema = RESOURCE_TYPES[rt_name]
 
-        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.search_for_alias(
+        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.search(
             rt_schema,
             ns.label_key,
             ns.label_value,
+            token=ns.token,
+            limit=ns.limit,
         )
 
         if r.result is None:
@@ -62,5 +72,8 @@ class SEARCHHandler:
         if ns.raw_json:
             print(r.result.json(by_alias=True))
         else:
-            for obj_id in r.result.object_ids:
-                print(obj_id)
+            if r.result.object_ids is None or len(r.result.object_ids) == 0:
+                print("No objects found.")
+            else:
+                for obj_id in r.result.object_ids:
+                    print(obj_id)

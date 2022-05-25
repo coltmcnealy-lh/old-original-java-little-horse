@@ -324,15 +324,18 @@ public class WFRun extends GETable {
         for (ThreadRun tr: threadRuns) {
             for (String varName: tr.variables.keySet()) {
                 Object varResult = tr.variables.get(varName);
-                if (! (varResult instanceof String)) {
+                if (! (varResult == null || varResult instanceof String)) {
                     continue;
                 }
                 IndexRecordKey i = new IndexRecordKey(
-                    "var_" + varName, String.class.cast(varResult)
+                    "var_" + varName + "__" + String.class.cast(varResult),
+                    objectId
                 );
                 out.add(i);
             }
         }
+        out.add(new IndexRecordKey("WFSpecName__" + wfSpecName, objectId));
+        out.add(new IndexRecordKey("WFSpecId__" + wfSpecDigest, objectId));
         return out;
     }
 
