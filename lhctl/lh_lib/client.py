@@ -130,6 +130,34 @@ class LHClient:
             )
         return intermediate
 
+    def list(
+        self,
+        resource_type: type,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        limit: Optional[int] = None,
+        token: Optional[str] = None,
+    ) -> LHRPCResponseSchema[RangeQueryResultSchema]:
+        resource_type_name = RESOURCE_TYPES_INV[resource_type]
+
+        url = f"{self.url}/search/{resource_type_name}/{key}/{val}"
+        params = {}
+        if token is not None:
+            params['token'] = token
+        if limit is not None:
+            params['limit'] = str(limit)
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        intermediate = LHRPCResponseSchema(**response.json())
+        if intermediate.result is not None:
+            intermediate.result = RangeQueryResultSchema(
+                **intermediate.result
+            )
+        return intermediate
+
+
     def run_wf(
         self,
         wf_spec_id_or_name: str,

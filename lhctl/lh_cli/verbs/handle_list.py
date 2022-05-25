@@ -1,20 +1,21 @@
 from argparse import _SubParsersAction, ArgumentParser, Namespace
-import json
-from typing import Any, Generic, Mapping, TypeVar
+import time
+from typing import Optional
 
 from lh_lib.client import RangeQueryResultSchema, LHClient
 from lh_lib.schema import RESOURCE_TYPES
 from lh_lib.schema.lh_rpc_response_schema import LHRPCResponseSchema
 
 
-class SEARCHHandler:
+
+class LISTHandler:
     def __init__(self):
         pass
 
     def init_subparsers(self, base_subparsers: _SubParsersAction):
         parser: ArgumentParser = base_subparsers.add_parser(
-            "search",
-            help="Search for Resources based on Label Keys and Values."
+            "list",
+            help="List all resources or resources created within a time window."
         )
 
         parser.add_argument(
@@ -24,13 +25,19 @@ class SEARCHHandler:
         )
 
         parser.add_argument(
-            "label_key",
-            help="Name of label."
+            "--since-seconds", "-s", type=int,
+            help="Number of seconds ago that resources should have been created."
+        )
+
+        parser.add_argument(
+            "--from-timestamp", "-f", type=int,
+            help="Time in long (millis) format from which to start iterating."
         )
         parser.add_argument(
-            "label_value",
-            help="Value of label to search for..",
+            "--to-timestamp", "-t", type=int,
+            help="Time in long (millis) format until which to continue iterating."
         )
+
         parser.add_argument(
             "--limit", "-l", type=int, default=10,
             help="Limit number of records for this page."
@@ -44,17 +51,25 @@ class SEARCHHandler:
             help="Print raw json result"
         )
 
-        parser.set_defaults(func=self.search)
+        parser.set_defaults(func=self.list)
 
-    def search(self, ns: Namespace, client: LHClient):
+    def list(self, ns: Namespace, client: LHClient):
         rt_name: str = ns.resource_type
-
         rt_schema = RESOURCE_TYPES[rt_name]
 
-        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.search(
+        start: Optional[int] = None
+        end: Optional[int] = None
+        
+        if ns.since_seconds is not None:
+            start = int(time.time()) - ns.since_seconds
+        else:
+            start = ns.from_timestamp
+            end = ns.to_timestamp
+
+        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.list(
             rt_schema,
-            ns.label_key,
-            ns.label_value,
+            start,
+            end,
             token=ns.token,
             limit=ns.limit,
         )
