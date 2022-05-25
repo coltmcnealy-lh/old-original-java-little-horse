@@ -20,7 +20,7 @@ dependencies:
   - werkzeug
   - xmltodict
   - pip:
-    - confluent-kafka
+    # - confluent-kafka
     - pylint
     - quart
     - Quart-CORS
