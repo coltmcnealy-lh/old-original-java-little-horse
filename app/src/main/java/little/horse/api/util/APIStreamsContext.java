@@ -23,6 +23,7 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
 import little.horse.api.OffsetInfo;
+import little.horse.api.ResponseStatus;
 import little.horse.api.metadata.IndexEntry;
 import little.horse.api.metadata.RangeQueryResponse;
 import little.horse.api.metadata.ResourceDbEntry;
@@ -102,11 +103,36 @@ public class APIStreamsContext<T extends GETable> {
     public RangeQueryResponse search(
         String key, String value, String token, int limit
     ) throws LHConnectionError {
-
         // TODO: Move this to some class somewhere so that we can do escaping.
+
+        String storeKey = key + ";;" + value;
         String start = key + ";;" + value + ";;";
         String end = start + getLastKey();
-        return iterBetweenKeys(start, end, limit, token, false);
+
+        KeyQueryMetadata metadata = streams.queryMetadataForKey(
+            T.getIndexStoreName(cls),
+            storeKey,
+            Serdes.String().serializer()
+        );
+        HostInfo hostInfo = metadata.activeHost();
+        String url = String.format(
+            "http://%s:%d%s",
+            hostInfo.host(), hostInfo.port(),
+            T.getInternalIterLabelsAPIPath(
+                start, end, token, String.valueOf(limit), cls
+            )
+        );
+
+        LHRpcResponse<RangeQueryResponse> resp = new LHRpcClient(
+            config
+        ).getResponse(url, RangeQueryResponse.class);
+
+        if (resp.status != ResponseStatus.OK &&
+            resp.status != ResponseStatus.OBJECT_NOT_FOUND
+        ) {
+            throw new LHConnectionError(null, "Failed looking up: " + resp.message);
+        }
+        return resp.result;
     }
 
     public RangeQueryResponse list(

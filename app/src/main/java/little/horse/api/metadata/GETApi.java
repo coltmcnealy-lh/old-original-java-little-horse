@@ -238,6 +238,7 @@ public class GETApi<T extends GETable> {
             response.result = streamsContext.iterBetweenKeys(
                 start, end, limit, token, true
             );
+            response.status = ResponseStatus.OK;
         } catch (LHConnectionError exn) {
             exn.printStackTrace();
             response.message =
