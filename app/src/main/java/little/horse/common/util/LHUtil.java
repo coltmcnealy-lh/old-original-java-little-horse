@@ -203,6 +203,26 @@ public class LHUtil {
         return thing.toString();
     }
 
+    public static String dateToDbString(Date date) {
+        return LHUtil.longToDbString(date.getTime());
+    }
+
+    public static String longToDbString(long val) {
+        return String.format("%20d", val);
+    }
+
+    public static String floatToDbString(float val) {
+        return String.format("%20.10f", val);
+    }
+
+    public static String intToDbString(int val) {
+        return String.format("%20d", val);
+    }
+
+    public static String boolToDbString(Boolean obj) {
+        return String.valueOf(obj);
+    }
+
     @SuppressWarnings("unchecked")
     public static Object lhCopy(Object o) {
         if (o instanceof Integer) {

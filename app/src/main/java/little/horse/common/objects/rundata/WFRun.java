@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Stack;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
@@ -16,7 +16,6 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
-import little.horse.api.metadata.IndexRecordKey;
 import little.horse.common.DepInjContext;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
@@ -318,24 +317,41 @@ public class WFRun extends GETable {
     }
 
     @Override
-    public Set<IndexRecordKey> getIndexEntries() {
-        HashSet<IndexRecordKey> out = new HashSet<>();
+    public Map<String, String> getIndexKeyValPairs() {
+        Map<String, String> out = new HashMap<>();
 
         for (ThreadRun tr: threadRuns) {
             for (String varName: tr.variables.keySet()) {
-                Object varResult = tr.variables.get(varName);
-                if (! (varResult == null || varResult instanceof String)) {
-                    continue;
+                Object val = tr.variables.get(varName);
+                String varKey = "var_" + varName;
+
+                if (val == null) {
+                    out.put(varKey, null);
+
+                } else if (val instanceof String) {
+                    out.put(varKey, String.class.cast(val));
+
+                } else if (val instanceof Float) {
+                    out.put(varKey, LHUtil.floatToDbString(Float.class.cast(val)));
+
+                } else if (val instanceof Integer) {
+                    out.put(varKey, LHUtil.intToDbString(Integer.class.cast(val)));
+
+                } else if (val instanceof Boolean) {
+                    out.put(varKey, LHUtil.boolToDbString(Boolean.class.cast(val)));
+
+                } else if (val instanceof Map) {
+                    LHUtil.log("TODO: figure out how to index a map");
+
+                } else if (val instanceof List) {
+                    LHUtil.log("TODO: Figure out how to index a list");
+
                 }
-                IndexRecordKey i = new IndexRecordKey(
-                    "var_" + varName + "__" + String.class.cast(varResult),
-                    objectId
-                );
-                out.add(i);
             }
         }
-        out.add(new IndexRecordKey("WFSpecName__" + wfSpecName, objectId));
-        out.add(new IndexRecordKey("WFSpecId__" + wfSpecDigest, objectId));
+
+        out.put("WFSpecName", wfSpecName);
+        out.put("WFSpecId", wfSpecDigest);
         return out;
     }
 

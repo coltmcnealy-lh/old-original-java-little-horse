@@ -75,8 +75,6 @@ public class RangeQueryResponse extends BaseSchema {
         }
 
         for (Map.Entry<String, String> e : other.partitionBookmarks.entrySet()) {
-            LHUtil.log(e.getKey(), e.getValue());
-            LHUtil.log(e.getKey().getClass());
             out.partitionBookmarks.put(e.getKey(), e.getValue());
         }
 

@@ -103,7 +103,7 @@ public class APIStreamsContext<T extends GETable> {
     ) throws LHConnectionError {
 
         // TODO: Move this to some class somewhere so that we can do escaping.
-        String start = key + "__" + value + ";";
+        String start = key + ";;" + value + ";;";
         String end = start + getLastKey();
         return iterBetweenKeys(start, end, limit, token, false);
     }
@@ -111,7 +111,7 @@ public class APIStreamsContext<T extends GETable> {
     public RangeQueryResponse list(
         String token, int limit
     ) throws LHConnectionError {
-        String start = "created__";
+        String start = "created;;";
         String end = start + getLastKey();
         return iterBetweenKeys(start, end, limit, token, false);
     }
@@ -192,7 +192,7 @@ public class APIStreamsContext<T extends GETable> {
                 "http://%s:%d%s",
                 host,
                 port,
-                T.getInternalIterAPIPath(
+                T.getInternalIterLabelsAPIPath(
                     start, end, token, String.valueOf(limit), cls
                 )
             );

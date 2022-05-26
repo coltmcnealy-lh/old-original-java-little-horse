@@ -1,6 +1,5 @@
 from lh_cli.verbs.handle_delete import DELETEHandler
 from lh_cli.verbs.handle_get import GETHandler
-from lh_cli.verbs.handle_list import LISTHandler
 from lh_cli.verbs.handle_run import RUNHandler
 from lh_cli.verbs.handle_compile import COMPILEHandler
 from lh_cli.verbs.handle_deploy import DEPLOYHandler
@@ -15,7 +14,6 @@ HANDLERS = {
     "compile": COMPILEHandler(),
     "deploy": DEPLOYHandler(),
     "delete": DELETEHandler(),
-    "list": LISTHandler(),
     "send-event": SENDEVENTHandler(),
     "search": SEARCHHandler(),
     "test": TESTHandler(),

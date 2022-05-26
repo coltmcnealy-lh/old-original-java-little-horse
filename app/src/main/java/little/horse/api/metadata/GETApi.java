@@ -34,7 +34,7 @@ public class GETApi<T extends GETable> {
 
         // GET /internal/iter/T/{start}/{end}
         app.get(
-            T.getInternalIterAPIPath("{start}", "{end}", "{token}", cls),
+            T.getInternalIterLabelsAPIPath("{start}", "{end}", "{token}", cls),
             this::internalIter
         );
 

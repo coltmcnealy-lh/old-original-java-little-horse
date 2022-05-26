@@ -1,7 +1,9 @@
 package little.horse.common.objects.metadata;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -19,6 +21,7 @@ import little.horse.common.util.LHUtil;
 public abstract class GETable extends BaseSchema {
     public String name;
     private Date created;
+    public Date updated;
 
     public Long lastUpdatedOffset;
 
@@ -81,20 +84,20 @@ public abstract class GETable extends BaseSchema {
         );
     }
 
-    public static <T extends GETable> String getInternalIterAPIPath(
+    public static <T extends GETable> String getInternalIterLabelsAPIPath(
         String start, String end, String token, Class<T> cls
     ) {
         return String.format(
-            "/internal/%s/iter/%s/%s/%s",
+            "/internal/%s/iterLabels/%s/%s/%s",
             cls.getSimpleName(), start, end, token
         );
     }
 
-    public static <T extends GETable> String getInternalIterAPIPath(
+    public static <T extends GETable> String getInternalIterLabelsAPIPath(
         String start, String end, String token, String limit, Class<T> cls
     ) {
         return String.format(
-            "/internal/%s/iter/%s/%s/%s",
+            "/internal/%s/iterLabels/%s/%s/%s",
             cls.getSimpleName(), start, end, token
         ) + "?limit=" + limit;
     }
@@ -118,15 +121,22 @@ public abstract class GETable extends BaseSchema {
         return config.send(record);
     }
 
+    // @JsonIgnore
+    public Map<String, String> getIndexKeyValPairs() {
+        HashMap<String, String> out = new HashMap<>();
+        out.put("name", name);
+        if (updated == null) updated = getCreated();
+        out.put("created", LHUtil.dateToDbString(getCreated()));
+        out.put("updated", LHUtil.dateToDbString(updated));
+        return out;
+    }
+
+    @JsonIgnore
     public Set<IndexRecordKey> getIndexEntries() {
         HashSet<IndexRecordKey> out = new HashSet<>();
-
-        // Make things searchable by name
-        out.add(new IndexRecordKey("name__" + name, objectId));
-
-        // Make thing searchable by timestamp
-        out.add(new IndexRecordKey("created__" + getCreated().getTime(), objectId));
-
+        for (Map.Entry<String, String> e : getIndexKeyValPairs().entrySet()) {
+            out.add(new IndexRecordKey(e.getKey(), e.getValue(), this));
+        }
         return out;
     }
 

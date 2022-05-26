@@ -12,7 +12,7 @@ import little.horse.common.objects.metadata.GETable;
  * is not a real database: the query layer is the LittleHorse API, and the data is
  * stored in RocksDB by KafkaStreams. To make a read query, you make a request to
  * the LittleHorse API (that is what the public static methods in this class do).
- * 
+ *
  * IMPORTANT: 
  * <<1 week later...wtf was I about to say? I left the note blank and forgot what
  *   I was gonna say>>
@@ -35,7 +35,7 @@ public class LHDatabaseClient {
                 url, RangeQueryResponse.class
             );
             if (entries.status == ResponseStatus.OBJECT_NOT_FOUND) return null;
-            
+
             url = config.getAPIUrlFor(T.getAPIPath(cls)) + "/";
             url += entries.result.objectIds.get(entries.result.objectIds.size() - 1);
 

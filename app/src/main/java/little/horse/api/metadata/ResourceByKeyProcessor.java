@@ -21,8 +21,6 @@ import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.POSTable;
 import little.horse.common.objects.metadata.GETable;
 import little.horse.common.objects.metadata.LHDeployStatus;
-import little.horse.common.objects.rundata.WFRun;
-import little.horse.common.util.LHUtil;
 
 public class ResourceByKeyProcessor<T extends GETable>
 implements Processor<String, T, String, IndexEvent> {
@@ -106,6 +104,8 @@ implements Processor<String, T, String, IndexEvent> {
                     "\n" + ExceptionUtils.getStackTrace(exn);
             }
         }
+
+        newMeta.updated = new Date(record.timestamp());
 
         // Store the actual data in the ID store:
         ResourceDbEntry entry = new ResourceDbEntry(newMeta, offset);
