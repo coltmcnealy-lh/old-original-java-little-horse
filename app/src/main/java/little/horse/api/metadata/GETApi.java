@@ -1,5 +1,7 @@
 package little.horse.api.metadata;
 
+import java.util.Date;
+
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
@@ -23,8 +25,17 @@ public class GETApi<T extends GETable> {
         // GET /T/{id}
         app.get(T.getAPIPath("/{id}", cls), this::publicGet);
 
+        // GET /list/T
+        app.get(T.getListPath(cls), this::publicList);
+
         // GET /search/T/{key}/{value}
         app.get(T.getSearchPath("{key}", "{value}", cls), this::publicSearch);
+
+        // GET /timeSearch/T?start={start}&end={end}
+        app.get(T.getTimeSearchPath(cls), this::publicTimeSearch);
+
+        // GET /rangeSearch/T/{key}?start={start}&end={end}
+        app.get(T.getRangeSearchPath("{key}", cls), this::publicRangeSearch);
 
         // GET /internal/waitFor/T/{id}/{offset}/{partition}
         app.get(
@@ -37,9 +48,6 @@ public class GETApi<T extends GETable> {
             T.getInternalIterLabelsAPIPath("{start}", "{end}", "{token}", cls),
             this::internalIter
         );
-
-        // GET /internal
-        app.get(T.getListPath(cls), this::publicList);
 
         // This code is kind of ugly, but we want the WFRun to have non-standard
         // POST'ing abilities.
@@ -114,6 +122,86 @@ public class GETApi<T extends GETable> {
         ctx.json(response);
     }
 
+    public void publicRangeSearch(Context ctx) {
+        String key = ctx.pathParam("key");
+        String start = ctx.queryParamAsClass(
+            "start", String.class
+        ).getOrDefault(null);
+        String end = ctx.queryParamAsClass(
+            "end", String.class
+        ).getOrDefault(null);
+
+        String pastToken = ctx.queryParamAsClass(
+            "token", String.class
+        ).getOrDefault(null);
+        int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(30);
+
+        LHRpcResponse<RangeQueryResponse> response = new LHRpcResponse<>();
+
+        try {
+            RangeQueryResponse result = streamsContext.rangeSearch(
+                key, start, end, pastToken, limit
+            );
+            response.result = result;
+
+            if (response.result == null || response.result.objectIds.size() == 0) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+            } else {
+                response.status = ResponseStatus.OK;
+            }
+
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            response.message =
+                "Had an internal retriable connection error: " + exn.getMessage();
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            ctx.status(500);
+        }
+
+        ctx.json(response);
+    }
+
+    public void publicTimeSearch(Context ctx) {
+        Long startLong = ctx.queryParamAsClass(
+            "start", Long.class
+        ).getOrDefault(null);
+        Long endLong = ctx.queryParamAsClass(
+            "end", Long.class
+        ).getOrDefault(null);
+
+        Date start = startLong == null ? null : new Date(startLong);
+        Date end = endLong == null ? null : new Date(endLong);
+
+        String pastToken = ctx.queryParamAsClass(
+            "token", String.class
+        ).getOrDefault(null);
+        int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(30);
+
+        LHRpcResponse<RangeQueryResponse> response = new LHRpcResponse<>();
+
+        try {
+            RangeQueryResponse result = streamsContext.timeSearch(
+                start, end, pastToken, limit
+            );
+            response.result = result;
+
+            if (response.result == null || response.result.objectIds.size() == 0) {
+                response.status = ResponseStatus.OBJECT_NOT_FOUND;
+            } else {
+                response.status = ResponseStatus.OK;
+            }
+
+        } catch (LHConnectionError exn) {
+            exn.printStackTrace();
+            response.message =
+                "Had an internal retriable connection error: " + exn.getMessage();
+            response.status = ResponseStatus.INTERNAL_ERROR;
+            ctx.status(500);
+        }
+
+        ctx.json(response);
+    }
+
     public void publicList(Context ctx) {
         String pastToken = ctx.queryParamAsClass(
             "token", String.class
@@ -137,7 +225,6 @@ public class GETApi<T extends GETable> {
         }
 
         ctx.json(response);
-
     }
 
     public void internalIter(Context ctx) {

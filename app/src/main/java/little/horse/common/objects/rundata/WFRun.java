@@ -317,28 +317,26 @@ public class WFRun extends GETable {
     }
 
     @Override
-    public Map<String, String> getIndexKeyValPairs() {
-        Map<String, String> out = new HashMap<>();
-
+    public void addIndexKeyValPairs(Map<String, String> pairs) {
         for (ThreadRun tr: threadRuns) {
             for (String varName: tr.variables.keySet()) {
                 Object val = tr.variables.get(varName);
                 String varKey = "var_" + varName;
 
                 if (val == null) {
-                    out.put(varKey, null);
+                    pairs.put(varKey, null);
 
                 } else if (val instanceof String) {
-                    out.put(varKey, String.class.cast(val));
+                    pairs.put(varKey, String.class.cast(val));
 
                 } else if (val instanceof Float) {
-                    out.put(varKey, LHUtil.floatToDbString(Float.class.cast(val)));
+                    pairs.put(varKey, LHUtil.floatToDbString(Float.class.cast(val)));
 
                 } else if (val instanceof Integer) {
-                    out.put(varKey, LHUtil.intToDbString(Integer.class.cast(val)));
+                    pairs.put(varKey, LHUtil.intToDbString(Integer.class.cast(val)));
 
                 } else if (val instanceof Boolean) {
-                    out.put(varKey, LHUtil.boolToDbString(Boolean.class.cast(val)));
+                    pairs.put(varKey, LHUtil.boolToDbString(Boolean.class.cast(val)));
 
                 } else if (val instanceof Map) {
                     LHUtil.log("TODO: figure out how to index a map");
@@ -350,9 +348,8 @@ public class WFRun extends GETable {
             }
         }
 
-        out.put("WFSpecName", wfSpecName);
-        out.put("WFSpecId", wfSpecDigest);
-        return out;
+        pairs.put("WFSpecName", wfSpecName);
+        pairs.put("WFSpecId", wfSpecDigest);
     }
 
 }

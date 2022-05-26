@@ -414,4 +414,7 @@ public class WFSpec extends POSTable {
         }
         return tqs;
     }
+
+    @Override
+    public void addIndexKeyValPairs(Map<String, String> pairs) {}
 }

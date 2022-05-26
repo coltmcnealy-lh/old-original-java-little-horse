@@ -45,15 +45,15 @@ class SEARCHHandler:
 
         # lookup based on created time
         created_sp = st_subparsers.add_parser(
-            "time", help="Lookup based on created time."
+            "seconds-ago", help="Lookup based on created time, in seconds ago."
         )
         created_sp.add_argument(
-            "--key", '-k',
-            help="Key to search for. If blank, lists all resources."
+            "--since", '-s',
+            help="Number of seconds since which to begin search."
         )
         created_sp.add_argument(
-            "--value", '-v',
-            help="Value to search for.",
+            "--until", '-u',
+            help="Number of seconds until which to continue search.",
         )
         created_sp.set_defaults(func=self.time_search)
 
@@ -75,6 +75,7 @@ class SEARCHHandler:
         )
         range_subp.set_defaults(func=self.range_search)
 
+        # Utility
         parser.add_argument(
             "--limit", "-l", type=int, default=10,
             help="Limit number of records for this page."
@@ -90,18 +91,60 @@ class SEARCHHandler:
 
         parser.set_defaults(func=self.list)
 
+    def _print_resp(
+        self,
+        r: LHRPCResponseSchema[RangeQueryResultSchema],
+        raw_json: bool
+    ):
+        if r.result is None:
+            r.result = RangeQueryResultSchema(object_ids=[])
+
+        if raw_json:
+            print(r.result.json(by_alias=True))
+        else:
+            if r.result.object_ids is None or len(r.result.object_ids) == 0:
+                print("No objects found.")
+            else:
+                for obj_id in r.result.object_ids:
+                    print(obj_id)
+
     def list(self, ns: Namespace, client: LHClient):
-        pass
+        rt_schema = RESOURCE_TYPES[ns.resource_type]
+
+        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.list_resource(
+            rt_schema,
+            token=ns.token,
+            limit=ns.limit,
+        )
+        self._print_resp(r, ns.raw_json)
 
     def range_search(self, ns: Namespace, client: LHClient):
-        pass
+        rt_schema = RESOURCE_TYPES[ns.resource_type]
+
+        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.range_search(
+            rt_schema,
+            key=ns.key,
+            start=ns.start,
+            end=ns.end,
+            token=ns.token,
+            limit=ns.limit,
+        )
+        self._print_resp(r, ns.raw_json)
 
     def time_search(self, ns: Namespace, client: LHClient):
-        pass
+        rt_schema = RESOURCE_TYPES[ns.resource_type]
+
+        r: LHRPCResponseSchema[RangeQueryResultSchema] = client.time_search(
+            rt_schema,
+            start=int(ns.since) if ns.since is not None else None,
+            end=int(ns.until) if ns.until is not None else None,
+            token=ns.token,
+            limit=ns.limit,
+        )
+        self._print_resp(r, ns.raw_json)
 
     def key_value_search(self, ns: Namespace, client: LHClient):
-        rt_name: str = ns.resource_type
-        rt_schema = RESOURCE_TYPES[rt_name]
+        rt_schema = RESOURCE_TYPES[ns.resource_type]
 
         r: LHRPCResponseSchema[RangeQueryResultSchema] = client.key_value_lookup(
             rt_schema,
@@ -110,15 +153,4 @@ class SEARCHHandler:
             token=ns.token,
             limit=ns.limit,
         )
-
-        if r.result is None:
-            r.result = RangeQueryResultSchema(object_ids=[])
-
-        if ns.raw_json:
-            print(r.result.json(by_alias=True))
-        else:
-            if r.result.object_ids is None or len(r.result.object_ids) == 0:
-                print("No objects found.")
-            else:
-                for obj_id in r.result.object_ids:
-                    print(obj_id)
+        self._print_resp(r, ns.raw_json)

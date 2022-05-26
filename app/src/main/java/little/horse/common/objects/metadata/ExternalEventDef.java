@@ -1,5 +1,7 @@
 package little.horse.common.objects.metadata;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import little.horse.common.DepInjContext;
@@ -25,4 +27,7 @@ public class ExternalEventDef extends POSTable {
     public void validate(DepInjContext config) {
         // Nothing to do yet.
     }
+
+    @Override
+    public void addIndexKeyValPairs(Map<String, String> pairs) {}
 }

@@ -130,6 +130,99 @@ class LHClient:
             )
         return intermediate
 
+    def range_search(
+        self,
+        resource_type: type,
+        key: str,
+        start: Optional[str] = None,
+        end: Optional[str] = None,
+        limit: Optional[int] = None,
+        token: Optional[str] = None,
+    ) -> LHRPCResponseSchema[RangeQueryResultSchema]:
+        resource_type_name = RESOURCE_TYPES_INV[resource_type]
+
+        url = f"{self.url}/rangeSearch/{resource_type_name}/{key}"
+        params = {}
+        if token is not None:
+            params['token'] = token
+        if limit is not None:
+            params['limit'] = str(limit)
+        if start is not None:
+            params['start'] = start
+        if end is not None:
+            params['end'] = end
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        intermediate = LHRPCResponseSchema(**response.json())
+        if intermediate.result is not None:
+            intermediate.result = RangeQueryResultSchema(
+                **intermediate.result
+            )
+        return intermediate
+
+    def list_resource(
+        self,
+        resource_type: type,
+        limit: Optional[int] = None,
+        token: Optional[str] = None,
+    ) -> LHRPCResponseSchema[RangeQueryResultSchema]:
+        resource_type_name = RESOURCE_TYPES_INV[resource_type]
+
+        url = f"{self.url}/list/{resource_type_name}"
+        print(url)
+        params = {}
+        if token is not None:
+            params['token'] = token
+        if limit is not None:
+            params['limit'] = str(limit)
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        intermediate = LHRPCResponseSchema(**response.json())
+        if intermediate.result is not None:
+            intermediate.result = RangeQueryResultSchema(
+                **intermediate.result
+            )
+        return intermediate
+
+    def time_search(
+        self,
+        resource_type: type,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        limit: Optional[int] = None,
+        token: Optional[str] = None,
+    ) -> LHRPCResponseSchema[RangeQueryResultSchema]:
+        resource_type_name = RESOURCE_TYPES_INV[resource_type]
+
+        def convert_seconds_ago_to_time(sec_ago) -> str:
+            now = round(time.time() * 1000)
+            return str(now - (sec_ago * 1000))
+
+        url = f"{self.url}/timeSearch/{resource_type_name}"
+        params = {}
+        if token is not None:
+            params['token'] = token
+        if limit is not None:
+            params['limit'] = str(limit)
+        if start is not None:
+            params['start'] = convert_seconds_ago_to_time(start)
+        if end is not None:
+            params['end'] = convert_seconds_ago_to_time(end)
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        intermediate = LHRPCResponseSchema(**response.json())
+        if intermediate.result is not None:
+            intermediate.result = RangeQueryResultSchema(
+                **intermediate.result
+            )
+        return intermediate
+
     def run_wf(
         self,
         wf_spec_id_or_name: str,
@@ -197,9 +290,18 @@ class LHClient:
 
     def add_external_event_def(self, ee: ExternalEventDefSchema):
         url = f'{self.url}/ExternalEventDef'
-        requests.post(
+        response = requests.post(
             url, json=json.loads(ee.json(by_alias=True))
-        ).raise_for_status()
+        )
+        response.raise_for_status()
+
+        resp = LHRPCResponseSchema(
+            **response.json()
+        )
+        if resp.status == ResponseStatusEnum.OK:
+            print(f"Created WFSpec {resp.object_id}")
+        else:
+            print(resp.json(by_alias=True))
 
     def add_wf_spec(self, wf: WFSpecSchema):
         url = f'{self.url}/WFSpec'
@@ -208,12 +310,19 @@ class LHClient:
         )
         try:
             response.raise_for_status()
+            resp = LHRPCResponseSchema(
+                **response.json()
+            )
+            if resp.status == ResponseStatusEnum.OK:
+                print(f"Created WFSpec {resp.object_id}")
+            else:
+                print(resp.json(by_alias=True))
+
         except Exception as exn:
             logging.error(
                 f"Got an exception: {exn}, {response.content.decode()}"
             )
             raise exn
-        print("Got id: ", response.json()['objectId'])
         return response.json()['objectId']
 
     def add_task_def(self, td: TaskDefSchema):
@@ -223,6 +332,14 @@ class LHClient:
         )
         try:
             response.raise_for_status()
+            resp = LHRPCResponseSchema(
+                **response.json()
+            )
+            if resp.status == ResponseStatusEnum.OK:
+                print(f"Created TaskDef {resp.object_id}")
+            else:
+                print(resp.json(by_alias=True))
+
         except Exception as exn:
             print(response.content.decode())
             raise exn

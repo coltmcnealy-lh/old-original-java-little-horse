@@ -1,6 +1,7 @@
 package little.horse.common.objects.metadata;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -155,4 +156,7 @@ public class TaskDef extends POSTable {
         }
         deployer.validate(this, config);
     }
+
+    @Override
+    public void addIndexKeyValPairs(Map<String, String> pairs) {}
 }

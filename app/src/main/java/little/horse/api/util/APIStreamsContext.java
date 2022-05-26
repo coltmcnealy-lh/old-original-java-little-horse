@@ -6,6 +6,7 @@
 
 package little.horse.api.util;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 
@@ -114,6 +115,50 @@ public class APIStreamsContext<T extends GETable> {
         String start = "created;;";
         String end = start + getLastKey();
         return iterBetweenKeys(start, end, limit, token, false);
+    }
+
+    public RangeQueryResponse rangeSearch(
+        String key, String start, String end, String token, int limit
+    ) throws LHConnectionError {
+        String startStr = key + ";;";
+        String endStr = key + ";;";
+
+        if (start != null) {
+            startStr += start;
+        } else {
+            startStr += getFirstKey();
+        }
+
+        if (end != null) {
+            endStr += end;
+        } else {
+            endStr += getLastKey();
+        }
+
+        return iterBetweenKeys(
+            startStr, endStr, limit, token, false
+        );
+    }
+
+    public RangeQueryResponse timeSearch(
+        Date start, Date end, String token, int limit
+    ) throws LHConnectionError {
+        String startStr = "created;;";
+        String endStr = "created;;";
+
+        if (start != null) {
+            startStr += LHUtil.dateToDbString(start);
+        } else {
+            startStr += getFirstKey();
+        }
+
+        if (end != null) {
+            endStr += LHUtil.dateToDbString(end);
+        } else {
+            endStr += getLastKey();
+        }
+
+        return iterBetweenKeys(startStr, endStr, limit, token, false);
     }
 
     private RangeQueryResponse iterBetweenKeysLocal(

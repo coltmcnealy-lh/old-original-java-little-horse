@@ -67,8 +67,34 @@ public abstract class GETable extends BaseSchema {
     }
 
     public static<T extends GETable> String getSearchPath(
-        String key, String value, Class<T> cls) {
+        String key, String value, Class<T> cls
+    ) {
         return "/search/" + cls.getSimpleName() + "/" + key + "/" + value;
+    }
+
+    public static <T extends GETable> String getTimeSearchPath(Class<T> cls) {
+        return "/timeSearch/" + cls.getSimpleName();
+    }
+
+    public static <T extends GETable> String getRangeSearchPath(
+        String key, Class<T> cls
+    ) {
+        return "/rangeSearch/" + cls.getSimpleName() + "/" + key;
+    }
+
+    public static <T extends GETable> String getRangeSearchPath(
+        String key, String start, String end, Class<T> cls
+    ) {
+        String out = getRangeSearchPath(key, cls);
+        if (start != null) {
+            out += "?start=" + start;
+            if (end != null) {
+                out += "&end=" + end;
+            }
+        } else if (end != null) {
+            out += "?end=" + end;
+        }
+        return out;
     }
 
     public static<T extends GETable> String getListPath(Class<T> cls) {
@@ -131,10 +157,14 @@ public abstract class GETable extends BaseSchema {
         return out;
     }
 
+    public abstract void addIndexKeyValPairs(Map<String, String> pairs);
+
     @JsonIgnore
     public Set<IndexRecordKey> getIndexEntries() {
         HashSet<IndexRecordKey> out = new HashSet<>();
-        for (Map.Entry<String, String> e : getIndexKeyValPairs().entrySet()) {
+        Map<String, String> pairs = getIndexKeyValPairs();
+        addIndexKeyValPairs(pairs);
+        for (Map.Entry<String, String> e : pairs.entrySet()) {
             out.add(new IndexRecordKey(e.getKey(), e.getValue(), this));
         }
         return out;
