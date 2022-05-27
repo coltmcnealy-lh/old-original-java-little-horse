@@ -21,8 +21,8 @@ public class IndexRecordKey {
     public static String getLabel(
         String key, String val, Date created, String objectId
     ) {
-        return key + ";;" + val + ";;" + LHUtil.dateToDbString(created) + ";;" +
-            objectId;
+        return IndexRecordKey.getPartitionKey(key, val) +
+            ";;" + LHUtil.dateToDbString(created) + ";;" + objectId;
     }
 
     public IndexRecordKey(String key, String val, GETable parent) {
@@ -51,5 +51,13 @@ public class IndexRecordKey {
     @Override
     public String toString() {
         return getLabel(key, value, created, objectId);
+    }
+
+    public static String getPartitionKey(String key, String value) {
+        return key + ";;" + value;
+    }
+
+    public String partitionKey() {
+        return IndexRecordKey.getPartitionKey(key, value);
     }
 }

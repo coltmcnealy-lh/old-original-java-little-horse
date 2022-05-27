@@ -25,6 +25,7 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import little.horse.api.OffsetInfo;
 import little.horse.api.ResponseStatus;
 import little.horse.api.metadata.IndexEntry;
+import little.horse.api.metadata.IndexRecordKey;
 import little.horse.api.metadata.RangeQueryResponse;
 import little.horse.api.metadata.ResourceDbEntry;
 import little.horse.common.DepInjContext;
@@ -105,8 +106,8 @@ public class APIStreamsContext<T extends GETable> {
     ) throws LHConnectionError {
         // TODO: Move this to some class somewhere so that we can do escaping.
 
-        String storeKey = key + ";;" + value;
-        String start = key + ";;" + value + ";;";
+        String storeKey = IndexRecordKey.getPartitionKey(key, value);
+        String start = storeKey + ";;";
         String end = start + getLastKey();
 
         KeyQueryMetadata metadata = streams.queryMetadataForKey(
@@ -192,6 +193,9 @@ public class APIStreamsContext<T extends GETable> {
     ) {
         if (end == null) end = getLastKey();
 
+        LHUtil.log(config.getAppInstanceId());
+        dumpStore(T.getIndexStoreName(cls));
+
         RangeQueryResponse out = new RangeQueryResponse();
         out.partitionBookmarks = bookmarkMap;
         ReadOnlyKeyValueStore<String, Bytes> store = getStore(
@@ -233,6 +237,8 @@ public class APIStreamsContext<T extends GETable> {
     public RangeQueryResponse iterBetweenKeys(
         String start, String end, int limit, String token, boolean forceLocal
     ) throws LHConnectionError {
+        LHUtil.logBack(1, "iter between keys, forcelocal is ", forceLocal);
+        LHUtil.logBack(2, "Came from here");
 
         Map<String, String> bookmarkMap = RangeQueryResponse.tokenToBookmarkMap(
             token, config
@@ -257,6 +263,7 @@ public class APIStreamsContext<T extends GETable> {
 
         RangeQueryResponse out = new RangeQueryResponse();
         for (StreamsMetadata meta: streams.metadataForAllStreamsClients()) {
+            LHUtil.log("host: ", meta.host(), "Port", meta.port());
             String host = meta.host();
             int port = meta.port();
             String url = String.format(
@@ -271,6 +278,10 @@ public class APIStreamsContext<T extends GETable> {
             LHRpcResponse<RangeQueryResponse> resp = new LHRpcClient(
                 config
             ).getResponse(url, RangeQueryResponse.class);
+
+            try {
+                LHUtil.log(LHUtil.getObjectMapper(config).writeValueAsString(resp), "\n\n------------------------\n\n\n\n\n");
+            } catch (Exception exn) {}
 
             if (resp.result != null) {
                 out = out.add(resp.result);

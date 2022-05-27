@@ -33,6 +33,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
         ArrayList<String> envList = new ArrayList<>();
         HashMap<String, String> env = config.getBaseEnv();
         env.put(Constants.KAFKA_APPLICATION_ID_KEY, spec.name);
+        env.put(Constants.KAFKA_APPLICATION_IID_KEY, "scheduler-0-" + spec.name);
         env.put(DeployerConstants.WF_SPEC_ID_KEY, spec.getObjectId());
         env.put(Constants.ADVERTISED_PORT_KEY, "80");
         for (Map.Entry<String, String> envEntry: env.entrySet()) {

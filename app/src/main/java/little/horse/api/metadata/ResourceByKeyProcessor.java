@@ -126,7 +126,7 @@ implements Processor<String, T, String, IndexEvent> {
                     IndexOperation.DELETE
                 );
                 Record<String, IndexEvent> ar = new Record<String, IndexEvent>(
-                    ali.toString(),
+                    ali.partitionKey(),
                     removeEvent,
                     record.timestamp()
                 );
@@ -144,7 +144,7 @@ implements Processor<String, T, String, IndexEvent> {
                     IndexOperation.CREATE
                 );
                 Record<String, IndexEvent> ar = new Record<String, IndexEvent>(
-                    ali.toString(),
+                    ali.partitionKey(),
                     createAliasEvent,
                     record.timestamp()
                 );

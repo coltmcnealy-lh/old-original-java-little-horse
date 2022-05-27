@@ -82,6 +82,8 @@ public class RangeQueryResponse extends BaseSchema {
         out.objectIds.addAll(objectIds);
         out.objectIds.addAll(other.objectIds);
 
+        LHUtil.log("After add, ", objectIds.size(), other.objectIds.size(), out.objectIds.size());
+
         return out;
     }
 }

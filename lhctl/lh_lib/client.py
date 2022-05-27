@@ -171,7 +171,6 @@ class LHClient:
         resource_type_name = RESOURCE_TYPES_INV[resource_type]
 
         url = f"{self.url}/list/{resource_type_name}"
-        print(url)
         params = {}
         if token is not None:
             params['token'] = token

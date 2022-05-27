@@ -61,36 +61,36 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
-  # little-horse-api-1:
-  #   # build: .
-  #   image: little-horse-api:latest
-  #   container_name: little-horse-api-1
-  #   labels:
-  #     - io.littlehorse/active=true
-  #   depends_on:
-  #     - broker
-  #   environment:
-  #     LHORSE_KAFKA_BOOTSTRAP_SERVERS: "127.0.0.1:9092"
-  #     LHORSE_API_URL: "http://127.0.0.1:5000"
-  #     LHORSE_ADVERTISED_PORT: "5001"
-  #     LHORSE_ADVERTISED_HOST: "127.0.0.1"
-  #     LHORSE_ADVERTISED_PROTOCOL: "http"
-  #     LHORSE_DEFAULT_PARTITIONS: "9"
-  #     LHORSE_DEFAULT_REPLICAS: "1"
-  #     LHORSE_KAFKA_APPLICATION_ID: "lh-api"
-  #     LHORSE_KAFKA_APPLICATION_IID: "1"
-  #     LHORSE_DEFAULT_WF_DEPLOYER: "little.horse.deployers.examples.docker.DockerWorkflowDeployer"
-  #     LHORSE_DEFAULT_TASK_DEPLOYER: "little.horse.deployers.examples.docker.DockerTaskDeployer"
-  #     LHORSE_KAFKA_STREAMS_STATE_DIR: "/tmp/kafkaState1"
-  #     # Specific to the DockerTaskDeployer
-  #     LHORSE_DOCKER_TASK_EXECUTOR_CLASS: "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
-  #   network_mode: "host"
-  #   entrypoint:
-  #     - 'java'
-  #     - '-cp'
-  #     - '/littleHorse.jar'
-  #     - 'little.horse.api.LittleHorseAPI'
-  #   command:
-  #     - "api"
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
+  little-horse-api-1:
+    # build: .
+    image: little-horse-api:latest
+    container_name: little-horse-api-1
+    labels:
+      - io.littlehorse/active=true
+    depends_on:
+      - broker
+    environment:
+      LHORSE_KAFKA_BOOTSTRAP_SERVERS: "127.0.0.1:9092"
+      LHORSE_API_URL: "http://127.0.0.1:5000"
+      LHORSE_ADVERTISED_PORT: "5001"
+      LHORSE_ADVERTISED_HOST: "127.0.0.1"
+      LHORSE_ADVERTISED_PROTOCOL: "http"
+      LHORSE_DEFAULT_PARTITIONS: "9"
+      LHORSE_DEFAULT_REPLICAS: "1"
+      LHORSE_KAFKA_APPLICATION_ID: "lh-api"
+      LHORSE_KAFKA_APPLICATION_IID: "1"
+      LHORSE_DEFAULT_WF_DEPLOYER: "little.horse.deployers.examples.docker.DockerWorkflowDeployer"
+      LHORSE_DEFAULT_TASK_DEPLOYER: "little.horse.deployers.examples.docker.DockerTaskDeployer"
+      LHORSE_KAFKA_STREAMS_STATE_DIR: "/tmp/kafkaState1"
+      # Specific to the DockerTaskDeployer
+      LHORSE_DOCKER_TASK_EXECUTOR_CLASS: "little.horse.lib.worker.examples.docker.bashExecutor.BashExecutor"
+    network_mode: "host"
+    entrypoint:
+      - 'java'
+      - '-cp'
+      - '/littleHorse.jar'
+      - 'little.horse.api.LittleHorseAPI'
+    command:
+      - "api"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
