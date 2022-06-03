@@ -45,4 +45,4 @@ RUN mkdir /javaInclude
 
 # This command just prints a message and exits. In other words, it should
 # be overriden by whatever is in charge of running the app.
-CMD ["java", "-cp", "/javaInclude:/littleHorse.jar", "little.horse.App"]
+CMD ["java", "-cp", "/javaInclude:/littleHorse.jar", "io.littlehorse.App"]

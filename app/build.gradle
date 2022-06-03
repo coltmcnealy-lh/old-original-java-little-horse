@@ -50,6 +50,9 @@ dependencies {
     // TODO: Do we want to make this optional since not everyone uses the docker
     // deployer? It might be considered dead weight in that case.
     implementation 'com.github.docker-java:docker-java:3.2.0-rc2'
+
+    // Stuff for Postgres/Yugabyte
+    implementation 'org.postgresql:postgresql:42.3.4'
 }
 
 
