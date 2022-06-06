@@ -1,8 +1,9 @@
 #!/bin/bash
 
-set -ex
-
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-${SCRIPT_DIR}/../build.sh
+cd $SCRIPT_DIR
 
-docker-compose -f ${SCRIPT_DIR}/docker-compose.yml up -d
+docker-compose up -d
+sleep 2
+
+psql postgresql://postgres:postgres@localhost:5432/postgres -f ${SCRIPT_DIR}/../sql/000_initial_schema.sql

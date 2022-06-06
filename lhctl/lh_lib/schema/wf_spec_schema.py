@@ -164,7 +164,7 @@ class ThreadSpecSchema(LHBaseModel):
     )
     interrupt_defs: Optional[dict[str, InterruptDefSchema]] = None
 
-    nodes: dict[str, NodeSchema] = Field(default_factory=lambda: dict({}))
+    nodes: list[NodeSchema] = Field(default_factory=lambda: list)
     edges: list[EdgeSchema] = Field(default_factory=lambda: list([]))
 
 
@@ -175,7 +175,7 @@ class WFSpecSchema(LHBaseModel):
     status_message: Optional[str] = None
     desired_status: LHDeployStatus = LHDeployStatus.RUNNING
 
-    thread_specs: dict[str, ThreadSpecSchema] = Field(default_factory=dict)
+    thread_specs: List[ThreadSpecSchema] = Field(default_factory=list)
     interrupt_events: Optional[List[str]] = None
 
     entrypoint_thread_name: str
