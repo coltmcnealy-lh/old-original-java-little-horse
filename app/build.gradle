@@ -33,38 +33,29 @@ dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.4'
     implementation 'org.slf4j:slf4j-simple:1.7.31'
 
-    // Stuff for Kafka
-    implementation 'org.apache.kafka:kafka-clients:3.2.0'
-    implementation 'org.apache.kafka:kafka-streams:3.2.0'
-
     // HTTP Client
     implementation 'com.squareup.okhttp3:okhttp:4.9.0'
 
     // Utils
     implementation 'org.apache.commons:commons-lang3:3.12.0'
-
-    // JSONPath
     implementation 'com.jayway.jsonpath:json-path:2.6.0'
-
-    // Docker compatibility.
-    // TODO: Do we want to make this optional since not everyone uses the docker
-    // deployer? It might be considered dead weight in that case.
-    implementation 'com.github.docker-java:docker-java:3.2.0-rc2'
 
     // Stuff for Postgres/Yugabyte
     implementation 'org.postgresql:postgresql:42.3.4'
+    implementation 'io.ebean:ebean:12.6.5'
+    implementation 'io.ebean:ebean-querybean:12.6.5'
 }
 
 
 application {
     // Define the main class for the application.
-    mainClass = 'little.horse.App'
+    mainClass = 'io.littlehorse.App'
     executableDir = 'custom_bin_dir'
 }
 
 task fatJar(type: Jar) {
   manifest {
-    attributes 'Main-Class': 'little.horse.App'
+    attributes 'Main-Class': 'io.littlehorse.App'
   }
 
   // TODO: something safer?
