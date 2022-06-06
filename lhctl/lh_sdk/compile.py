@@ -4,7 +4,7 @@ import time
 from typing import Iterable, List, Mapping, Set
 
 import os
-from humps import camelize
+from humps import camelize # type: ignore
 from pydantic import Field
 
 from lh_sdk.thread_spec_builder import Workflow
@@ -28,10 +28,8 @@ DEFAULT_DOCKER_IMAGE = os.getenv(
 
 
 def iter_nodes(wf: WFSpecSchema) -> Iterable[NodeSchema]:
-    for tspec_name in wf.thread_specs.keys():
-        tspec = wf.thread_specs[tspec_name]
-        for node_name in tspec.nodes.keys():
-            node = tspec.nodes[node_name]
+    for tspec in wf.thread_specs:
+        for node in tspec.nodes:
             yield node
 
 
@@ -55,7 +53,7 @@ def get_external_events_for_wf(spec: WFSpecSchema) -> Set[str]:
             continue
         out.add(node.external_event_def_name)
 
-    for tspec in spec.thread_specs.values():
+    for tspec in spec.thread_specs:
         for eev_name in (tspec.interrupt_defs or []):
             out.add(eev_name)
     return out

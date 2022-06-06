@@ -1,96 +1,15 @@
----
-version: '3'
+# Use postgres/example user/password credentials
+version: '3.1'
+
 services:
-  zookeeper:
-    labels:
-      - io.littlehorse/active=true
-    image: confluentinc/cp-zookeeper:6.2.4
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    network_mode: "host"
-  broker:
-    image: confluentinc/cp-kafka:6.2.4
-    container_name: broker
-    labels:
-      - io.littlehorse/active=true
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: '127.0.0.1:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092,PLAINTEXT_HOST://127.0.0.1:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    network_mode: "host"
 
-  little-horse-api-0:
-    # build: .
-    image: little-horse-api:latest
-    container_name: little-horse-api-0
+  db:
+    image: postgres
+    container_name: little-horse-test-db
+    restart: always
+    network_mode: "host"
     labels:
       - io.littlehorse/active=true
-    depends_on:
-      - broker
     environment:
-      LHORSE_KAFKA_BOOTSTRAP_SERVERS: "127.0.0.1:9092"
-      LHORSE_API_URL: "http://127.0.0.1:5000"
-      LHORSE_ADVERTISED_PORT: "5000"
-      LHORSE_ADVERTISED_HOST: "127.0.0.1"
-      LHORSE_ADVERTISED_PROTOCOL: "http"
-      LHORSE_DEFAULT_PARTITIONS: "9"
-      LHORSE_DEFAULT_REPLICAS: "1"
-      LHORSE_KAFKA_APPLICATION_IID: "0"
-      LHORSE_KAFKA_APPLICATION_ID: "lh-api"
-      LHORSE_DEFAULT_WF_DEPLOYER: "io.littlehorse.deployers.examples.docker.DockerWorkflowDeployer"
-      LHORSE_DEFAULT_TASK_DEPLOYER: "io.littlehorse.deployers.examples.docker.DockerTaskDeployer"
-      LHORSE_KAFKA_STREAMS_STATE_DIR: "/tmp/kafkaState0"
-      # Specific to the DockerTaskDeployer
-      LHORSE_DOCKER_TASK_EXECUTOR_CLASS: "io.littlehorse.lib.worker.examples.docker.bashExecutor.BashExecutor"
-    network_mode: "host"
-    entrypoint:
-      - 'java'
-      - '-cp'
-      - '/littleHorse.jar'
-      - 'io.littlehorse.api.LittleHorseAPI'
-    command:
-      - "api"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-#  little-horse-api-1:
-#    # build: .
-#    image: little-horse-api:latest
-#    container_name: little-horse-api-1
-#    labels:
-#      - io.littlehorse/active=true
-#    depends_on:
-#      - broker
-#    environment:
-#      LHORSE_KAFKA_BOOTSTRAP_SERVERS: "127.0.0.1:9092"
-#      LHORSE_API_URL: "http://127.0.0.1:5000"
-#      LHORSE_ADVERTISED_PORT: "5001"
-#      LHORSE_ADVERTISED_HOST: "127.0.0.1"
-#      LHORSE_ADVERTISED_PROTOCOL: "http"
-#      LHORSE_DEFAULT_PARTITIONS: "9"
-#      LHORSE_DEFAULT_REPLICAS: "1"
-#      LHORSE_KAFKA_APPLICATION_ID: "lh-api"
-#      LHORSE_KAFKA_APPLICATION_IID: "1"
-#      LHORSE_DEFAULT_WF_DEPLOYER: "io.littlehorse.deployers.examples.docker.DockerWorkflowDeployer"
-#      LHORSE_DEFAULT_TASK_DEPLOYER: "io.littlehorse.deployers.examples.docker.DockerTaskDeployer"
-#      LHORSE_KAFKA_STREAMS_STATE_DIR: "/tmp/kafkaState1"
-#      # Specific to the DockerTaskDeployer
-#      LHORSE_DOCKER_TASK_EXECUTOR_CLASS: "io.littlehorse.lib.worker.examples.docker.bashExecutor.BasExecutor"
-#    network_mode: "host"
-#    entrypoint:
-#      - 'java'
-#      - '-cp'
-#      - '/littleHorse.jar:/javaInclude'
-#      - 'io.littlehorse.api.LittleHorseAPI'
-#    command:
-#      - "api"
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres

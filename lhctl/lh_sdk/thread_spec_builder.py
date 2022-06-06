@@ -42,7 +42,7 @@ THREAD_FUNC = Callable[['ThreadSpecBuilder'], None]
 class ThreadSpecBuilder:
     def __init__(self, name: str, wf_spec: WFSpecSchema, wf: Workflow):
         self._spec: ThreadSpecSchema = ThreadSpecSchema(name=name)
-        self._spec.nodes = {}
+        self._spec.nodes = []
         self._spec.edges = []
         self._last_node_name: Optional[str] = None
         self._wf_spec = wf_spec
@@ -189,7 +189,7 @@ class ThreadSpecBuilder:
 
         tag = hashlib.sha256(self._spec.name.encode()).hexdigest()[:5]
         node_name = f'{len(self._spec.nodes)}-{node_human_name}-{tag}'
-        self._spec.nodes[node_name] = node
+        self._spec.nodes.append(node)
 
         for source_node_name in self._feeder_nodes:
             condition = self._feeder_nodes[source_node_name]
@@ -236,7 +236,7 @@ class ThreadSpecBuilder:
 
     def _mutate(self, var_name: str, mutation: VariableMutationSchema):
         assert self._last_node_name is not None, "Execute task before mutating vars!"
-        node = self._spec.nodes[self._last_node_name]
+        node = self._spec.nodes[-1]
         node.variable_mutations[var_name] = mutation
 
     def wait_for_event(self, event_name: str) -> NodeOutput:
@@ -359,7 +359,7 @@ class Workflow:
                     seen_funcs.add(func_name)
                     thr = ThreadSpecBuilder(func_name, self._spec, self)
                     self._funcs[func_name](thr)
-                    self._spec.thread_specs[func_name] = thr.spec
+                    self._spec.thread_specs.append(thr.spec)
             if cur_funcs_size == len(self._funcs):
                 break
 
