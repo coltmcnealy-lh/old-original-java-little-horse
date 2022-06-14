@@ -133,6 +133,7 @@ class ExceptionHandlerSpecSchema(LHBaseModel):
 
 
 class NodeSchema(LHBaseModel):
+    name: Optional[str] = None
     timeout_seconds: Optional[VariableAssignmentSchema] = None
     num_retries: int = 0
     node_type: NodeType = NodeType.TASK

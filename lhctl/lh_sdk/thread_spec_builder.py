@@ -203,6 +203,7 @@ class ThreadSpecBuilder:
         self._feeder_nodes = {node_name: None}
         # self._next_edge_condition = None
         self._last_node_name = node_name
+        node.name = node_name
         return node_name
 
     def add_variable(

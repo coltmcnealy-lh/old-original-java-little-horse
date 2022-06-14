@@ -23,6 +23,7 @@ def my_workflow(thread: ThreadSpecBuilder):
 
     # Execute a task
     thread.execute(ask_for_name)
+    thread.execute(ask_for_name)
 
     # # Wait for an external event to come in. The WFRun will block here (without
     # # using any resources) indefinitely until an ExternalEvent arrives.
