@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS wf_specs;
+
+CREATE TABLE wf_specs (
+    id VARCHAR(128) PRIMARY KEY,
+    created TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated TIMESTAMP
+);

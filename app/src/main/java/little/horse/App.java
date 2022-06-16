@@ -3,6 +3,8 @@
  */
 package little.horse;
 
+import io.ebean.Database;
+import io.ebean.dbmigration.DbMigration;
 import little.horse.common.LHConfig;
 
 public class App {
@@ -11,5 +13,9 @@ public class App {
         System.out.println("This class does nothing, all the logic is elsewhere.");
 
         LHConfig config = new LHConfig();
+        Database db = config.getEbeanDb();
+        DbMigration migration = DbMigration.create();
+
+        System.out.println(migration.generateInitMigration());
     }
 }
