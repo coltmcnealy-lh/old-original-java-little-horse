@@ -1,6 +1,6 @@
 package little.horse.sdkprototype.examples;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.sdkprototype.LHTaskFunction;
 import little.horse.sdkprototype.sdk.SpecBuilderThreadContext;
 
@@ -21,7 +21,7 @@ class MyOtherTask {
 public class BasicExceptions {
     public static void main(String[] args) {
         SpecBuilderThreadContext wf = new SpecBuilderThreadContext(
-            new DepInjContext(), "basic-exceptions-sample"
+            new LHConfig(), "basic-exceptions-sample"
         );
 
         wf.execute(

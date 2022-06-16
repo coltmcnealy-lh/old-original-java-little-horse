@@ -8,7 +8,7 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -25,14 +25,14 @@ import little.horse.deployers.examples.kubernetes.specs.*;
 
 public class K8sTaskDeployer implements TaskDeployer {
 
-    public void deploy(TaskDef spec, DepInjContext config) throws LHConnectionError {
+    public void deploy(TaskDef spec, LHConfig config) throws LHConnectionError {
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         Deployment dp = getK8sDeployment(spec, config, kdConfig);
         kdConfig.createDeployment(dp);
     }
 
     private Deployment getK8sDeployment(
-        TaskDef spec, DepInjContext config, KDConfig kdConfig
+        TaskDef spec, LHConfig config, KDConfig kdConfig
     ) {
         K8sTaskDeployMeta meta;
         try {
@@ -130,12 +130,12 @@ public class K8sTaskDeployer implements TaskDeployer {
         return dp;
     }
 
-    public void undeploy(TaskDef spec, DepInjContext config) throws LHConnectionError{
+    public void undeploy(TaskDef spec, LHConfig config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         kdConfig.deleteK8sDeployment("io.littlehorse/taskDefId", spec.getObjectId());
     }
 
-    public void validate(TaskDef spec, DepInjContext config) throws LHValidationError {
+    public void validate(TaskDef spec, LHConfig config) throws LHValidationError {
         String message = null;
         if (spec.deployMetadata == null) {
             throw new LHValidationError("Must provide valid Docker validation!");

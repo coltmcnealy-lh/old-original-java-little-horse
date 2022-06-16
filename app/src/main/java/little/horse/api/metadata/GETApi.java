@@ -6,7 +6,7 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
 import little.horse.api.util.APIStreamsContext;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.GETable;
 import little.horse.common.objects.rundata.WFRun;
@@ -17,7 +17,7 @@ public class GETApi<T extends GETable> {
     private APIStreamsContext<T> streamsContext;
 
     public GETApi(
-        DepInjContext config, Class<T> cls, APIStreamsContext<T> context, Javalin app
+        LHConfig config, Class<T> cls, APIStreamsContext<T> context, Javalin app
     ) {
         this.cls = cls;
         this.streamsContext = context;

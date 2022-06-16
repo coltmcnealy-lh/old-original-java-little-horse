@@ -2,7 +2,7 @@ package little.horse.common.util;
 
 import little.horse.api.ResponseStatus;
 import little.horse.api.metadata.RangeQueryResponse;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.GETable;
 
@@ -20,7 +20,7 @@ import little.horse.common.objects.metadata.GETable;
 public class LHDatabaseClient {
 
     public static<T extends GETable> T getByNameOrId(
-        String idOrName, DepInjContext config, Class<T> cls
+        String idOrName, LHConfig config, Class<T> cls
     ) throws LHConnectionError {
 
         LHRpcClient client = new LHRpcClient(config);
@@ -45,7 +45,7 @@ public class LHDatabaseClient {
     }
 
     public static<T extends GETable> T getById(
-        String id, DepInjContext config, Class<T> cls
+        String id, LHConfig config, Class<T> cls
     ) throws LHConnectionError {
 
         LHRpcClient client = new LHRpcClient(config);

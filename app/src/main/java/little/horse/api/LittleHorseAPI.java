@@ -19,7 +19,7 @@ import little.horse.api.metadata.GETApi;
 import little.horse.api.metadata.ApiTopologyBuilder;
 import little.horse.api.metadata.POSTApi;
 import little.horse.api.util.APIStreamsContext;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.POSTable;
 import little.horse.common.objects.metadata.ExternalEventDef;
@@ -34,14 +34,14 @@ import little.horse.common.util.LHUtil;
 
 public class LittleHorseAPI {
     private Javalin app; 
-    private DepInjContext config;
+    private LHConfig config;
     private Set<GETApi<? extends GETable>> getApis;
     private Set<POSTApi<? extends POSTable>> postApis;
     
     private KafkaStreams streams;
     
     @SuppressWarnings("unchecked")
-    public LittleHorseAPI(DepInjContext config, Topology topology) {
+    public LittleHorseAPI(LHConfig config, Topology topology) {
         // The API is two components:
         // 1. The Javalin HTTP/REST Frontend
         // 2. The Kafka Streams Backend.
@@ -128,7 +128,7 @@ public class LittleHorseAPI {
      * Core API. All it does right now is create a bunch of kafka topics so everybody
      * is happy.
      */
-    public static void doIdempotentSetup(DepInjContext config) {
+    public static void doIdempotentSetup(LHConfig config) {
         int partitions = config.getDefaultPartitions();
         short replicationFactor = (short) config.getDefaultReplicas();
 
@@ -173,7 +173,7 @@ public class LittleHorseAPI {
     public static void main(String[] args) throws LHConnectionError {
         LHUtil.log("Running the core LittleHorse API");
         
-        DepInjContext config = new DepInjContext();
+        LHConfig config = new LHConfig();
         LHUtil.log("Creating kafka topics");
         LittleHorseAPI.doIdempotentSetup(config);
 

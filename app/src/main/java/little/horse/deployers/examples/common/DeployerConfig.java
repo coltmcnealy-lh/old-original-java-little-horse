@@ -3,7 +3,7 @@ package little.horse.deployers.examples.common;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DockerClientBuilder;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.TaskDef;
 import little.horse.common.objects.metadata.WFSpec;
@@ -56,7 +56,7 @@ public class DeployerConfig {
         return taskDefId;
     }
 
-    public WFSpec lookupWFSpecOrDie(DepInjContext config) {
+    public WFSpec lookupWFSpecOrDie(LHConfig config) {
         WFSpec wfSpec = null;
         try {
             wfSpec = LHDatabaseClient.getByNameOrId(
@@ -71,7 +71,7 @@ public class DeployerConfig {
         return wfSpec;
     }
 
-    public TaskDef lookupTaskDefOrDie(DepInjContext config) {
+    public TaskDef lookupTaskDefOrDie(LHConfig config) {
         TaskDef taskDef = null;
         try {
             taskDef = LHDatabaseClient.getByNameOrId(

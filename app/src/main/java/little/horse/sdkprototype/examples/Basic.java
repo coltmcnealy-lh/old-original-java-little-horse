@@ -1,6 +1,6 @@
 package little.horse.sdkprototype.examples;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.sdkprototype.LHTaskFunction;
 import little.horse.sdkprototype.LHTaskOutput;
 import little.horse.sdkprototype.LHVariable;
@@ -16,7 +16,7 @@ class MyTask {
 public class Basic {
     public static void main(String[] args) {
         SpecBuilderThreadContext wf = new SpecBuilderThreadContext(
-            new DepInjContext(), "my-wf"
+            new LHConfig(), "my-wf"
         );
 
         LHVariable lenVar = wf.addVariable("len", Integer.class);

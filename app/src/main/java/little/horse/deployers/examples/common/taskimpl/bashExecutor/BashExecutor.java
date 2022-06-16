@@ -3,7 +3,7 @@ package little.horse.deployers.examples.common.taskimpl.bashExecutor;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
@@ -16,7 +16,7 @@ import little.horse.scheduler.TaskScheduleRequest;
 public class BashExecutor implements JavaTask {
     private BashTaskMetadata meta;
 
-    public void init(DeployerConfig ddConfig, DepInjContext config) {        
+    public void init(DeployerConfig ddConfig, LHConfig config) {        
         try {
             meta = BaseSchema.fromString(
                 System.getenv(DeployerConstants.TASK_EXECUTOR_META_KEY),

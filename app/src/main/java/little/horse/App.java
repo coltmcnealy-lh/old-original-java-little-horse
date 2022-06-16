@@ -3,28 +3,13 @@
  */
 package little.horse;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.utils.Bytes;
-
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 
 public class App {
     public static void main(String[] args) throws Exception {
         System.out.println("TODO: run some experiment for funsies.");
         System.out.println("This class does nothing, all the logic is elsewhere.");
 
-        DepInjContext c = new DepInjContext();
-        for (int i = 0; i < 10; i++) {
-            ProducerRecord<String, Bytes> rec = new ProducerRecord<>(
-                "wfEvents__my_workflow-57eb2bc6", "1b8b45b2-4094-40dc-b445-78b6ac040df2",
-                new Bytes("test".getBytes())
-            );
-            c.send(rec).get();
-        }
+        LHConfig config = new LHConfig();
     }
 }

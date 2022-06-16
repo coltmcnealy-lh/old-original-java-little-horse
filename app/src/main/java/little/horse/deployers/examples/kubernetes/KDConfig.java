@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.POSTable;
 import little.horse.common.objects.metadata.TaskDef;
@@ -65,7 +65,7 @@ public class KDConfig {
         return taskDefId;
     }
 
-    public WFSpec lookupWFSpecOrDie(DepInjContext config) {
+    public WFSpec lookupWFSpecOrDie(LHConfig config) {
         WFSpec wfSpec = null;
         try {
             wfSpec = LHDatabaseClient.getByNameOrId(
@@ -80,7 +80,7 @@ public class KDConfig {
         return wfSpec;
     }
 
-    public TaskDef lookupTaskDefOrDie(DepInjContext config) {
+    public TaskDef lookupTaskDefOrDie(LHConfig config) {
         TaskDef taskDef = null;
         try {
             taskDef = LHDatabaseClient.getByNameOrId(

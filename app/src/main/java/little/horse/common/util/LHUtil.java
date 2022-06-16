@@ -28,7 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.streams.KafkaStreams;
 
 import io.javalin.Javalin;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.rundata.LHFailureReason;
@@ -43,7 +43,7 @@ public class LHUtil {
         return UUID.randomUUID().toString().replaceAll("-", "");
     }
 
-    public static ObjectMapper getObjectMapper(DepInjContext cfg) {
+    public static ObjectMapper getObjectMapper(LHConfig cfg) {
         if (mapper == null) {
             mapper = new MapperInitializer(cfg).getMapper();
         }
@@ -118,7 +118,7 @@ public class LHUtil {
      * @return the unsplatted object
      */
     @SuppressWarnings("unchecked")
-    public static Map<String, Object> unsplat(Object obj, DepInjContext cfg) {
+    public static Map<String, Object> unsplat(Object obj, LHConfig cfg) {
         HashMap<String, Object> out;
         try {
             LHUtil.log("obj:", obj.toString());
@@ -153,7 +153,7 @@ public class LHUtil {
         return out.toString();
     }
 
-    public static String toJsonString(Object thing, DepInjContext cfg) {
+    public static String toJsonString(Object thing, LHConfig cfg) {
         try {
             return getObjectMapper(cfg).writeValueAsString(thing);
         } catch(JsonProcessingException exn) {
@@ -162,7 +162,7 @@ public class LHUtil {
         }
     }
 
-    public static Object stringToObj(String data, DepInjContext cfg) {
+    public static Object stringToObj(String data, LHConfig cfg) {
         try {
             Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
             return obj;
@@ -339,12 +339,12 @@ class MapperInitializer {
         return mapper;
     }
 
-    public MapperInitializer(DepInjContext cfg) {
+    public MapperInitializer(LHConfig cfg) {
         this.mapper = new ObjectMapper();
 
         InjectableValues inject = new InjectableValues.Std().addValue(
             BaseSchema.class, cfg
-        ).addValue(DepInjContext.class, cfg);
+        ).addValue(LHConfig.class, cfg);
 
         mapper.setInjectableValues(inject);
         SimpleModule module = new SimpleModule();

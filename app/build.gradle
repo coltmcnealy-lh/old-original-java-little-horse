@@ -44,9 +44,12 @@ dependencies {
 
     // Utils
     implementation 'org.apache.commons:commons-lang3:3.12.0'
-
-    // JSONPath
     implementation 'com.jayway.jsonpath:json-path:2.6.0'
+
+    // Stuff for Postgres/Yugabyte (Ebean version)
+    implementation 'org.postgresql:postgresql:42.3.4'
+    implementation 'io.ebean:ebean:12.6.5'
+    implementation 'io.ebean:ebean-querybean:12.6.5'
 
     // Docker compatibility.
     // TODO: Do we want to make this optional since not everyone uses the docker

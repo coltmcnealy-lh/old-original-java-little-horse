@@ -3,7 +3,7 @@ package little.horse.deployers.examples.common.taskimpl.bashExecutor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -19,7 +19,7 @@ public class BashValidator implements CustomTaskValidator {
         "---(.*?)---"
     );
 
-    public void validate(TaskDef task, DepInjContext config) throws LHValidationError {
+    public void validate(TaskDef task, LHConfig config) throws LHValidationError {
         DockerTaskDeployMetadata taskMeta;
         BashTaskMetadata bashMeta;
         try {

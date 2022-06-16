@@ -11,7 +11,7 @@ import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.exception.ConflictException;
 import com.github.dockerjava.api.model.Container;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.metadata.WFSpec;
@@ -23,7 +23,7 @@ import little.horse.deployers.examples.common.DeployerConstants;
 import little.horse.scheduler.Scheduler;
 
 public class DockerWorkflowDeployer implements WorkflowDeployer {
-    public void deploy(WFSpec spec, DepInjContext config) throws LHConnectionError {
+    public void deploy(WFSpec spec, LHConfig config) throws LHConnectionError {
 
         String containerName = spec.getK8sName();
         DeployerConfig ddConfig = new DeployerConfig(); // TODO: Inject the dependency somehow.
@@ -76,7 +76,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
         }
     }
 
-    public void undeploy(WFSpec spec, DepInjContext config) {
+    public void undeploy(WFSpec spec, LHConfig config) {
         DeployerConfig ddConfig = new DeployerConfig(); // TODO: Inject the dependency somehow.
 
         DockerClient client = ddConfig.getDockerClient();
@@ -96,7 +96,7 @@ public class DockerWorkflowDeployer implements WorkflowDeployer {
 
     }
 
-    public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {
+    public void validate(WFSpec spec, LHConfig config) throws LHValidationError {
         // Nothing to do here, since basically it's just gonna be valid no matter what
     }
     

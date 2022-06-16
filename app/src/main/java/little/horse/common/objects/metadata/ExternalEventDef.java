@@ -4,7 +4,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 
 // As of now, we don't have any fancy logic here, so it's literally just a CRUD api.
 public class ExternalEventDef extends POSTable {
@@ -24,7 +24,7 @@ public class ExternalEventDef extends POSTable {
         }
     }
 
-    public void validate(DepInjContext config) {
+    public void validate(LHConfig config) {
         // Nothing to do yet.
     }
 

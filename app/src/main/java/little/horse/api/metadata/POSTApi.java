@@ -8,7 +8,7 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
 import little.horse.api.util.APIStreamsContext;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -18,12 +18,12 @@ import little.horse.common.util.LHDatabaseClient;
 import little.horse.common.util.LHRpcResponse;
 
 public class POSTApi<T extends POSTable> {
-    private DepInjContext config;
+    private LHConfig config;
     private Class<T> cls;
     private APIStreamsContext<T> streamsContext;
 
     public POSTApi(
-        DepInjContext config, Class<T> cls, APIStreamsContext<T> context, Javalin app
+        LHConfig config, Class<T> cls, APIStreamsContext<T> context, Javalin app
     ) {
         this.config = config;
         this.cls = cls;

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.kafka.clients.admin.NewTopic;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.util.LHDatabaseClient;
@@ -131,7 +131,7 @@ public class TaskDef extends POSTable {
         this.status = LHDeployStatus.STOPPED;
     }
 
-    public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
+    public void validate(LHConfig config) throws LHValidationError, LHConnectionError {
         this.config = config;
 
         // ALl we gotta do is make sure the TaskDef exists.

@@ -2,7 +2,7 @@ package little.horse.api.metadata;
 
 import java.util.Set;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.objects.metadata.GETable;
 
@@ -17,7 +17,7 @@ public class ResourceDbEntry extends BaseSchema {
         this.latestSourceOffset = offset;
     }
     
-    public ResourceDbEntry(DepInjContext config) {}
+    public ResourceDbEntry(LHConfig config) {}
 
     public ResourceDbEntry() {}
 }

@@ -2,7 +2,7 @@ package little.horse.common.util;
 
 import java.io.IOException;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
@@ -11,9 +11,9 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class LHRpcClient {
-    private DepInjContext config;
+    private LHConfig config;
 
-    public LHRpcClient(DepInjContext config) {
+    public LHRpcClient(LHConfig config) {
         this.config = config;
     }
 

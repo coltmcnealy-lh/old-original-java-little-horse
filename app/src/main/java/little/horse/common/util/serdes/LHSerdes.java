@@ -4,15 +4,15 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.BaseSchema;
 
 
 public class LHSerdes<T extends BaseSchema> implements Serde<T> {
     private Class<T> cls;
-    private DepInjContext config;
+    private LHConfig config;
     
-    public LHSerdes(Class<T> cls, DepInjContext config) {
+    public LHSerdes(Class<T> cls, LHConfig config) {
         this.cls = cls;
         this.config = config;
     }

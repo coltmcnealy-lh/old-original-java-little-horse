@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import little.horse.api.ResponseStatus;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.events.ExternalEventCorrel;
 import little.horse.common.events.ExternalEventPayload;
 import little.horse.common.events.WFEvent;
@@ -304,7 +304,7 @@ public class WFRun extends GETable {
 
     public static WFRunApiStuff apiStuff;
 
-    public static void overridePostAPIEndpoints(Javalin app, DepInjContext config) {
+    public static void overridePostAPIEndpoints(Javalin app, LHConfig config) {
         apiStuff = new WFRunApiStuff(config);
 
         app.post("/WFRun", apiStuff::postRun);
@@ -355,9 +355,9 @@ public class WFRun extends GETable {
 }
 
 class WFRunApiStuff {
-    private DepInjContext config;
+    private LHConfig config;
 
-    public WFRunApiStuff(DepInjContext config) {
+    public WFRunApiStuff(LHConfig config) {
         this.config = config;
     }
 

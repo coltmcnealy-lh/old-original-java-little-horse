@@ -7,7 +7,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.metadata.GETable;
 import little.horse.common.util.serdes.LHSerdes;
 
@@ -15,7 +15,7 @@ import little.horse.common.util.serdes.LHSerdes;
 public class ApiTopologyBuilder {
 
     public static<T extends GETable> void addStuff(
-        Topology topology, DepInjContext config, Class<T> cls
+        Topology topology, LHConfig config, Class<T> cls
     ) {
         LHSerdes<T> serde = new LHSerdes<>(cls, config);
         LHSerdes<ResourceDbEntry> dataSerde = new LHSerdes<>(

@@ -14,7 +14,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.utils.Bytes;
 
 import little.horse.api.metadata.IndexRecordKey;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
 
@@ -40,14 +40,14 @@ public abstract class GETable extends BaseSchema {
 
     @JsonIgnore
     public static <T extends GETable> String getIdKafkaTopic(
-        DepInjContext config, Class<T> cls
+        LHConfig config, Class<T> cls
     ) {
         return config.getKafkaTopicPrefix() + T.getLHTypeName(cls);
     }
 
     @JsonIgnore
     public static<T extends GETable> String getIndexKafkaTopic(
-        DepInjContext config, Class<T> cls
+        LHConfig config, Class<T> cls
     ) {
         return getIdKafkaTopic(config, cls) + "__index";
     }
@@ -140,7 +140,7 @@ public abstract class GETable extends BaseSchema {
 
     @JsonIgnore
     public static<T extends GETable> Future<RecordMetadata> sendNullRecord(
-        String id, DepInjContext config, Class<T> cls
+        String id, LHConfig config, Class<T> cls
     ) {
         ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
             getIdKafkaTopic(config, cls), id, null);

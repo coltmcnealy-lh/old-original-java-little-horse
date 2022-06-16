@@ -2,7 +2,7 @@ package little.horse.common.events;
 
 import org.apache.kafka.common.record.Record;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 
 /**
  * Shows how to find the payload of an event in a WFRun's Event History (i.e. a 
@@ -13,7 +13,7 @@ public class WFEventId {
     public int partition;
     public long offset;
 
-    public Record getRecord(DepInjContext config) {
+    public Record getRecord(LHConfig config) {
         return null;
     }
 }

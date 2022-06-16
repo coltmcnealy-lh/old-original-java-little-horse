@@ -8,7 +8,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.BaseSchema;
 import little.horse.common.util.LHUtil;
 
@@ -48,7 +48,7 @@ public class RangeQueryResponse extends BaseSchema {
 
     @SuppressWarnings("unchecked")
     public static Map<String, String> tokenToBookmarkMap(
-        String token, DepInjContext config
+        String token, LHConfig config
     ) {
         if (token == null || token.equals("null")) {
             return new HashMap<String, String>();

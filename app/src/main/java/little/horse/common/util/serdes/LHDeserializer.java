@@ -2,15 +2,15 @@ package little.horse.common.util.serdes;
 
 import org.apache.kafka.common.serialization.Deserializer;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
 
 public class LHDeserializer<T extends BaseSchema> implements Deserializer<T> {
     private Class<T> cls;
-    private DepInjContext config;
+    private LHConfig config;
 
-    public LHDeserializer(Class<T> cls, DepInjContext config) {
+    public LHDeserializer(Class<T> cls, LHConfig config) {
         this.cls = cls;
         this.config = config;
     }

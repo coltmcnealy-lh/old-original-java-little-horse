@@ -8,7 +8,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.utils.Bytes;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 
@@ -37,6 +37,6 @@ public abstract class POSTable extends GETable {
         return this.config.send(record);
     }
 
-    public abstract void validate(DepInjContext config)
+    public abstract void validate(LHConfig config)
     throws LHValidationError, LHConnectionError;
 }

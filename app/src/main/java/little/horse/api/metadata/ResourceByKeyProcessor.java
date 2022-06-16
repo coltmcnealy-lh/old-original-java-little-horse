@@ -14,7 +14,7 @@ import org.apache.kafka.streams.processor.api.RecordMetadata;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import little.horse.api.OffsetInfo;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
@@ -27,9 +27,9 @@ implements Processor<String, T, String, IndexEvent> {
     private KeyValueStore<String, Bytes> kvStore;
     private ProcessorContext<String, IndexEvent> context;
     private Class<T> cls;
-    private DepInjContext config;
+    private LHConfig config;
 
-    public ResourceByKeyProcessor(Class<T> cls, DepInjContext config) {
+    public ResourceByKeyProcessor(Class<T> cls, LHConfig config) {
         this.config = config;
         this.cls = cls;
     }

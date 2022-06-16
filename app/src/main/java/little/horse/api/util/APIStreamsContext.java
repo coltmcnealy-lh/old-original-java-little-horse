@@ -28,7 +28,7 @@ import little.horse.api.metadata.IndexEntry;
 import little.horse.api.metadata.IndexRecordKey;
 import little.horse.api.metadata.RangeQueryResponse;
 import little.horse.api.metadata.ResourceDbEntry;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.BaseSchema;
@@ -42,9 +42,9 @@ public class APIStreamsContext<T extends GETable> {
     private KafkaStreams streams;
     private HostInfo thisHost;
     private Class<T> cls;
-    private DepInjContext config;
+    private LHConfig config;
 
-    public APIStreamsContext(KafkaStreams streams, Class<T> cls, DepInjContext config) {
+    public APIStreamsContext(KafkaStreams streams, Class<T> cls, LHConfig config) {
         this.streams = streams;
         this.thisHost = config.getHostInfo();
         this.cls = cls;

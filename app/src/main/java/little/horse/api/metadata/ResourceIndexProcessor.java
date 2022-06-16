@@ -10,7 +10,7 @@ import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.objects.metadata.GETable;
 
@@ -20,7 +20,7 @@ implements Processor<String, IndexEvent, Void, Void> {
     private ProcessorContext<Void, Void> context;
     private Class<T> cls;
 
-    public ResourceIndexProcessor(Class<T> cls, DepInjContext config) {
+    public ResourceIndexProcessor(Class<T> cls, LHConfig config) {
         this.cls = cls;
         // this.config = config;
     }

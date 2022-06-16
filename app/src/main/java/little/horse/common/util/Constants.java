@@ -25,6 +25,12 @@ public class Constants {
     public static String DEFAULT_WF_DEPLOYER_KEY = "LHORSE_DEFAULT_WF_DEPLOYER";
     public static String EXPOSE_KSTREAMS_HEALTH_KEY = "LHORSE_EXPOSE_KSTREAMS_HEALTH";
 
+    public static String DB_HOST_KEY = "LHORSE_DB_HOST";
+    public static String DB_USER_KEY = "LHORSE_DB_USER";
+    public static String DB_PASSWORD_KEY = "LHORSE_DB_PASSWORD";
+    public static String DB_DB_KEY = "LHORSE_DB_DB";
+    public static String DB_PORT_KEY = "LHORSE_DB_PORT";
+
     public static String DEFAULT_TASK_WORKER_POLL_MILLIS_KEY =
         "LHORSE_DEFAULT_TASK_WORKER_POLL_MILLIS";
 

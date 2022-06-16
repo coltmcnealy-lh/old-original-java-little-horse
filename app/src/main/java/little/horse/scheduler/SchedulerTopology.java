@@ -7,7 +7,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.events.WFEvent;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.TaskDef;
@@ -21,7 +21,7 @@ import little.horse.common.util.serdes.LHSerdes;
 public class SchedulerTopology {
 
     public static void addStuff(
-        Topology topology, DepInjContext config, WFSpec wfSpec
+        Topology topology, LHConfig config, WFSpec wfSpec
     ) throws LHConnectionError {
         /*
         This topology is headless—it doesn't present an API for querying (that's done

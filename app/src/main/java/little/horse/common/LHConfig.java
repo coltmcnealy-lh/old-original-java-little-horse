@@ -24,7 +24,11 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
-
+import io.ebean.Database;
+import io.ebean.DatabaseFactory;
+import io.ebean.Transaction;
+import io.ebean.config.DatabaseConfig;
+import io.ebean.datasource.DataSourceConfig;
 import little.horse.common.util.Constants;
 import little.horse.common.util.LHUtil;
 import little.horse.deployers.examples.docker.DockerTaskDeployer;
@@ -32,7 +36,7 @@ import little.horse.deployers.examples.docker.DockerWorkflowDeployer;
 import okhttp3.OkHttpClient;
 
 
-public class DepInjContext {
+public class LHConfig {
     private Properties properties;
 
     private KafkaProducer<String, Bytes> txnProducer;
@@ -44,11 +48,11 @@ public class DepInjContext {
     private OkHttpClient httpClient;
 
 
-    public DepInjContext() {
+    public LHConfig() {
         this.initialize(getDefaultsFromEnv());
     }
 
-    public DepInjContext(Properties overrides) {
+    public LHConfig(Properties overrides) {
         Properties newProps = new Properties(getDefaultsFromEnv());
 
         for (String key: overrides.stringPropertyNames()) {
@@ -411,6 +415,43 @@ public class DepInjContext {
             return result;
         }
     }
+
+    public String getDbHost() {
+        return getOrSetDefault(Constants.DB_HOST_KEY, "localhost");
+    }
+
+    public int getDbPort() {
+        return Integer.valueOf(getOrSetDefault(Constants.DB_PORT_KEY, "5432"));
+    }
+
+    public String getDbUser() {
+        return getOrSetDefault(Constants.DB_USER_KEY, "postgres");
+    }
+
+    public String getDbPassword() {
+        return getOrSetDefault(Constants.DB_PASSWORD_KEY, "postgres");
+    }
+
+    public String getDbDb() {
+        return getOrSetDefault(Constants.DB_DB_KEY, "postgres");
+    }
+
+    public Database getEbeanDb() {
+        DataSourceConfig dSource = new DataSourceConfig();
+        dSource.setUsername(getDbUser());
+        dSource.setPassword(getDbPassword());
+
+        dSource.setUrl(String.format("jdbc:postgresql://%s:%d/%s", getDbHost(),
+                getDbPort(), getDbDb()));
+
+        dSource.setIsolationLevel(Transaction.SERIALIZABLE);
+
+        DatabaseConfig cfg = new DatabaseConfig();
+        cfg.setDataSourceConfig(dSource);
+
+        return DatabaseFactory.create(cfg);
+    }
+
 
     private Properties getDefaultsFromEnv() {
         Properties props = new Properties();

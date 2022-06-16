@@ -8,7 +8,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.objects.metadata.VariableMutationOperation;
 import little.horse.common.objects.metadata.WFRunVariableDef;
 import little.horse.common.objects.metadata.WFRunVariableTypeEnum;
@@ -22,11 +22,11 @@ public class Mutation {
     public ThreadRun tr;
     public WFRunVariableDef varDef;
     public String varName;
-    public DepInjContext config;
+    public LHConfig config;
 
     public Mutation(
         Object lhs, Object rhs, VariableMutationOperation op, ThreadRun tr,
-        WFRunVariableDef varDef, String varName, DepInjContext config
+        WFRunVariableDef varDef, String varName, LHConfig config
     ) {
         this.lhs = LHUtil.lhCopy(lhs);
         this.rhs = LHUtil.lhCopy(rhs);

@@ -16,7 +16,7 @@ import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.events.WFEvent;
 import little.horse.common.events.WFEventType;
 import little.horse.common.exceptions.LHConnectionError;
@@ -40,9 +40,9 @@ public class SchedulerProcessor
     private WFSpec wfSpec;
     private ProcessorContext<String, SchedulerOutput> context;
     private Cancellable punctuator;
-    private DepInjContext config;
+    private LHConfig config;
 
-    public SchedulerProcessor(DepInjContext config, WFSpec wfSpec) {
+    public SchedulerProcessor(LHConfig config, WFSpec wfSpec) {
         this.wfSpec = wfSpec;
         this.config = config;
     }

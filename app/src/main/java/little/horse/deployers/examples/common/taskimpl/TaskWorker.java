@@ -15,7 +15,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.events.TaskRunEndedEvent;
 import little.horse.common.events.TaskRunEvent;
 import little.horse.common.events.TaskRunResult;
@@ -32,7 +32,7 @@ import little.horse.deployers.examples.common.DeployerConfig;
 import little.horse.scheduler.TaskScheduleRequest;
 
 public class TaskWorker {
-    private DepInjContext config;
+    private LHConfig config;
     private TaskDef taskDef;
     private JavaTask executor;
     private ExecutorService threadPool;
@@ -41,7 +41,7 @@ public class TaskWorker {
     private KafkaProducer<String, Bytes> producer;
 
     public TaskWorker(
-        DepInjContext config, String taskQueueName, JavaTask executor, int numThreads
+        LHConfig config, String taskQueueName, JavaTask executor, int numThreads
     ) throws LHConnectionError {
         this.config = config;
         this.taskDef = LHDatabaseClient.getByNameOrId(
@@ -209,7 +209,7 @@ public class TaskWorker {
     public static void main(String[] args) throws LHConnectionError {
         LHUtil.log("Running Task Worker executable!");
 
-        DepInjContext config = new DepInjContext();
+        LHConfig config = new LHConfig();
         DeployerConfig ddConfig = new DeployerConfig();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHValidationError;
 import little.horse.common.objects.BaseSchema;
@@ -150,7 +150,7 @@ public class Node extends BaseSchema {
     }
 
     @Override
-    public void validate(DepInjContext config) throws LHValidationError, LHConnectionError {
+    public void validate(LHConfig config) throws LHValidationError, LHConnectionError {
         setConfig(config);
         if (threadSpec == null) {
             throw new RuntimeException("Jackson didn't do its thing");
@@ -200,7 +200,7 @@ public class Node extends BaseSchema {
         }
     }
 
-    private void validateNopNode(DepInjContext config)
+    private void validateNopNode(LHConfig config)
     throws LHValidationError {
         if (taskDefName != null || externalEventDef != null) {
             throw new LHValidationError(
@@ -211,7 +211,7 @@ public class Node extends BaseSchema {
         // TODO: Later on, validate that there's no variable mutations and such here.
     }
 
-    private void validateTaskNode(DepInjContext config)
+    private void validateTaskNode(LHConfig config)
     throws LHValidationError, LHConnectionError {
         String taskDefKey = (taskDefId == null) ? taskDefName : taskDefId;
         if (taskDefKey == null) {
@@ -236,7 +236,7 @@ public class Node extends BaseSchema {
         taskDefName = taskDef.name;
     }
 
-    private void validateExternalEventNode(DepInjContext config)
+    private void validateExternalEventNode(LHConfig config)
     throws LHValidationError, LHConnectionError {
         String eedKey = (externalEventDefId == null) ?
             externalEventDefName : externalEventDefId;
@@ -261,7 +261,7 @@ public class Node extends BaseSchema {
         externalEventDefId = externalEventDef.getObjectId();
     }
 
-    private void validateSpawnThreadNode(DepInjContext config)
+    private void validateSpawnThreadNode(LHConfig config)
     throws LHValidationError {
         String tname = threadSpawnThreadSpecName;
         if (tname == null) {
@@ -286,7 +286,7 @@ public class Node extends BaseSchema {
         }
     }
 
-    private void validateWaitForThreadNode(DepInjContext config)
+    private void validateWaitForThreadNode(LHConfig config)
     throws LHValidationError {
         if (threadWaitThreadId == null) {
             throw new LHValidationError(
@@ -307,7 +307,7 @@ public class Node extends BaseSchema {
         // graph of nodes/edges on the ThreadSpec.
     }
 
-    private void validateSleepNode(DepInjContext config) throws LHValidationError {
+    private void validateSleepNode(LHConfig config) throws LHValidationError {
         // Need to check that the variables specify how long to sleep.
 
         if (timeoutSeconds == null) {

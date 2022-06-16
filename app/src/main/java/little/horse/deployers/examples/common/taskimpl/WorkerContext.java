@@ -1,6 +1,6 @@
 package little.horse.deployers.examples.common.taskimpl;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.util.LHUtil;
 import little.horse.scheduler.TaskScheduleRequest;
 
@@ -8,7 +8,7 @@ public class WorkerContext {
     private TaskScheduleRequest tsr;
     private String stderr;
 
-    public WorkerContext(DepInjContext config, TaskScheduleRequest tsr) {
+    public WorkerContext(LHConfig config, TaskScheduleRequest tsr) {
         this.tsr = tsr;
     }
 

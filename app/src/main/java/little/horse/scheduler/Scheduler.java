@@ -4,7 +4,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import io.javalin.Javalin;
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.objects.metadata.WFSpec;
 import little.horse.common.util.KStreamsStateListener;
@@ -13,12 +13,12 @@ import little.horse.deployers.examples.common.DeployerConfig;
 
 public class Scheduler {
     private DeployerConfig ddConfig;
-    private DepInjContext config;
+    private LHConfig config;
     private KStreamsStateListener listener;
 
     public Scheduler(
         DeployerConfig ddConfig,
-        DepInjContext config,
+        LHConfig config,
         KStreamsStateListener listener
     ) {
         this.ddConfig = ddConfig;
@@ -49,9 +49,9 @@ public class Scheduler {
     public static void main(String[] args) throws LHConnectionError {
         KStreamsStateListener listener = new KStreamsStateListener();
         Scheduler ww = new Scheduler(
-            new DeployerConfig(), new DepInjContext(), listener
+            new DeployerConfig(), new LHConfig(), listener
         );
-        DepInjContext config = new DepInjContext();
+        LHConfig config = new LHConfig();
 
         Javalin app = LHUtil.createAppWithHealth(listener);
         if (config.getShouldExposeHealth()) {

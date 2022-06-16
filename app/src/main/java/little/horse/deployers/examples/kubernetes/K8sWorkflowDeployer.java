@@ -8,7 +8,7 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-import little.horse.common.DepInjContext;
+import little.horse.common.LHConfig;
 import little.horse.common.exceptions.LHConnectionError;
 import little.horse.common.exceptions.LHSerdeError;
 import little.horse.common.exceptions.LHValidationError;
@@ -32,7 +32,7 @@ import little.horse.scheduler.Scheduler;
 
 public class K8sWorkflowDeployer implements WorkflowDeployer {
 
-    public void deploy(WFSpec spec, DepInjContext config) throws LHConnectionError {
+    public void deploy(WFSpec spec, LHConfig config) throws LHConnectionError {
         KDConfig kdConfig = LHUtil.loadClass(KDConfig.class.getCanonicalName());
         Deployment dp = getK8sDeployment(spec, config, kdConfig);
 
@@ -40,7 +40,7 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
     }
 
     private Deployment getK8sDeployment(
-        WFSpec spec, DepInjContext config, KDConfig kdConfig
+        WFSpec spec, LHConfig config, KDConfig kdConfig
     ) throws LHConnectionError {
         K8sWorkflowDeployMeta meta = new K8sWorkflowDeployMeta();
         try {
@@ -135,12 +135,12 @@ public class K8sWorkflowDeployer implements WorkflowDeployer {
         return dp;
     }
 
-    public void undeploy(WFSpec spec, DepInjContext config) throws LHConnectionError{
+    public void undeploy(WFSpec spec, LHConfig config) throws LHConnectionError{
         KDConfig kdConfig = config.loadClass(KDConfig.class.getCanonicalName());
         kdConfig.deleteK8sDeployment("io.littlehorse/wfSpecId", spec.getObjectId());
     }
 
-    public void validate(WFSpec spec, DepInjContext config) throws LHValidationError {
+    public void validate(WFSpec spec, LHConfig config) throws LHValidationError {
         String message = null;
         try {
             if (spec.deployMetadata != null) {
