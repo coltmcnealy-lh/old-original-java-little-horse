@@ -33,9 +33,9 @@ The following software is needed to develop LittleHorse:
 * Optional, Not Recommended: `pip`
 
 ### Building LittleHorse Java Code
-Running the script `./build.sh` should build LittleHorse, creating an all-in-one docker image tagged `little-horse-api:latest`.
+Running the script `./build/build.sh` should build LittleHorse, creating an all-in-one docker image tagged `little-horse-api:latest`.
 
-To simply build the Java binary (but not the docker image), run `gradle build` in the root of the repository. This will allow you to run an arbitrary class using the command `java -cp "./app/bin/main:./app/build/libs/app-all.jar" little.horse.SomeClass` from the root of the repository.
+To simply build the Java binary (but not the docker image), run `gradle fatJar` in the root of the repository. This will allow you to run an arbitrary class using the command `java -cp "./app/bin/main:./app/build/libs/app-all.jar" io.littlehorse.SomeClass` from the root of the repository.
 
 ### Installing `lhctl`
 LittleHorse comes with the `lhctl` python package, which provides an SDK/Interpreter for developing workflows and a CLI for managing and running workflows. In order to install `lhctl`, you must install python (I recommend doing so through [anaconda](https://docs.anaconda.com/anaconda/install/index.html)).
@@ -45,10 +45,10 @@ In order to install `lhctl`, you must do three things:
 2. Add `/path/to/little-horse/lhctl` to your `PYTHONPATH`.
 3. Alias `lhctl` to `python -m lh_cli`.
 
-To create the conda environment, I suggest just using the `environment.dev.yml` file rather than wrestling with `pip` and all of your system dependencies:
+To create the conda environment, I suggest just using the `build/environment.dev.yml` file rather than wrestling with `pip` and all of your system dependencies:
 
 ```
-conda env update -f environment.dev.yml
+conda env update -f ./build/environment.dev.yml
 conda activate little-horse
 ```
 
@@ -127,7 +127,7 @@ After installing all dependencies (see above), you can run a simple example in d
 
 ### Build the Main Docker Image
 
-`./build.sh`
+`./build/build.sh`
 
 ### Install in Docker Compose
 
