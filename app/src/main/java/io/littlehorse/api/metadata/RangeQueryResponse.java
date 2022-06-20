@@ -62,7 +62,7 @@ public class RangeQueryResponse extends BaseSchema {
 
     public static String bookmarkMapToString(Map<String, String> bookmarkMap) {
         return Base64.getEncoder().encodeToString(
-            LHUtil.objToString(bookmarkMap).getBytes()
+            LHUtil.objToJsonString(bookmarkMap).getBytes()
         );
     }
 

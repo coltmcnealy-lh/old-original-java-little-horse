@@ -29,7 +29,6 @@ import org.apache.kafka.streams.KafkaStreams;
 import io.javalin.Javalin;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.objects.BaseSchema;
-import io.littlehorse.common.objects.metadata.WFRunVariableDef;
 import io.littlehorse.common.objects.rundata.LHFailureReason;
 import io.littlehorse.common.objects.rundata.VarSubOrzDash;
 import io.littlehorse.common.util.json.JsonMapKeyDeserializer;
@@ -186,7 +185,7 @@ public class LHUtil {
         }
     }
 
-    public static String objToString(Object thing) {
+    public static String objToJsonString(Object thing) {
         if (thing == null) return "null";
         if (thing instanceof Map) {
             try {
@@ -296,18 +295,6 @@ public class LHUtil {
             }
         });
         return app;
-    }
-
-    public static Class<? extends Object> getNeededClass(WFRunVariableDef vardef) {
-        switch (vardef.type) {
-            case STRING:    return String.class;
-            case INT:       return Integer.class;
-            case FLOAT:    return Double.class;
-            case ARRAY:     return List.class;
-            case OBJECT:    return Object.class;
-            case BOOLEAN:   return Boolean.class;
-            default: throw new RuntimeException("Not possible");
-        }
     }
 
     /**

@@ -17,7 +17,7 @@ import io.littlehorse.common.objects.metadata.VariableAssignment;
 import io.littlehorse.common.objects.metadata.VariableMutation;
 import io.littlehorse.common.objects.metadata.VariableMutationOperation;
 import io.littlehorse.common.objects.metadata.WFRunVariableDef;
-import io.littlehorse.common.objects.metadata.WFRunVariableTypeEnum;
+import io.littlehorse.common.objects.metadata.LHVarType;
 import io.littlehorse.common.objects.metadata.WFSpec;
 import io.littlehorse.deployers.examples.common.taskimpl.bashExecutor.BashExecutor;
 import io.littlehorse.deployers.examples.common.taskimpl.bashExecutor.BashTaskMetadata;
@@ -224,12 +224,12 @@ public class SpecBuilderThreadContext implements LHThreadContext {
     public <T> LHVariable addVariable(String name, Class<T> cls) {
         WFRunVariableDef def = new WFRunVariableDef();
 
-        if (cls == Integer.class) def.type = WFRunVariableTypeEnum.INT;
-        else if (cls == List.class) def.type = WFRunVariableTypeEnum.ARRAY;
-        else if (cls == Double.class) def.type = WFRunVariableTypeEnum.FLOAT;
-        else if (cls == Boolean.class) def.type = WFRunVariableTypeEnum.BOOLEAN;
-        else if (cls == String.class) def.type = WFRunVariableTypeEnum.STRING;
-        else def.type = WFRunVariableTypeEnum.OBJECT;
+        if (cls == Integer.class) def.type = LHVarType.INT;
+        else if (cls == List.class) def.type = LHVarType.ARRAY;
+        else if (cls == Double.class) def.type = LHVarType.DOUBLE;
+        else if (cls == Boolean.class) def.type = LHVarType.BOOLEAN;
+        else if (cls == String.class) def.type = LHVarType.STRING;
+        else def.type = LHVarType.OBJECT;
 
         this.entrypoint.variableDefs.put(name, def);
 

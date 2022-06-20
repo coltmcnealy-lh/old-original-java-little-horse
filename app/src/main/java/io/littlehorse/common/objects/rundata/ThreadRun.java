@@ -34,7 +34,9 @@ import io.littlehorse.common.objects.metadata.ThreadSpec;
 import io.littlehorse.common.objects.metadata.VariableAssignment;
 import io.littlehorse.common.objects.metadata.VariableMutation;
 import io.littlehorse.common.objects.metadata.VariableMutationOperation;
+import io.littlehorse.common.objects.metadata.VariableValue;
 import io.littlehorse.common.objects.metadata.WFRunVariableDef;
+import io.littlehorse.common.objects.metadata.WFRunVariableTypeEnum;
 import io.littlehorse.common.objects.metadata.WFSpec;
 import io.littlehorse.common.util.LHUtil;
 import io.littlehorse.scheduler.TaskScheduleRequest;
@@ -56,7 +58,7 @@ public class ThreadRun extends BaseSchema {
     public ArrayList<UpNextPair> upNext;
     public LHExecutionStatus status;
 
-    public HashMap<String, Object> variables;
+    public HashMap<String, VariableValue> variables;
 
     public int id;
     public Integer parentThreadId;
@@ -170,7 +172,22 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public Object assignVariable(VariableAssignment var)
+    public VariableValue assignValue(
+        VariableAssignment var, WFRunVariableTypeEnum type
+    ) throws VarSubOrzDash, LHConnectionError {
+        Object val = assignVariableObjectHelper(var);
+        val = 
+    }
+    
+    @JsonIgnore
+    public VariableValue assignVariable(VariableAssignment var)
+    throws LHConnectionError, VarSubOrzDash {
+        Object val = assignVariableObjectHelper(var);
+        return new VariableValue(config, val);
+    }
+
+    @JsonIgnore
+    private Object assignVariableObjectHelper(VariableAssignment var)
     throws LHConnectionError, VarSubOrzDash {
         if (var.literalValue != null) {
             return var.literalValue;
@@ -485,15 +502,19 @@ public class ThreadRun extends BaseSchema {
     boolean evaluateEdge(EdgeCondition condition)
     throws VarSubOrzDash, LHConnectionError {
         if (condition == null) return true;
-        Object lhs = assignVariable(condition.leftSide);
-        Object rhs = assignVariable(condition.rightSide);
+        VariableValue lhs = assignVariable(condition.leftSide);
+        VariableValue rhs = assignVariable(condition.rightSide);
         switch (condition.comparator) {
             case LESS_THAN: return Mutation.compare(lhs, rhs) < 0;
             case LESS_THAN_EQ: return Mutation.compare(lhs, rhs) <= 0;
             case GREATER_THAN: return Mutation.compare(lhs, rhs) > 0;
             case GREATER_THAN_EQ: return Mutation.compare(lhs, rhs) >= 0;
-            case EQUALS: return lhs != null && lhs.equals(rhs);
-            case NOT_EQUALS: return lhs != null && !lhs.equals(rhs);
+            case EQUALS:
+                return lhs.getValue() != null && lhs.getValue().equals(rhs.getValue());
+            case NOT_EQUALS:
+                return (
+                    lhs.getValue() != null && !lhs.getValue().equals(rhs.getValue())
+                );
             case IN: return Mutation.contains(rhs, lhs);
             case NOT_IN: return !Mutation.contains(rhs, lhs);
             default: return false;
@@ -770,19 +791,27 @@ public class ThreadRun extends BaseSchema {
         if (node.timeoutSeconds == null) return null;
 
         Calendar calendar = Calendar.getInstance();
-        Object sleepSeconds = assignVariable(node.timeoutSeconds);
+        VariableValue sleepSeconds = assignVariable(node.timeoutSeconds);
 
-        if (!(sleepSeconds instanceof Integer) || (Integer)sleepSeconds < 0) {
-            String s = (sleepSeconds == null)
-                ? "null pointer": sleepSeconds.getClass().getCanonicalName();
-            if (sleepSeconds instanceof Integer) {
-                s += " with val: " + String.valueOf((Integer)sleepSeconds);
-            }
-
-            throw new VarSubOrzDash(null, s);
+        if (sleepSeconds.getValue() == null) {
+            throw new VarSubOrzDash(null,
+                "Got 'null', which is invalid value for sleep seconds."
+            );
+        }
+        if (!(sleepSeconds.type == WFRunVariableTypeEnum.INT)) {
+            throw new VarSubOrzDash(
+                null,
+                "Got invalid type " + sleepSeconds.type + " for sleep seconds"
+            );
+        }
+        if ((Integer) sleepSeconds.getValue() < 0) {
+            throw new VarSubOrzDash(
+                null,
+                "Got negative value for sleep seconds"
+            );
         }
 
-        Integer intVal = Integer.class.cast(sleepSeconds);
+        Integer intVal = Integer.class.cast(sleepSeconds.getValue());
 
         calendar.add(Calendar.SECOND, intVal);
         return calendar;
@@ -984,8 +1013,8 @@ public class ThreadRun extends BaseSchema {
         Integer threadId;
 
         try {
-            Object threadIdObj = assignVariable(node.threadWaitThreadId);
-            threadId = Integer.class.cast(threadIdObj);
+            VariableValue threadIdObj = assignVariable(node.threadWaitThreadId);
+            threadId = Integer.class.cast(threadIdObj.getValue());
         } catch (VarSubOrzDash|ClassCastException exn) {
             failTask(
                 tr, LHFailureReason.VARIABLE_LOOKUP_ERROR,

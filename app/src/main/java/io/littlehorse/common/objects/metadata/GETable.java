@@ -2,9 +2,7 @@ package io.littlehorse.common.objects.metadata;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Future;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;

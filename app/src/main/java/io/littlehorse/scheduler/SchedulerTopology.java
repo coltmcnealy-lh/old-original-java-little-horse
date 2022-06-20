@@ -13,7 +13,6 @@ import io.littlehorse.common.objects.metadata.TaskDef;
 import io.littlehorse.common.objects.metadata.WFSpec;
 import io.littlehorse.common.objects.rundata.WFRun;
 import io.littlehorse.common.util.Constants;
-import io.littlehorse.common.util.LHUtil;
 import io.littlehorse.common.util.serdes.LHSerdes;
 
 

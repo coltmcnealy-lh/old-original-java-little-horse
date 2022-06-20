@@ -1,10 +1,10 @@
 package io.littlehorse.common.objects.metadata;
 
-public enum WFRunVariableTypeEnum {
+public enum LHVarType {
     OBJECT,
     ARRAY,
     INT,
-    FLOAT,
+    DOUBLE,
     BOOLEAN,
     STRING;
 }

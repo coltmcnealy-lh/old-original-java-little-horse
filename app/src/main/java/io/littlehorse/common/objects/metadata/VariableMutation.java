@@ -5,7 +5,7 @@ import io.littlehorse.common.objects.BaseSchema;
 
 public class VariableMutation extends BaseSchema {
     public VariableMutationOperation operation;
-    
+
     /**
      * A node that mutates a variable may calculate its RHS variable in any of
      * the following ways:

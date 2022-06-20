@@ -6,7 +6,7 @@ import io.littlehorse.common.util.json.JsonMapKey;
 
 
 public class WFRunVariableDef extends BaseSchema {
-    public WFRunVariableTypeEnum type;
+    public LHVarType type;
     public VariableValue defaultValue;
 
     @JsonMapKey

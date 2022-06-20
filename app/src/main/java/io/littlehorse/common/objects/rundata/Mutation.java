@@ -9,8 +9,9 @@ import java.util.Objects;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.objects.metadata.VariableMutationOperation;
+import io.littlehorse.common.objects.metadata.VariableValue;
 import io.littlehorse.common.objects.metadata.WFRunVariableDef;
-import io.littlehorse.common.objects.metadata.WFRunVariableTypeEnum;
+import io.littlehorse.common.objects.metadata.LHVarType;
 import io.littlehorse.common.util.LHUtil;
 
 public class Mutation {
@@ -45,8 +46,8 @@ public class Mutation {
             throw new VarSubOrzDash(
                 exn,
                 "Had an unexpected error mutating variable " + varName +
-                ", lhs: " + LHUtil.objToString(lhs) + ", rhs: " + 
-                LHUtil.objToString(rhs) + ":\n" + exn.getMessage()
+                ", lhs: " + LHUtil.objToJsonString(lhs) + ", rhs: " + 
+                LHUtil.objToJsonString(rhs) + ":\n" + exn.getMessage()
             );
         }
     }
@@ -105,17 +106,17 @@ public class Mutation {
 
     private Object coerceBackToType(Object o) throws VarSubOrzDash {
         // Class<?> defTypeCls = LHUtil.getNeededClass(varDef);
-        if (varDef.type == WFRunVariableTypeEnum.INT) {
+        if (varDef.type == LHVarType.INT) {
             return toInt(o);
-        } else if (varDef.type == WFRunVariableTypeEnum.ARRAY) {
+        } else if (varDef.type == LHVarType.ARRAY) {
             return toArray(o);
-        } else if (varDef.type == WFRunVariableTypeEnum.OBJECT) {
+        } else if (varDef.type == LHVarType.OBJECT) {
             return toMap(o);
-        } else if (varDef.type == WFRunVariableTypeEnum.FLOAT) {
+        } else if (varDef.type == LHVarType.DOUBLE) {
             return toDouble(o);
-        } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
+        } else if (varDef.type == LHVarType.STRING) {
             return toStr(o);
-        } else if (varDef.type == WFRunVariableTypeEnum.BOOLEAN) {
+        } else if (varDef.type == LHVarType.BOOLEAN) {
             return toBool(o);
         } else {
             throw new VarSubOrzDash(null, "Impossible to get here");
@@ -160,6 +161,8 @@ public class Mutation {
             } catch (JsonProcessingException exn) {
                 throw new VarSubOrzDash(exn, "Failed to convert string to list!");
             }
+        } else {
+            throw new VarSubOrzDash(null, "Unable to cast type " + type + " to ARRAY");
         }
         return List.class.cast(o);
     }
@@ -197,8 +200,8 @@ public class Mutation {
     }
 
     private Object handleAdd() throws VarSubOrzDash {
-        if (varDef.type == WFRunVariableTypeEnum.BOOLEAN ||
-            varDef.type == WFRunVariableTypeEnum.OBJECT
+        if (varDef.type == LHVarType.BOOLEAN ||
+            varDef.type == LHVarType.OBJECT
         ) {
             throw new VarSubOrzDash(
                 null,
@@ -208,13 +211,13 @@ public class Mutation {
 
         // Just try to cast the right hand side to what it's supposed to be
         // in order to verify that it'll work.
-        if (varDef.type == WFRunVariableTypeEnum.INT) {
+        if (varDef.type == LHVarType.INT) {
             return toInt(rhs) + toInt(lhs);
 
-        } else if (varDef.type == WFRunVariableTypeEnum.STRING) {
+        } else if (varDef.type == LHVarType.STRING) {
             return toStr(lhs) + toStr(rhs);
 
-        } else if (varDef.type == WFRunVariableTypeEnum.ARRAY) {
+        } else if (varDef.type == LHVarType.ARRAY) {
             // nothing to verify here until we start enforcing json schemas
             // within arrays
             @SuppressWarnings("unchecked")
@@ -223,13 +226,13 @@ public class Mutation {
             return lhsArr;
 
         } else {
-            assert (varDef.type == WFRunVariableTypeEnum.FLOAT);
+            assert (varDef.type == LHVarType.DOUBLE);
             return toDouble(lhs) + toDouble(rhs);
         }
     }
 
     private Object handleExtend() throws VarSubOrzDash {
-        if (varDef.type != WFRunVariableTypeEnum.ARRAY ||
+        if (varDef.type != LHVarType.ARRAY ||
             !(rhs instanceof List)
         ) {
             throw new VarSubOrzDash(null,
@@ -257,14 +260,14 @@ public class Mutation {
         }
 
         Double out = lfloat / rfloat;
-        return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
+        return (varDef.type == LHVarType.DOUBLE) ? out : out.intValue();
     }
 
     private Object handleSubtract() throws VarSubOrzDash {
         Double lfloat = toDouble(lhs);
         Double rfloat = toDouble(rhs);
         Double out = lfloat - rfloat;
-        return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
+        return (varDef.type == LHVarType.DOUBLE) ? out : out.intValue();
     }
 
     private Object handleMultiply() throws VarSubOrzDash {
@@ -272,7 +275,7 @@ public class Mutation {
         Double rfloat = toDouble(rhs);
 
         Double out = lfloat * rfloat;
-        return (varDef.type == WFRunVariableTypeEnum.FLOAT) ? out : out.intValue();
+        return (varDef.type == LHVarType.DOUBLE) ? out : out.intValue();
     
     }
 
@@ -309,11 +312,12 @@ public class Mutation {
      * right.
      */
     @SuppressWarnings("all")
-    public static boolean contains(Object left, Object right) throws VarSubOrzDash {
+    public static boolean contains(VariableValue left, VariableValue right)
+    throws VarSubOrzDash {
         try {
-            Collection<Object> collection = (Collection<Object>) left;
+            Collection<Object> collection = (Collection<Object>) left.getValue();
             for (Object thing : collection) {
-                if (thing.equals(right)) {
+                if (thing.equals(right.getValue())) {
                     return true;
                 }
             }
@@ -322,7 +326,8 @@ public class Mutation {
             throw new VarSubOrzDash(
                 exn,
                 "Failed determing whether the left contains the right: " +
-                LHUtil.objToString(left) + " , " + LHUtil.objToString(right)
+                LHUtil.objToJsonString(left.getValue()) + " , " +
+                LHUtil.objToJsonString(right.getValue())
             );
         }
         return false;
@@ -330,11 +335,11 @@ public class Mutation {
     }
 
     @SuppressWarnings("all") // lol
-    public static int compare(Object left, Object right) throws VarSubOrzDash {
-
+    public static int compare(VariableValue left, VariableValue right)
+    throws VarSubOrzDash {
         try {
-            int result = ((Comparable) left).compareTo((Comparable) right);
-            return result;
+            return ((Comparable) left.getValue()).compareTo(
+                (Comparable) right.getValue());
         } catch(Exception exn) {
             LHUtil.logError(exn.getMessage());
             throw new VarSubOrzDash(exn, "Failed comparing the provided values.");
