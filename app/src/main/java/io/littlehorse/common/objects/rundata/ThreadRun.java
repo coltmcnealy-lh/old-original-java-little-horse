@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.commons.lang3.tuple.Pair;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -36,7 +36,7 @@ import io.littlehorse.common.objects.metadata.VariableMutation;
 import io.littlehorse.common.objects.metadata.VariableMutationOperation;
 import io.littlehorse.common.objects.metadata.VariableValue;
 import io.littlehorse.common.objects.metadata.WFRunVariableDef;
-import io.littlehorse.common.objects.metadata.WFRunVariableTypeEnum;
+import io.littlehorse.common.objects.metadata.LHVarType;
 import io.littlehorse.common.objects.metadata.WFSpec;
 import io.littlehorse.common.util.LHUtil;
 import io.littlehorse.scheduler.TaskScheduleRequest;
@@ -155,28 +155,32 @@ public class ThreadRun extends BaseSchema {
     }
 
     @JsonIgnore
-    public Object getMutationRHS(
+    public VariableValue getMutationRHS(
         VariableMutation mutSchema, TaskRun tr
     ) throws LHConnectionError, VarSubOrzDash {
         if (mutSchema.jsonPath != null) {
-            return LHUtil.jsonPath(
-                LHUtil.objToString(tr.stdout), mutSchema.jsonPath
+            Object val = LHUtil.jsonPath(
+                LHUtil.objToJsonString(tr.stdout), mutSchema.jsonPath
             );
+            return new VariableValue(config, val);
+
         } else if (mutSchema.sourceVariable != null) {
             return assignVariable(mutSchema.sourceVariable);
+
         } else if (mutSchema.literalValue != null) {
             return mutSchema.literalValue;
+
         } else {
-            return tr.stdout;
+            return new VariableValue(config, tr.stdout);
         }
     }
 
     @JsonIgnore
     public VariableValue assignValue(
-        VariableAssignment var, WFRunVariableTypeEnum type
+        VariableAssignment var, LHVarType type
     ) throws VarSubOrzDash, LHConnectionError {
         Object val = assignVariableObjectHelper(var);
-        val = 
+        return new VariableValue(config, val);
     }
     
     @JsonIgnore
@@ -232,7 +236,7 @@ public class ThreadRun extends BaseSchema {
         }
 
         try {
-            return LHUtil.jsonPath(LHUtil.objToString(dataToParse), var.jsonPath);
+            return LHUtil.jsonPath(LHUtil.objToJsonString(dataToParse), var.jsonPath);
         } catch(Exception exn) {
             throw new VarSubOrzDash(
                 exn,
@@ -430,6 +434,9 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     private void mutateVariablesHelper(TaskRun tr, boolean dryRun) 
     throws VarSubOrzDash, LHConnectionError {
+
+        Map<Pair<Integer, String>, VariableValue> newVals = new HashMap<>();
+
         for (Map.Entry<String, VariableMutation> pair:
             tr.getNode().variableMutations.entrySet())
         {
@@ -439,16 +446,54 @@ public class ThreadRun extends BaseSchema {
 
             WFRunVariableDef varDef = varLookup.varDef;
             ThreadRun thread = varLookup.thread;
-            Object lhs = varLookup.value;
-            Object rhs = getMutationRHS(mutSchema, tr);
+            VariableValue lhs = varLookup.value;
+            VariableValue rhs = getMutationRHS(mutSchema, tr);
             VariableMutationOperation op = mutSchema.operation;
 
-            // Ok, if we got this far, then we know that the RHS and LHS both exist,
-            // but are LHS + operation + RHS valid?
-            Mutation mut = new Mutation(
-                lhs, rhs, op, thread, varDef, varName, config
-            );
-            mut.execute(dryRun);  // validate by call with dryRun==true
+            VariableValue newVal;
+
+            switch (op) {
+                case ADD:
+                    newVal = lhs.add(rhs);
+                    break;
+                case SUBTRACT:
+                    newVal = lhs.subtract(rhs);
+                    break;
+                case DIVIDE:
+                    newVal = lhs.subtract(rhs);
+                    break;
+                case ASSIGN:
+                    newVal = rhs;
+                    break;
+                case MULTIPLY:
+                    newVal = lhs.multiply(rhs);
+                    break;
+                case EXTEND:
+                    newVal = lhs.extend(rhs);
+                    break;
+                case REMOVE_IF_PRESENT:
+                    newVal = lhs.removeIfPresent(rhs);
+                    break;
+                case REMOVE_INDEX:
+                    newVal = lhs.removeIndex(rhs);
+                    break;
+                case REMOVE_KEY:
+                    newVal = lhs.removeKey(rhs);
+                    break;
+                default:
+                    // Should be impossible
+                    throw new VarSubOrzDash(null, "Unsupported operation: " + op);
+            }
+
+            newVal = newVal.castToType(varDef.type);
+            newVals.put(Pair.of(thread.id, varDef.variableName), newVal);
+        }
+
+        // If we got here without throwing a VarSubOrzdash, then all of the mutations have
+        // been successfully calculated. Now we just need to iterate and set the variables.
+        for (Map.Entry<Pair<Integer, String>, VariableValue> p : newVals.entrySet()) {
+            ThreadRun th = wfRun.threadRuns.get(p.getKey().getLeft());
+            th.variables.put(p.getKey().getRight(), p.getValue());
         }
     }
 
@@ -461,9 +506,8 @@ public class ThreadRun extends BaseSchema {
         tr.failureMessage = msg;
         tr.failureReason = reason;
 
-        addAndStartInterruptThread(
-            handlerSpecName, new HashMap<String, Object>(), true
-        );
+        // TODO: Put information about the exception handler here.
+        addAndStartInterruptThread(handlerSpecName, null, true);
     }
 
     @JsonIgnore
@@ -505,18 +549,18 @@ public class ThreadRun extends BaseSchema {
         VariableValue lhs = assignVariable(condition.leftSide);
         VariableValue rhs = assignVariable(condition.rightSide);
         switch (condition.comparator) {
-            case LESS_THAN: return Mutation.compare(lhs, rhs) < 0;
-            case LESS_THAN_EQ: return Mutation.compare(lhs, rhs) <= 0;
-            case GREATER_THAN: return Mutation.compare(lhs, rhs) > 0;
-            case GREATER_THAN_EQ: return Mutation.compare(lhs, rhs) >= 0;
+            case LESS_THAN: return lhs.compare(rhs) < 0;
+            case LESS_THAN_EQ: return lhs.compare(rhs) <= 0;
+            case GREATER_THAN: return lhs.compare(rhs) > 0;
+            case GREATER_THAN_EQ: return lhs.compare(rhs) >= 0;
             case EQUALS:
                 return lhs.getValue() != null && lhs.getValue().equals(rhs.getValue());
             case NOT_EQUALS:
                 return (
                     lhs.getValue() != null && !lhs.getValue().equals(rhs.getValue())
                 );
-            case IN: return Mutation.contains(rhs, lhs);
-            case NOT_IN: return !Mutation.contains(rhs, lhs);
+            case IN: return lhs.contains(rhs);
+            case NOT_IN: return !lhs.contains(rhs);
             default: return false;
         }
     }
@@ -798,10 +842,10 @@ public class ThreadRun extends BaseSchema {
                 "Got 'null', which is invalid value for sleep seconds."
             );
         }
-        if (!(sleepSeconds.type == WFRunVariableTypeEnum.INT)) {
+        if (!(sleepSeconds.getType() == LHVarType.INT)) {
             throw new VarSubOrzDash(
                 null,
-                "Got invalid type " + sleepSeconds.type + " for sleep seconds"
+                "Got invalid type " + sleepSeconds.getType() + " for sleep seconds"
             );
         }
         if ((Integer) sleepSeconds.getValue() < 0) {
@@ -888,7 +932,7 @@ public class ThreadRun extends BaseSchema {
         List<WFRunTimer> timers, int attemptNumber
     ) throws LHConnectionError {
         upNext = new ArrayList<>();
-        HashMap<String, Object> inputVars = new HashMap<String, Object>();
+        HashMap<String, VariableValue> inputVars = new HashMap<String, VariableValue>();
         TaskRun tr = createNewTaskRun(node, attemptNumber);
         try {
             for (Map.Entry<String, VariableAssignment> pair:
@@ -906,7 +950,8 @@ public class ThreadRun extends BaseSchema {
             return true;
         }
 
-        ThreadRun thread = wfRun.createThreadClientAdds(
+        ThreadRun thread;
+        thread = wfRun.createThreadClientAdds(
             node.threadSpawnThreadSpecName, inputVars, this
         );
         wfRun.threadRuns.add(thread);
@@ -914,7 +959,7 @@ public class ThreadRun extends BaseSchema {
         ThreadRunMeta meta = new ThreadRunMeta(tr, thread);
         taskRuns.add(tr);
         TaskRunResult result = new TaskRunResult(
-            LHUtil.objToString(meta), null, true, 0
+            LHUtil.objToJsonString(meta), null, true, 0
         );
         completeTask(
             tr, LHExecutionStatus.COMPLETED, result, event.timestamp
@@ -1054,7 +1099,7 @@ public class ThreadRun extends BaseSchema {
             completeTask(
                 tr, LHExecutionStatus.COMPLETED,
                 new TaskRunResult(
-                    LHUtil.objToString(toWaitFor.variables), null, true, 0
+                    LHUtil.objToJsonString(toWaitFor.variables), null, true, 0
                 ),
                 event.timestamp
             );
@@ -1248,20 +1293,23 @@ public class ThreadRun extends BaseSchema {
         String tspecname = idef.handlerThreadName;
         addAndStartInterruptThread(
             tspecname,
-            LHUtil.unsplat(payload.content, config),
+            payload.content,
             false
         );
     }
 
     @JsonIgnore
     private void addAndStartInterruptThread(
-        String tspecName, Map<String, Object> inputs, boolean isException
+        String tspecName, VariableValue input, boolean isException
     ) throws LHConnectionError {
         // crucial to create the thread BEFORE calling halt(), as the call to halt()
         // adds a WFHaltReason which we dont wanna propagate to the interrupt thread.
+
+        Map<String, VariableValue> newVars = new HashMap<>();
+        newVars.put("__interruptInput", input);
         ThreadRun trun = wfRun.createThreadClientAdds(
             tspecName,
-            inputs,
+            newVars,
             this
         );
         trun.isInterruptThread = true;

@@ -73,35 +73,35 @@ public class BaseSchema {
         if (this.config != null) return;
         this.config = config;
 
-        // Now set config of all the children.
-        for (Field field: this.getClass().getDeclaredFields()) {
-            field.setAccessible(true);
-            Object obj;
-            try {
-                obj = field.get(this);
-            } catch (IllegalAccessException exn) {
-                exn.printStackTrace();
-                continue;
-            }
-            if (obj == null) continue;
+        // // Now set config of all the children.
+        // for (Field field: this.getClass().getDeclaredFields()) {
+        //     field.setAccessible(true);
+        //     Object obj;
+        //     try {
+        //         obj = field.get(this);
+        //     } catch (IllegalAccessException exn) {
+        //         exn.printStackTrace();
+        //         continue;
+        //     }
+        //     if (obj == null) continue;
 
-            if (obj instanceof BaseSchema) {
-                BaseSchema bs = (BaseSchema) obj;
-                bs.setConfig(config);
-            } else if (obj instanceof List) {
-                for (Object subObj : (List<Object>) obj) {
-                    if (subObj instanceof BaseSchema) {
-                        ((BaseSchema) subObj).setConfig(config);
-                    }
-                }
-            } else if (obj instanceof Map) {
-                for (Object subObj: ((Map<Object, Object>) obj).values()) {
-                    if (subObj instanceof BaseSchema) {
-                        ((BaseSchema) subObj).setConfig(config);
-                    }
-                }
-            }
-        }
+        //     if (obj instanceof BaseSchema) {
+        //         BaseSchema bs = (BaseSchema) obj;
+        //         bs.setConfig(config);
+        //     } else if (obj instanceof List) {
+        //         for (Object subObj : (List<Object>) obj) {
+        //             if (subObj instanceof BaseSchema) {
+        //                 ((BaseSchema) subObj).setConfig(config);
+        //             }
+        //         }
+        //     } else if (obj instanceof Map) {
+        //         for (Object subObj: ((Map<Object, Object>) obj).values()) {
+        //             if (subObj instanceof BaseSchema) {
+        //                 ((BaseSchema) subObj).setConfig(config);
+        //             }
+        //         }
+        //     }
+        // }
     }
 
     public byte[] toBytes() {

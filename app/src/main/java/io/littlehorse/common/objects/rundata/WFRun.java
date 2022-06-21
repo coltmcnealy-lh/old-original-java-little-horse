@@ -28,6 +28,7 @@ import io.littlehorse.common.objects.metadata.Edge;
 import io.littlehorse.common.objects.metadata.ExternalEventDef;
 import io.littlehorse.common.objects.metadata.GETable;
 import io.littlehorse.common.objects.metadata.ThreadSpec;
+import io.littlehorse.common.objects.metadata.VariableValue;
 import io.littlehorse.common.objects.metadata.WFRunVariableDef;
 import io.littlehorse.common.objects.metadata.WFSpec;
 import io.littlehorse.common.util.LHDatabaseClient;
@@ -77,7 +78,7 @@ public class WFRun extends GETable {
 
     @JsonIgnore
     public ThreadRun createThreadClientAdds(
-        String threadName, Map<String, Object> variables, ThreadRun parent
+        String threadName, Map<String, VariableValue> variables, ThreadRun parent
     ) throws LHConnectionError {
         ThreadSpec tspec = wfSpec.threadSpecs.get(threadName);
 
@@ -89,17 +90,23 @@ public class WFRun extends GETable {
         trun.taskRuns = new ArrayList<TaskRun>();
 
         // Load the variables for the ThreadRun
-        trun.variables = new HashMap<String, Object>();
+        trun.variables = new HashMap<String, VariableValue>();
         for (String varName: tspec.variableDefs.keySet()) {
             WFRunVariableDef varDef = tspec.variableDefs.get(varName);
 
-            Object result = variables.get(varName);
+            VariableValue result = variables.get(varName);
             if (result != null) {
+                // As a prerequisite to this function, we assume that the types are valid.
                 trun.variables.put(varName, result);
+
             } else {
-                trun.variables.put(varName, varDef.defaultValue);
+                VariableValue val = new VariableValue(config);
+                val.setType(varDef.type);
+                trun.variables.put(varName, val);
+
             }
         }
+
         trun.upNext = new ArrayList<>();
         trun.threadSpec = wfSpec.threadSpecs.get(threadName);
         trun.threadSpecName = threadName;
@@ -541,7 +548,7 @@ class WFRunApiStuff {
             ExternalEventPayload payload = new ExternalEventPayload();
             payload.externalEventDefId = evd.getObjectId();
             payload.externalEventDefName = evd.name;
-            payload.content = eventContent;
+            payload.content = new VariableValue(config, eventContent).castToType(evd.contentType);
 
             WFEvent wfEvent = new WFEvent();
             wfEvent.wfRunId = wfRun.getObjectId();
@@ -562,6 +569,11 @@ class WFRunApiStuff {
             ctx.status(500);
             response.status = ResponseStatus.INTERNAL_ERROR;
             response.message = exn.getMessage();
+            ctx.json(response);
+        } catch(VarSubOrzDash exn) {
+            ctx.status(400);
+            response.status = ResponseStatus.VALIDATION_ERROR;
+            response.message = "Failed validating your payload into required type: " + exn.getMessage();
             ctx.json(response);
         }
     }

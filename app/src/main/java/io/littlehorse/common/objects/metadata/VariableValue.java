@@ -392,4 +392,50 @@ public class VariableValue extends BaseSchema {
         lhsMap.remove(other.getValue());
         return new VariableValue(config, lhsMap);
     }
+
+    public VariableValue copy() {
+        VariableValue val = new VariableValue(config);
+        try {
+            val.setSerializedVal(serializedVal);
+            val.setType(type);
+        } catch(VarSubOrzDash exn) {
+            // This shouldn't be possible
+            throw new RuntimeException(exn);
+        }
+        return val;
+    }
+
+    public Integer compare(VariableValue o) throws VarSubOrzDash {
+        switch (type) {
+            case STRING:
+                return asString().compareTo(o.asString());
+            case INT:
+                return asInt().compareTo(o.asInt());
+            case DOUBLE:
+                return asDouble().compareTo(o.asDouble());
+            case BOOLEAN:
+                asBool().compareTo(o.asBool());
+            default:
+                throw new VarSubOrzDash(null, "Tried to compare an invalid type: " + type);
+        }
+    }
+
+    public boolean contains(VariableValue other) throws VarSubOrzDash {
+        if (!isInTypes(LHVarType.STRING, LHVarType.OBJECT, LHVarType.ARRAY)) {
+            throw new VarSubOrzDash(
+                null, "Tried to check if a " + type + " contains another object!"
+            );
+        } 
+
+        if (type == LHVarType.STRING) {
+            return asString().contains(other.asString());
+        }
+
+        if (type == LHVarType.OBJECT) {
+            return asMap().containsKey(other.asString());
+        }
+
+        assert type == LHVarType.ARRAY;
+        return asArray().contains(other.getValue());
+    }
 }

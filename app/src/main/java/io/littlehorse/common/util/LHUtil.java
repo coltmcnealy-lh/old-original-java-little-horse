@@ -109,33 +109,6 @@ public class LHUtil {
         logBack(1, things);
     }
 
-    /**
-     * Given an object, try to turn it into a HashMap (via json.loads). If possible
-     * return the hashmap; otherwise return the variable.
-     * @param obj the thing to unsplat
-     * @return the unsplatted object
-     */
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> unsplat(Object obj, LHConfig cfg) {
-        HashMap<String, Object> out;
-        try {
-            LHUtil.log("obj:", obj.toString());
-            if (obj instanceof Map) {
-                return (Map<String, Object>) Map.class.cast(obj);
-            }
-
-            HashMap<String, Object> tmp = (HashMap<String, Object>) stringToObj(
-                obj.toString(), cfg
-            );
-
-            out = tmp;
-        } catch (Exception exn) {
-            out = new HashMap<>();
-            out.put("", obj);
-        }
-        return out;
-    }
-
     public static String inputStreamToString(InputStream stream) {
         int bufferSize = 1024;
         char[] buffer = new char[bufferSize];
