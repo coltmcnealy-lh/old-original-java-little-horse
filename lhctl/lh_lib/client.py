@@ -6,7 +6,7 @@ from typing import List, Optional, TypeVar
 
 import requests
 
-from lh_lib.schema.wf_spec_schema import ExternalEventDefSchema, LHDeployStatus, TaskDefSchema
+from lh_lib.schema.wf_spec_schema import TYPE_TO_ENUM, ExternalEventDefSchema, LHDeployStatus, TaskDefSchema
 from lh_sdk.compile import SpecsResult
 from lh_sdk.utils import LHBaseModel
 from lh_lib.config import DEFAULT_API_URL
@@ -228,9 +228,15 @@ class LHClient:
         vars: Optional[dict] = None,
         wf_run_id: Optional[str] = None,
     ) -> LHRPCResponseSchema[WFRunSchema]:
+        vars = vars or {}
         wf_run_request = {
             "wfSpecId": wf_spec_id_or_name,
-            "variables": vars,
+            "variables": {
+                var_name: {
+                    "serializedVal": json.dumps(vars[var_name]),
+                    "type": TYPE_TO_ENUM[type(vars[var_name])]
+                } for var_name in vars
+            },
             "wfRunId": wf_run_id
         }
 
