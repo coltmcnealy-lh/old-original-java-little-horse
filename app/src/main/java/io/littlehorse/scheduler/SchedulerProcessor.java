@@ -2,6 +2,7 @@ package io.littlehorse.scheduler;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -28,6 +29,7 @@ import io.littlehorse.common.objects.rundata.ThreadRun;
 import io.littlehorse.common.objects.rundata.WFRun;
 import io.littlehorse.common.objects.rundata.WFRunTimer;
 import io.littlehorse.common.util.Constants;
+import io.littlehorse.common.util.LHDatabaseClient;
 import io.littlehorse.common.util.LHUtil;
 
 
@@ -36,13 +38,15 @@ public class SchedulerProcessor
 {
     private KeyValueStore<String, WFRun> wfRunStore;
     private KeyValueStore<String, Bytes> timerStore;
-    private WFSpec wfSpec;
+    // private WFSpec wfSpec;
     private ProcessorContext<String, SchedulerOutput> context;
     private Cancellable punctuator;
     private LHConfig config;
 
-    public SchedulerProcessor(LHConfig config, WFSpec wfSpec) {
-        this.wfSpec = wfSpec;
+    private HashMap<String, WFSpec> wfSpecCache;
+
+    public SchedulerProcessor(LHConfig config) {
+        this.wfSpecCache = new HashMap<>();
         this.config = config;
     }
 
@@ -54,7 +58,7 @@ public class SchedulerProcessor
 
         punctuator = context.schedule(
             Constants.PUNCTUATOR_INERVAL,
-            PunctuationType.WALL_CLOCK_TIME,
+            PunctuationType.STREAM_TIME,
             this::clearTimers
         );
     }
@@ -133,6 +137,13 @@ public class SchedulerProcessor
     throws LHConnectionError {
 
         WFRun wfRun = wfRunStore.get(wfRunGuid);
+        WFSpec wfSpec = getWFSpec(event.wfSpecId);
+
+        if (wfSpec == null) {
+            // This should REALLY not happen.
+            // TODO: Create a deadletter queue.
+            return;
+        }
 
         if (wfRun == null) {
             if (event.type == WFEventType.WF_RUN_STARTED) {
@@ -190,7 +201,7 @@ public class SchedulerProcessor
             co.request = tsr;
             context.forward(new Record<String, SchedulerOutput>(
                 wfRun.getObjectId(), co, timestamp
-            ));
+            ), SchedulerTopology.taskQueueSink);
         }
 
         // Set all the timers!
@@ -225,13 +236,22 @@ public class SchedulerProcessor
         co.wfRun = wfRun;
         context.forward(new Record<String, SchedulerOutput>(
             wfRun.getObjectId(), co, timestamp
-        ));
+        ), SchedulerTopology.wfRunSink);
 
         wfRunStore.put(wfRun.getObjectId(), wfRun);
     }
 
     private String getTimerKey(long timestamp) {
         return String.format(Locale.US, "%020d", timestamp);
+    }
+
+    private WFSpec getWFSpec(String id) throws LHConnectionError {
+        WFSpec spec = wfSpecCache.get(id);
+        if (spec == null) {
+            spec = LHDatabaseClient.getByNameOrId(id, config, WFSpec.class);
+            wfSpecCache.put(id, spec);
+        }
+        return spec;
     }
 }
 

@@ -27,13 +27,8 @@ public class Scheduler {
 
     public void run() throws LHConnectionError {
         Topology scheduler = new Topology();
-        WFSpec wfSpec = ddConfig.lookupWFSpecOrDie(config);
 
-        SchedulerTopology.addStuff(
-            scheduler,
-            config,
-            wfSpec
-        );
+        SchedulerTopology.addStuff(scheduler, config);
 
         KafkaStreams schedulerStreams = new KafkaStreams(
             scheduler, config.getStreamsConfig()

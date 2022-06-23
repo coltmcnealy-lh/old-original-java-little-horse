@@ -252,14 +252,6 @@ public class LHConfig {
         }
     }
 
-    // Worker Configuration
-    public String getWfWorkerImage() {
-        return getOrSetDefault(
-            Constants.DEFAULT_WF_WORKER_IMAGE_KEY,
-            "little-horse-api:latest"
-        );
-    }
-
     public String getAPIUrlFor(String extension) {
         String out = this.getAPIUrl();
         if (!extension.startsWith("/")) {

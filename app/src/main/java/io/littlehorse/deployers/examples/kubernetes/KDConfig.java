@@ -18,7 +18,6 @@ import io.littlehorse.deployers.examples.kubernetes.specs.Deployment;
 
 
 public class KDConfig {
-    private String wfSpecId;
     private String taskDefId;
     private String dockerHost;
     private String taskExecutorClassName;
@@ -27,7 +26,6 @@ public class KDConfig {
     private String defaultK8sNamespace;
     
     public KDConfig() {
-        wfSpecId = System.getenv(KDConstants.WF_SPEC_ID_KEY);
         taskDefId = System.getenv(KDConstants.TASK_DEF_ID_KEY);
         taskExecutorClassName = System.getenv().get(
             KDConstants.TASK_EXECUTOR_CLASS_KEY
@@ -47,10 +45,6 @@ public class KDConfig {
         return this.dockerHost;
     }
 
-    public String getWFSpecId() {
-        return this.wfSpecId;
-    }
-
     public JavaTask getTaskExecutor() {
         return LHUtil.loadClass(taskExecutorClassName);
     }
@@ -61,21 +55,6 @@ public class KDConfig {
 
     public String getTaskDefId() {
         return taskDefId;
-    }
-
-    public WFSpec lookupWFSpecOrDie(LHConfig config) {
-        WFSpec wfSpec = null;
-        try {
-            wfSpec = LHDatabaseClient.getByNameOrId(
-                this.getWFSpecId(), config, WFSpec.class
-            );
-        } catch (LHConnectionError exn) {
-            exn.printStackTrace();
-        }
-        if (wfSpec == null) {
-            throw new RuntimeException("Couldn't load wfSpec" + getWFSpecId());
-        }
-        return wfSpec;
     }
 
     public TaskDef lookupTaskDefOrDie(LHConfig config) {

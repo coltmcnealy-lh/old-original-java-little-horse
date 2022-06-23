@@ -19,7 +19,6 @@ public class Constants {
     public static String ADVERTISED_PORT_KEY = "LHORSE_ADVERTISED_PORT";
     public static String STATE_DIR_KEY = "LHORSE_KAFKA_STREAMS_STATE_DIR";
 
-    public static String DEFAULT_WF_WORKER_IMAGE_KEY = "LHORSE_DEFAULT_WF_WORKER_IMAGE";
     public static String DEFAULT_REPLICAS_KEY = "LHORSE_DEFAULT_REPLICAS";
     public static String DEFAULT_TASK_DEPLOYER_KEY = "LHORSE_DEFAULT_TASK_DEPLOYER";
     public static String DEFAULT_WF_DEPLOYER_KEY = "LHORSE_DEFAULT_WF_DEPLOYER";
@@ -34,10 +33,6 @@ public class Constants {
     public static String DEFAULT_TASK_WORKER_POLL_MILLIS_KEY =
         "LHORSE_DEFAULT_TASK_WORKER_POLL_MILLIS";
 
-    // TODO: make this a reserved word.
-    public static String LATEST_OFFSET_ROCKSDB_KEY = "latest-offset";
-    public static String LATEST_TS_ROCKSDB_KEY = "latest-timestamp";
-    public static String LAST_PROCESSED_TS_ROCKSDB_KEY = "last-processed-timestamp";
     public static String TIMER_STORE_NAME = "timerStore";
     public static Duration PUNCTUATOR_INERVAL = Duration.ofSeconds(1);
 

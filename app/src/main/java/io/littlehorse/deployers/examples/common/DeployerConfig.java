@@ -5,20 +5,17 @@ import com.github.dockerjava.core.DockerClientBuilder;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.exceptions.LHConnectionError;
 import io.littlehorse.common.objects.metadata.TaskDef;
-import io.littlehorse.common.objects.metadata.WFSpec;
 import io.littlehorse.common.util.LHDatabaseClient;
 import io.littlehorse.common.util.LHUtil;
 import io.littlehorse.deployers.examples.common.taskimpl.JavaTask;
 
 public class DeployerConfig {
-    private String wfSpecId;
     private String taskDefId;
     private String dockerHost;
     private String taskExecutorClassName;
     private int numThreads;
     
     public DeployerConfig() {
-        wfSpecId = System.getenv(DeployerConstants.WF_SPEC_ID_KEY);
         taskDefId = System.getenv(DeployerConstants.TASK_DEF_ID_KEY);
         dockerHost = System.getenv().getOrDefault(
             DeployerConstants.DOCKER_HOST_KEY, "unix:///var/run/docker.sock"
@@ -35,10 +32,6 @@ public class DeployerConfig {
         return this.dockerHost;
     }
 
-    public String getWFSpecId() {
-        return this.wfSpecId;
-    }
-
     public DockerClient getDockerClient() {
         return DockerClientBuilder.getInstance(this.getDockerHost()).build();
     }
@@ -53,21 +46,6 @@ public class DeployerConfig {
 
     public String getTaskDefId() {
         return taskDefId;
-    }
-
-    public WFSpec lookupWFSpecOrDie(LHConfig config) {
-        WFSpec wfSpec = null;
-        try {
-            wfSpec = LHDatabaseClient.getByNameOrId(
-                this.getWFSpecId(), config, WFSpec.class
-            );
-        } catch (LHConnectionError exn) {
-            exn.printStackTrace();
-        }
-        if (wfSpec == null) {
-            throw new RuntimeException("Couldn't load wfSpec" + getWFSpecId());
-        }
-        return wfSpec;
     }
 
     public TaskDef lookupTaskDefOrDie(LHConfig config) {
