@@ -16,6 +16,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -300,6 +301,7 @@ class MapperInitializer {
 
     public MapperInitializer(LHConfig cfg) {
         this.mapper = new ObjectMapper();
+        this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         InjectableValues inject = new InjectableValues.Std().addValue(
             BaseSchema.class, cfg
