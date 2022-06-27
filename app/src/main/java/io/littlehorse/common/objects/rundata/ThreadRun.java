@@ -88,7 +88,7 @@ public class ThreadRun extends BaseSchema {
 
     @JsonIgnore
     private ThreadSpec getThreadSpec() throws LHConnectionError {
-        return wfRun.getWFSpec().threadSpecs.get(threadSpecName);
+        return wfRun.getWFSpec().findThreadSpec(threadSpecName);
     }
 
     public String getId() {
@@ -138,9 +138,9 @@ public class ThreadRun extends BaseSchema {
             throw new RuntimeException("wfRun was not set yet!");
         }
         WFSpec wfSpec = wfRun.getWFSpec();
-        ThreadSpec threadSchema = wfSpec.threadSpecs.get(threadSpecName);
+        ThreadSpec threadSchema = wfSpec.findThreadSpec(threadSpecName);
 
-        WFRunVariableDef varDef = threadSchema.variableDefs.get(varName);
+        WFRunVariableDef varDef = threadSchema.findVarDef(varName);
         if (varDef != null) {
             return new VariableLookupResult(varDef, this, variables.get(varName));
         }
@@ -691,7 +691,7 @@ public class ThreadRun extends BaseSchema {
             Edge edge = pair.edge;
             try {
                 if (evaluateEdge(edge.condition)) {
-                    Node n = getThreadSpec().nodes.get(edge.sinkNodeName);
+                    Node n = getThreadSpec().findNode(edge.sinkNodeName);
                     if (lockVariables(n, id)) {
                         activatedNode = n;
                         attemptNumber = pair.attemptNumber;
@@ -872,7 +872,7 @@ public class ThreadRun extends BaseSchema {
 
         TaskScheduleRequest tsr = new TaskScheduleRequest();
         tsr.setConfig(config);
-        tsr.taskDefName = node.taskDef.name;
+        tsr.taskDefName = node.taskDefName;
         tsr.wfRunId = wfRun.objectId;
         tsr.wfSpecId = wfRun.wfSpecDigest;
         tsr.wfSpecName = wfRun.wfSpecName;
@@ -1166,7 +1166,7 @@ public class ThreadRun extends BaseSchema {
             for (UpNextPair p: upNext) {
                 Edge e = p.edge;
                 if (e.sinkNodeName.equals(timer.nodeName)) {
-                    timedOutEventNode = createNewTaskRun(getThreadSpec().nodes.get(
+                    timedOutEventNode = createNewTaskRun(getThreadSpec().findNode(
                         e.sinkNodeName
                     ));
                     taskRuns.add(timedOutEventNode);
@@ -1288,8 +1288,7 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     public void handleInterrupt(ExternalEventPayload payload) throws
     LHConnectionError {
-        HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
-        InterruptDef idef = idefs.get(payload.externalEventDefName);
+        InterruptDef idef = getThreadSpec().findIdef(payload.externalEventDefName);
         String tspecname = idef.handlerThreadName;
         addAndStartInterruptThread(
             tspecname,
@@ -1348,8 +1347,10 @@ public class ThreadRun extends BaseSchema {
     @JsonIgnore
     public void propagateInterrupt(ExternalEventPayload payload) throws
     LHConnectionError {
-        HashMap<String, InterruptDef> idefs = getThreadSpec().interruptDefs;
-        if (idefs != null && idefs.containsKey(payload.externalEventDefName)) {
+        InterruptDef idef = getThreadSpec().findIdef(
+            payload.externalEventDefName
+        );
+        if (idef != null) {
             // Now we need to add thread!
             handleInterrupt(payload);
         } else {

@@ -63,9 +63,9 @@ public class TaskRun extends BaseSchema {
         if (parentThread == null) {
             throw new RuntimeException("Parent thread of taskrun was null!");
         }
-        return parentThread.wfRun.getWFSpec().threadSpecs.get(
+        return parentThread.wfRun.getWFSpec().findThreadSpec(
             parentThread.threadSpecName
-        ).nodes.get(nodeName);
+        ).findNode(nodeName);
     }
 
     public NodeType getNodeType() throws LHConnectionError {

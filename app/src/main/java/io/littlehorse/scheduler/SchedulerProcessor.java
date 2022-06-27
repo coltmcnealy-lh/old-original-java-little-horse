@@ -146,16 +146,17 @@ public class SchedulerProcessor
         }
 
         if (wfRun == null) {
-            if (event.type == WFEventType.WF_RUN_STARTED) {
-                wfRun = wfSpec.newRun(wfRunGuid, event);
-                wfRun.setWFSpec(wfSpec);
-            } else {
-                // This really shouldn't happen.
-                LHUtil.log("Couldn't find wfRun for event", wfRunGuid);
+            return;
+            // if (event.type == WFEventType.WF_RUN_STARTED) {
+            //     wfRun = wfSpec.newRun(wfRunGuid, event);
+            //     wfRun.setWFSpec(wfSpec);
+            // } else {
+            //     // This really shouldn't happen.
+            //     LHUtil.log("Couldn't find wfRun for event", wfRunGuid);
 
-                // TODO: Shoudl we maybe put some record saying it's orzdashed?
-                return;
-            }
+            //     // TODO: Shoudl we maybe put some record saying it's orzdashed?
+            //     return;
+            // }
         } else {
             wfRun.setWFSpec(wfSpec);
             wfRun.incorporateEvent(event);

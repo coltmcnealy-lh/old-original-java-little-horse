@@ -1,10 +1,17 @@
 package io.littlehorse.common.util;
 
+import java.io.IOException;
 import io.littlehorse.api.ResponseStatus;
 import io.littlehorse.api.metadata.RangeQueryResponse;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.exceptions.LHConnectionError;
+import io.littlehorse.common.exceptions.LHSerdeError;
+import io.littlehorse.common.objects.BaseSchema;
 import io.littlehorse.common.objects.metadata.GETable;
+import io.littlehorse.common.objects.metadata.WFSpec;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 
 /**
@@ -18,6 +25,37 @@ import io.littlehorse.common.objects.metadata.GETable;
  *   I was gonna say>>
  */
 public class LHDatabaseClient {
+
+    public static WFSpec getWFSpecById(String idOrName, LHConfig config)
+    throws LHConnectionError {
+        OkHttpClient client = config.getHttpClient();
+        String url = config.getAPIUrlFor("WFSpec") + "/" + idOrName;
+        Request request = new Request.Builder().url(
+            url
+        ).build();
+
+        try {
+            Response resp = client.newCall(request).execute();
+            byte[] body = resp.body().bytes();
+            if (resp.code() < 300 && resp.code() >= 200) {
+                return BaseSchema.fromBytes(body, WFSpec.class, config);
+            } else {
+                return null;
+            }
+        } catch(IOException exn) {
+            throw new LHConnectionError(
+                exn,
+                String.format(
+                    "Had %s error connectiong to %s: %s",
+                    exn.getClass().getName(), url, exn.getMessage()
+                )
+            );
+        } catch(LHSerdeError exn) {
+            // Not possible
+            return null;
+        }
+    }
+
 
     public static<T extends GETable> T getByNameOrId(
         String idOrName, LHConfig config, Class<T> cls

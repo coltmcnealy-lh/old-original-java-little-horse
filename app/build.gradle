@@ -62,13 +62,13 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'little.horse.App'
+    mainClass = 'io.littlehorse.App'
     executableDir = 'custom_bin_dir'
 }
 
 task fatJar(type: Jar) {
   manifest {
-    attributes 'Main-Class': 'little.horse.App'
+    attributes 'Main-Class': 'io.littlehorse.App'
   }
 
   // TODO: something safer?

@@ -4,7 +4,6 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.objects.metadata.GETable;
-import io.littlehorse.common.objects.rundata.WFRun;
 
 public class GETApi<T extends GETable> {
     private Class<T> cls;
@@ -34,12 +33,6 @@ public class GETApi<T extends GETable> {
             T.getInternalIterLabelsAPIPath("{start}", "{end}", "{token}", cls),
             this::internalIter
         );
-
-        // This code is kind of ugly, but we want the WFRun to have non-standard
-        // POST'ing abilities.
-        if (cls == WFRun.class) {
-            WFRun.overridePostAPIEndpoints(app, config);
-        }
     }
 
     public void publicGet(Context ctx) {

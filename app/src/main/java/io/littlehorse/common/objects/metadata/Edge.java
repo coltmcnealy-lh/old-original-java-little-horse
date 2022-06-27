@@ -20,7 +20,7 @@ public class Edge extends BaseSchema {
     @JsonIgnore
     public Node getSourceNode() {
         if (sourceNode == null) {
-            sourceNode = thread.nodes.get(sourceNodeName);
+            sourceNode = thread.findNode(sourceNodeName);
         }
         return sourceNode;
     }
@@ -31,7 +31,7 @@ public class Edge extends BaseSchema {
     @JsonIgnore
     public Node getSinkNode() {
         if (sinkNode == null) {
-            sinkNode = thread.nodes.get(sinkNodeName);
+            sinkNode = thread.findNode(sinkNodeName);
         }
         return sinkNode;
     }

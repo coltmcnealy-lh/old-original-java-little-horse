@@ -13,7 +13,7 @@ else
     docker stop $CONTAINERS &
 fi
 
-./build/build.sh
+# ./build/build.sh
 
 
 wait

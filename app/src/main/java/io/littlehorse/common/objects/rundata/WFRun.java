@@ -63,7 +63,7 @@ public class WFRun extends GETable {
     @JsonIgnore
     public void setWFSpec(WFSpec spec) {
         wfSpec = spec;
-        wfSpecDigest = wfSpec.getObjectId();
+        wfSpecDigest = wfSpec.id;
         wfSpecName = wfSpec.name;
     }
 
@@ -80,7 +80,7 @@ public class WFRun extends GETable {
     public ThreadRun createThreadClientAdds(
         String threadName, Map<String, VariableValue> variables, ThreadRun parent
     ) throws LHConnectionError {
-        ThreadSpec tspec = wfSpec.threadSpecs.get(threadName);
+        ThreadSpec tspec = wfSpec.findThreadSpec(threadName);
 
         ThreadRun trun = new ThreadRun();
         trun.setConfig(config);
@@ -91,8 +91,8 @@ public class WFRun extends GETable {
 
         // Load the variables for the ThreadRun
         trun.variables = new HashMap<String, VariableValue>();
-        for (String varName: tspec.variableDefs.keySet()) {
-            WFRunVariableDef varDef = tspec.variableDefs.get(varName);
+        for (WFRunVariableDef varDef: tspec.variableDefs) {
+            String varName = varDef.variableName;
 
             VariableValue result = variables.get(varName);
             if (result != null) {
@@ -108,7 +108,7 @@ public class WFRun extends GETable {
         }
 
         trun.upNext = new ArrayList<>();
-        trun.threadSpec = wfSpec.threadSpecs.get(threadName);
+        trun.threadSpec = wfSpec.findThreadSpec(threadName);
         trun.threadSpecName = threadName;
         if (parent != null) {
             trun.parentThreadId = parent.id;
@@ -308,20 +308,6 @@ public class WFRun extends GETable {
         return threadRuns.get(0);
     }
 
-    public static WFRunApiStuff apiStuff;
-
-    public static void overridePostAPIEndpoints(Javalin app, LHConfig config) {
-        apiStuff = new WFRunApiStuff(config);
-
-        app.post("/WFRun", apiStuff::postRun);
-        app.post(
-            "/externalEvent/{externalEventDefId}/{wfRunId}", apiStuff::postEvent
-        );
-
-        app.post("/WFRun/stop/{wfRunId}/{tid}", apiStuff::postStopThread);
-        app.post("/WFRun/resume/{wfRunId}/{tid}", apiStuff::postResumeThread);
-    }
-
     @Override
     public void addIndexKeyValPairs(Map<String, String> pairs) {
         for (ThreadRun tr: threadRuns) {
@@ -356,226 +342,6 @@ public class WFRun extends GETable {
 
         pairs.put("WFSpecName", wfSpecName);
         pairs.put("WFSpecId", wfSpecDigest);
-    }
-
-}
-
-class WFRunApiStuff {
-    private LHConfig config;
-
-    public WFRunApiStuff(LHConfig config) {
-        this.config = config;
-    }
-
-    public void postRun(Context ctx) {
-        LHRpcResponse<WFRun> response = new LHRpcResponse<>();
-
-        WFRunRequest request;
-        try {
-            request = BaseSchema.fromBytes(
-                ctx.bodyAsBytes(),
-                WFRunRequest.class,
-                config
-            );
-        } catch(LHSerdeError exn) {
-            response.status = ResponseStatus.VALIDATION_ERROR;
-            response.message = exn.getMessage();
-            ctx.json(response);
-            return;
-        }
-        if (request.variables == null) {
-            request.variables = new HashMap<>();
-        }
-
-        WFEvent event = new WFEvent();
-        event.setConfig(config);
-        String guid = (request.wfRunId == null) ?
-            LHUtil.generateGuid():request.wfRunId;
-
-        event.wfRunId = guid;
-        event.content = request.toString();
-        event.type = WFEventType.WF_RUN_STARTED;
-        event.timestamp = LHUtil.now();
-
-        try {
-            WFSpec spec = LHDatabaseClient.getByNameOrId(
-                request.wfSpecId,
-                config,
-                WFSpec.class
-            );
-            if (spec == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "Couldn't find wfspec " + request.wfSpecId;
-
-            } else {
-                response.objectId = guid;
-                event.wfSpecId = spec.getObjectId();
-                event.wfSpecName = spec.name;
-                event.wfSpec = spec;
-                event.record();
-                response.status = ResponseStatus.OK;
-
-            }
-        } catch(LHConnectionError exn) {
-            response.status = ResponseStatus.INTERNAL_ERROR;
-            response.message = exn.getMessage();
-            ctx.json(response);
-            return;
-        }
-
-        ctx.json(response);
-        return;
-    }
-
-    public void postStopThread(Context ctx) {
-        String wfRunGuid = ctx.pathParam("wfRunId");
-        int tid = Integer.valueOf(ctx.pathParam("tid"));
-
-        LHRpcResponse<WFRun> response = new LHRpcResponse<>();
-
-        try {
-
-            WFRun wfRun = LHDatabaseClient.getByNameOrId(
-                wfRunGuid, config, WFRun.class
-            );
-            if (wfRun == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "Could not find provided wfRun with provided id.";
-                ctx.json(response);
-                return;
-            }
-
-            WFEvent event = new WFEvent();
-            event.setConfig(config);
-            event.wfRun = wfRun;
-            event.wfRunId = wfRunGuid;
-            event.type = WFEventType.WF_RUN_STOP_REQUEST;    
-            event.threadId = tid;
-            event.wfSpecId = event.wfRun.wfSpecDigest;
-            event.wfSpecName = event.wfRun.wfSpecName;
-            event.record();
-
-            response.result = wfRun;
-
-            ctx.json(response);
-
-        } catch(LHConnectionError exn) {
-            exn.printStackTrace();
-            ctx.status(500);
-            response.message = "Couldn't stop the wfRun: " + exn.getMessage();
-            response.status = ResponseStatus.INTERNAL_ERROR;
-            ctx.json(response);
-            return;
-        }
-    }
-
-    public void postResumeThread(Context ctx) {
-        String wfRunGuid = ctx.pathParam("wfRunId");
-        int tid = Integer.valueOf(ctx.pathParam("tid"));
-
-        LHRpcResponse<WFRun> response = new LHRpcResponse<>();
-
-        try {
-
-            WFRun wfRun = LHDatabaseClient.getByNameOrId(wfRunGuid, config, WFRun.class);
-            if (wfRun == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "Could not find provided wfRun with provided id.";
-                ctx.json(response);
-                return;
-            }
-
-            WFEvent event = new WFEvent();
-            event.setConfig(config);
-            event.wfRun = wfRun;
-            event.wfRunId = wfRunGuid;
-            event.type = WFEventType.WF_RUN_RESUME_REQUEST;    
-            event.threadId = tid;
-            event.wfSpecId = event.wfRun.wfSpecDigest;
-            event.wfSpecName = event.wfRun.wfSpecName;
-            event.record();
-
-            response.result = wfRun;
-
-            ctx.json(response);
-
-        } catch(LHConnectionError exn) {
-            exn.printStackTrace();
-            ctx.status(500);
-            response.message = "Couldn't resume the wfRun: " + exn.getMessage();
-            response.status = ResponseStatus.INTERNAL_ERROR;
-            ctx.json(response);
-            return;
-        }
-    }
-
-    public void postEvent(Context ctx) {
-        String wfRunId = ctx.pathParam("wfRunId");
-        String externalEventDefID = ctx.pathParam("externalEventDefId");
-        Object eventContent;
-        try {
-            eventContent = ctx.bodyAsClass(Object.class);
-        } catch(Exception exn) {
-            eventContent = ctx.body();
-        }
-
-        WFRun wfRun;
-        ExternalEventDef evd;
-
-        LHRpcResponse<WFRun> response = new LHRpcResponse<>();
-
-        try {
-            wfRun = LHDatabaseClient.getByNameOrId(wfRunId, config, WFRun.class);
-            if (wfRun == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "Couldn't find wfRun with id " + wfRunId;
-                ctx.json(response);
-                return;
-            }
-
-            evd = LHDatabaseClient.getByNameOrId(
-                externalEventDefID, config, ExternalEventDef.class
-            );
-
-            if (evd == null) {
-                response.status = ResponseStatus.OBJECT_NOT_FOUND;
-                response.message = "Couldn't find Ext Ev Def with id "
-                    + externalEventDefID;
-                ctx.json(response);
-                return;
-            }
-
-            ExternalEventPayload payload = new ExternalEventPayload();
-            payload.externalEventDefId = evd.getObjectId();
-            payload.externalEventDefName = evd.name;
-            payload.content = new VariableValue(config, eventContent).castToType(evd.contentType);
-
-            WFEvent wfEvent = new WFEvent();
-            wfEvent.wfRunId = wfRun.getObjectId();
-            wfEvent.wfSpecId = wfRun.wfSpecDigest;
-            wfEvent.wfSpecName = wfRun.wfSpecName;
-            wfEvent.type = WFEventType.EXTERNAL_EVENT;
-            wfEvent.timestamp = LHUtil.now();
-            wfEvent.content = payload.toString();
-            wfEvent.wfRun = wfRun;
-            wfEvent.setConfig(config);
-
-            wfEvent.record();
-
-            ctx.json(response);
-
-        } catch(LHConnectionError exn) {
-            exn.printStackTrace();
-            ctx.status(500);
-            response.status = ResponseStatus.INTERNAL_ERROR;
-            response.message = exn.getMessage();
-            ctx.json(response);
-        } catch(VarSubOrzDash exn) {
-            ctx.status(400);
-            response.status = ResponseStatus.VALIDATION_ERROR;
-            response.message = "Failed validating your payload into required type: " + exn.getMessage();
-            ctx.json(response);
-        }
     }
 
 }

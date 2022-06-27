@@ -3,17 +3,65 @@
  */
 package io.littlehorse;
 
+import java.util.Arrays;
+import org.apache.kafka.clients.admin.NewTopic;
 import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import com.fasterxml.jackson.dataformat.avro.schema.AvroSchemaGenerator;
+import io.littlehorse.common.LHConfig;
+import io.littlehorse.common.objects.metadata.ExternalEventDef;
+import io.littlehorse.common.objects.metadata.GETable;
+import io.littlehorse.common.objects.metadata.POSTable;
+import io.littlehorse.common.objects.metadata.TaskDef;
+import io.littlehorse.common.objects.metadata.WFSpec;
+import io.littlehorse.common.objects.rundata.WFRun;
+import io.littlehorse.common.util.LHDatabaseClient;
+import io.littlehorse.common.util.LHUtil;
+import io.littlehorse.scheduler.Scheduler;
 
 class Foo {
     public int bar;
 }
 
 public class App {
+    /**
+     * Idempotent LittleHorse cluster setup is currently done on startup of the LH
+     * Core API. All it does right now is create a bunch of kafka topics so everybody
+     * is happy.
+     */
+    public static void doIdempotentSetup(LHConfig config) {
+        int partitions = config.getDefaultPartitions();
+        short replicationFactor = (short) config.getDefaultReplicas();
 
-    private static void experiment() throws Exception {
+        for (Class<? extends GETable> cls: Arrays.asList(
+            WFSpec.class, TaskDef.class, ExternalEventDef.class, WFRun.class
+        )) {
+            LHUtil.log("About to create topics for ", cls.getName());
+            config.createKafkaTopic(
+                new NewTopic(
+                    POSTable.getIdKafkaTopic(config, cls),
+                    partitions,
+                    replicationFactor
+                )
+            );
+
+            config.createKafkaTopic(
+                new NewTopic(
+                    POSTable.getIndexKafkaTopic(config, cls),
+                    partitions,
+                    replicationFactor
+                )
+            );
+        }
+
+        config.createKafkaTopic(new NewTopic(
+            config.getWFRunEventTopic(),
+            partitions,
+            replicationFactor
+        ));
+    }
+
+    public static void experiment() throws Exception {
         AvroSchemaGenerator gen = new AvroSchemaGenerator();
         AvroMapper mapper = new AvroMapper();
         mapper.acceptJsonFormatVisitor(Foo.class, gen);
@@ -31,6 +79,15 @@ public class App {
     }
 
     public static void main(String[] args) throws Exception {
-        experiment();
+        // LHConfig config = new LHConfig();
+        // doIdempotentSetup(config);
+        // Scheduler.main(args);
+
+        LHConfig config = new LHConfig();
+        WFSpec spec = LHDatabaseClient.getWFSpecById(
+            "cfb40a389dee4faf9a57360176b2a972", config
+        );
+
+        System.out.println(spec.toString());
     }
 }

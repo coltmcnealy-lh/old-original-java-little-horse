@@ -152,7 +152,7 @@ public abstract class GETable extends BaseSchema {
         return out;
     }
 
-    public abstract void addIndexKeyValPairs(Map<String, String> pairs);
+    public void addIndexKeyValPairs(Map<String, String> pairs) {}
 
     public Date getCreated() {
         if (created == null) {

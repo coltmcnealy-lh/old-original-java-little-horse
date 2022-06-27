@@ -1,0 +1,60 @@
+{
+  "created": null,
+  "name": "profile_workflow",
+  "status": "STOPPED",
+  "statusMessage": null,
+  "desiredStatus": "RUNNING",
+  "threadSpecs": [
+    {
+      "name": "profile_workflow",
+      "entrypointNodeName": null,
+      "variableDefs": {
+        "my_name_var": {
+          "type": "INT",
+          "defaultValue": 0
+        }
+      },
+      "interruptDefs": null,
+      "nodes": [
+        {
+          "name": "0-task1-d63bb",
+          "nodeType": "TASK",
+          "taskDefName": "task1"
+        },
+        {
+          "name": "1-task2-d63bb",
+          "nodeType": "TASK",
+          "variableMutations": {
+            "my_name_var": {
+              "operation": "ADD",
+              "jsonPath": null,
+              "literalValue": 1,
+              "sourceVariable": null
+            }
+          },
+          "taskDefName": "task2"
+        }
+      ],
+      "edges": [
+        {
+          "sourceNodeName": "0-task1-d63bb",
+          "sinkNodeName": "1-task2-d63bb"
+        },
+        {
+          "sourceNodeName": "1-task2-d63bb",
+          "sinkNodeName": "0-task1-d63bb",
+          "condition": {
+            "leftSide": {
+              "wfRunVariableName": "my_name_var"
+            },
+            "rightSide": {
+              "literalValue": 50
+            },
+            "comparator": "LESS_THAN"
+          }
+        }
+      ]
+    }
+  ],
+  "entrypointThreadName": "profile_workflow"
+}
