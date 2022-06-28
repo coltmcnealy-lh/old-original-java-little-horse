@@ -3,8 +3,6 @@
  */
 package io.littlehorse;
 
-import java.util.Arrays;
-import org.apache.kafka.clients.admin.NewTopic;
 import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import com.fasterxml.jackson.dataformat.avro.schema.AvroSchemaGenerator;

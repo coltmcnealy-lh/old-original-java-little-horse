@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
-import java.util.regex.Pattern;
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
@@ -22,7 +20,6 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.state.HostInfo;
 import io.littlehorse.common.util.Constants;
 import okhttp3.OkHttpClient;
 
@@ -148,7 +145,7 @@ public class LHConfig {
 
     public String getAppInstanceId() {
         String defVal = getKafkaTopicPrefix();
-        defVal += RandomStringUtils.randomAlphanumeric(10).toLowerCase();
+        // defVal += RandomStringUtils.randomAlphanumeric(10).toLowerCase();
         defVal += "-unset-instance-id-badbadbad";
 
         return getOrSetDefault(
@@ -202,7 +199,6 @@ public class LHConfig {
             ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.getAppInstanceId()
         );
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
-        props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.getStateDirectory());
         props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 4000);
         props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, "exactly_once_v2");
@@ -279,40 +275,6 @@ public class LHConfig {
         return out;
     }
 
-    // Info about the Advertised Host for this process
-
-    public HostInfo getHostInfo() {
-        return new HostInfo(getAdvertisedHost(), getAdvertisedPort());
-    }
-
-    public String getAdvertisedProto() {
-        return getOrSetDefault(
-            Constants.ADVERTISED_PROTOCOL_KEY, "http"
-        );
-    }
-
-    public String getAdvertisedUrl() {
-
-        return String.format(
-            "%s://%s:%d",
-            getAdvertisedProto(),
-            this.getAdvertisedHost(),
-            getAdvertisedPort()
-        );
-    }
-
-    public String getAdvertisedHost() {
-        return getOrSetDefault(
-            Constants.ADVERTISED_HOST_KEY, "localhost"
-        );
-    }
-
-    public int getAdvertisedPort() {
-        return Integer.valueOf(getOrSetDefault(
-            Constants.ADVERTISED_PORT_KEY, "5000"
-        ));
-    }
-
     // HTTP Client
     public OkHttpClient getHttpClient() {
         return this.httpClient;
@@ -353,18 +315,8 @@ public class LHConfig {
         return Integer.valueOf(getOrSetDefault(Constants.DEFAULT_PARTITIONS_KEY, "1"));
     }
 
-    public String getWFRunEventTopic() {
-        return this.getKafkaTopicPrefix() + "wfEvents__";
-    }
-
     public String getWFRunTimerTopicPrefix() {
         return this.getKafkaTopicPrefix() + "timers__";
-    }
-
-    public Pattern getAllWFRunTopicsPattern() {
-        return Pattern.compile(
-            this.getWFRunEventTopic() + ".*"
-        );
     }
 
     // Private Implementation Utility methods

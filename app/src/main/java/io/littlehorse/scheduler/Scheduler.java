@@ -26,7 +26,10 @@ public class Scheduler {
         );
         schedulerStreams.setStateListener(listener);
         Runtime.getRuntime().addShutdownHook(new Thread(config::cleanup));
-        Runtime.getRuntime().addShutdownHook(new Thread(schedulerStreams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("hello there");
+            schedulerStreams.close();
+        }));
 
         schedulerStreams.start();
     }

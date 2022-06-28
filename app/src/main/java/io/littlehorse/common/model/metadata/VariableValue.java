@@ -6,10 +6,13 @@ import java.util.Objects;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.protobuf.ByteString;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.model.BaseSchema;
 import io.littlehorse.common.exceptions.VarSubError;
 import io.littlehorse.common.util.LHUtil;
+import io.littlehorse.proto.VariableTypePb;
+import io.littlehorse.proto.VariableValuePb;
 
 /**
  * This is the initial prototype attempt at implementing a form of "typed" variable
@@ -35,6 +38,33 @@ public class VariableValue extends BaseSchema {
             type = getTypeEnumFromClass(val.getClass());
             this.setValue(val);
         }
+    }
+
+    public static VariableValue fromProto(VariableValuePb proto) throws VarSubError {
+        VariableValue out = new VariableValue();
+        out.setSerializedVal(proto.getSerializedValue().toByteArray());
+        String typeName = proto.getType().name();
+        if (typeName.equals("STRING")) {
+            out.setType(LHVarType.STRING);
+        } else if (typeName.equals("INT")) {
+            out.setType(LHVarType.INT);
+        } else if (typeName.equals("DOUBLE")) {
+            out.setType(LHVarType.DOUBLE);
+        } else if (typeName.equals("BOOLEAN")) {
+            out.setType(LHVarType.BOOLEAN);
+        } else if(typeName.equals("OBJECT")) {
+            out.setType(LHVarType.OBJECT);
+        } else {
+            out.setType(LHVarType.ARRAY);
+        }
+        return out;
+    }
+
+    public VariableValuePb.Builder toProtoBuilder() {
+        VariableValuePb.Builder out = VariableValuePb.newBuilder();
+        out.setType(VariableTypePb.valueOf(type.toString()));
+        out.setSerializedValue(ByteString.copyFrom(serializedVal));
+        return out;
     }
 
     public byte[] getSerializedVal() {
