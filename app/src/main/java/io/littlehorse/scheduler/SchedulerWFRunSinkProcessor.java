@@ -3,7 +3,7 @@ package io.littlehorse.scheduler;
 import org.apache.kafka.streams.processor.api.Processor;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
-import io.littlehorse.common.objects.rundata.WFRun;
+import io.littlehorse.common.model.rundata.WFRun;
 
 public class SchedulerWFRunSinkProcessor implements Processor<
     String, SchedulerOutput, String, WFRun

@@ -37,6 +37,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-avro:2.8.5'
     implementation 'org.apache.avro:avro-compiler:1.8.2'
 
+    implementation 'com.google.protobuf:protobuf-java:3.21.2'
+
+
     // Stuff for Kafka
     implementation 'org.apache.kafka:kafka-clients:3.2.0'
     implementation 'org.apache.kafka:kafka-streams:3.2.0'
@@ -47,16 +50,6 @@ dependencies {
     // Utils
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'com.jayway.jsonpath:json-path:2.6.0'
-
-    // Stuff for Postgres/Yugabyte (Ebean version)
-    implementation 'org.postgresql:postgresql:42.3.4'
-    implementation 'io.ebean:ebean:12.6.5'
-    implementation 'io.ebean:ebean-querybean:12.6.5'
-
-    // Docker compatibility.
-    // TODO: Do we want to make this optional since not everyone uses the docker
-    // deployer? It might be considered dead weight in that case.
-    implementation 'com.github.docker-java:docker-java:3.2.0-rc2'
 }
 
 

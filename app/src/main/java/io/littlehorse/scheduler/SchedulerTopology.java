@@ -10,7 +10,7 @@ import org.apache.kafka.streams.state.Stores;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.events.WFEvent;
 import io.littlehorse.common.exceptions.LHConnectionError;
-import io.littlehorse.common.objects.rundata.WFRun;
+import io.littlehorse.common.model.rundata.WFRun;
 import io.littlehorse.common.util.Constants;
 import io.littlehorse.common.util.LHUtil;
 import io.littlehorse.common.util.serdes.LHSerdes;

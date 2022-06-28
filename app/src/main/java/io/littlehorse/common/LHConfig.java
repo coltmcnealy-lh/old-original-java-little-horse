@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -24,14 +23,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
-import io.ebean.Database;
-import io.ebean.DatabaseFactory;
-import io.ebean.Transaction;
-import io.ebean.config.DatabaseConfig;
-import io.ebean.datasource.DataSourceConfig;
 import io.littlehorse.common.util.Constants;
-import io.littlehorse.common.util.LHUtil;
-import io.littlehorse.deployers.examples.docker.DockerTaskDeployer;
 import okhttp3.OkHttpClient;
 
 
@@ -210,7 +202,6 @@ public class LHConfig {
             ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.getAppInstanceId()
         );
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.getBootstrapServers());
-        props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, this.getAdvertisedUrl());
         props.put(StreamsConfig.STATE_DIR_CONFIG, this.getStateDirectory());
         props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, 4000);
@@ -272,13 +263,6 @@ public class LHConfig {
         return Integer.valueOf(String.class.cast(properties.getOrDefault(
             Constants.DEFAULT_REPLICAS_KEY, "1"
         )));
-    }
-
-    public String getDefaultTaskDeployerClassName() {
-        return String.class.cast(properties.getOrDefault(
-            Constants.DEFAULT_TASK_DEPLOYER_KEY,
-            DockerTaskDeployer.class.getCanonicalName()
-        ));
     }
 
     public HashMap<String, String> getBaseEnv() {
@@ -365,11 +349,6 @@ public class LHConfig {
         }
     }
 
-    // Thin wrapper used for depency injection
-    public <T extends Object> T loadClass(String className) {
-        return LHUtil.loadClass(className);
-    }
-
     public int getDefaultPartitions() {
         return Integer.valueOf(getOrSetDefault(Constants.DEFAULT_PARTITIONS_KEY, "1"));
     }
@@ -399,43 +378,6 @@ public class LHConfig {
             return result;
         }
     }
-
-    public String getDbHost() {
-        return getOrSetDefault(Constants.DB_HOST_KEY, "localhost");
-    }
-
-    public int getDbPort() {
-        return Integer.valueOf(getOrSetDefault(Constants.DB_PORT_KEY, "5432"));
-    }
-
-    public String getDbUser() {
-        return getOrSetDefault(Constants.DB_USER_KEY, "postgres");
-    }
-
-    public String getDbPassword() {
-        return getOrSetDefault(Constants.DB_PASSWORD_KEY, "postgres");
-    }
-
-    public String getDbDb() {
-        return getOrSetDefault(Constants.DB_DB_KEY, "postgres");
-    }
-
-    public Database getEbeanDb() {
-        DataSourceConfig dSource = new DataSourceConfig();
-        dSource.setUsername(getDbUser());
-        dSource.setPassword(getDbPassword());
-
-        dSource.setUrl(String.format("jdbc:postgresql://%s:%d/%s", getDbHost(),
-                getDbPort(), getDbDb()));
-
-        dSource.setIsolationLevel(Transaction.SERIALIZABLE);
-
-        DatabaseConfig cfg = new DatabaseConfig();
-        cfg.setDataSourceConfig(dSource);
-
-        return DatabaseFactory.create(cfg);
-    }
-
 
     private Properties getDefaultsFromEnv() {
         Properties props = new Properties();

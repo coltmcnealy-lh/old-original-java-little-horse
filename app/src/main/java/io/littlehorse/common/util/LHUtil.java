@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
@@ -12,28 +11,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
+import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.streams.KafkaStreams.StateListener;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.DeserializationConfig;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.hash.Hashing;
 import com.jayway.jsonpath.JsonPath;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.streams.KafkaStreams;
 import io.javalin.Javalin;
 import io.littlehorse.common.LHConfig;
-import io.littlehorse.common.objects.BaseSchema;
-import io.littlehorse.common.objects.rundata.LHFailureReason;
-import io.littlehorse.common.objects.rundata.VarSubOrzDash;
-import io.littlehorse.common.util.json.JsonMapKeyDeserializer;
-
+import io.littlehorse.common.exceptions.VarSubError;
+import io.littlehorse.common.model.BaseSchema;
 
 public class LHUtil {
     private static ObjectMapper mapper = null;
@@ -147,11 +137,11 @@ public class LHUtil {
         }
     }
 
-    public static Object jsonPath(String json, String path) throws VarSubOrzDash {
+    public static Object jsonPath(String json, String path) throws VarSubError {
         try {
             return JsonPath.parse(json).read(path);
         } catch (Exception exn) {
-            throw new VarSubOrzDash(
+            throw new VarSubError(
                 exn,
                 "Failed accessing path " + path + " on data " + json + "  :\n" +
                 exn.getMessage()
@@ -226,67 +216,24 @@ public class LHUtil {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends Object> T loadClass(String className) {
-        Class<T> cls;
-        try {
-            cls = (Class<T>) Class.forName(className);
-        } catch (ClassNotFoundException exn) {
-            throw new LHClassLoadError(
-                "Unable to find provided classname " + className + ": "
-                + exn.getMessage(), exn
-            );
-        }
-
-        try {
-            return cls.cast(
-                cls.getDeclaredConstructor().newInstance()
-            );
-        } catch(IllegalAccessException
-                | InvocationTargetException
-                | NoSuchMethodException 
-                | InstantiationException exn) {
-            throw new LHClassLoadError(
-                "Unable to instantiate Object of type " + className + ": " +
-                exn.getMessage(), exn
-            );
-        }
-    }
-
-    public static Javalin createAppWithHealth(KStreamsStateListener listener) {
+    public static Javalin createAppWithHealth(StateListener listener) {
         Javalin app = Javalin.create(javalinConf -> {
             javalinConf.prefer405over404 = true;
             javalinConf.enableCorsForAllOrigins();
         });
 
         app.get("/health", (ctx) -> {
-            if (listener.getState() == KafkaStreams.State.RUNNING) {
-                ctx.status(200);
-                ctx.result("OK");
-            } else {
-                ctx.status(500);
-                ctx.result(listener.getState().toString());
-            }
+            ctx.status(500);
+            ctx.result("TODO: Write the createAppWithHealth() function.");
+            // if (listener.getState() == KafkaStreams.State.RUNNING) {
+            //     ctx.status(200);
+            //     ctx.result("OK");
+            // } else {
+            //     ctx.status(500);
+            //     ctx.result(listener.getState().toString());
+            // }
         });
         return app;
-    }
-
-    /**
-     * Returns whether or not TaskRun failures called by this failure are retryable.
-     * TODO: Maybe put this in somewhere that makes more sense rather than LHUtil.
-     * @param reason the LHFailureReason from task failure.
-     * @return True if we can retry task failures from that reason.
-     */
-    public static boolean isRetryable(LHFailureReason reason) {
-        switch (reason) {
-            case TASK_FAILURE:                  return true;
-            case VARIABLE_LOOKUP_ERROR:         return false;
-            case INVALID_WF_SPEC_ERROR:         return false;
-            case TIMEOUT:                       return true;
-            case INTERNAL_LITTLEHORSE_ERROR:    return true;
-            case SUBTHREAD_FAILURE:             return false;
-            default: throw new RuntimeException("Not possible.");
-        }
     }
 }
 
@@ -309,13 +256,6 @@ class MapperInitializer {
 
         mapper.setInjectableValues(inject);
         SimpleModule module = new SimpleModule();
-        module.setDeserializerModifier(new BeanDeserializerModifier() {
-            @Override
-            public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, 
-                    BeanDescription beanDescription, JsonDeserializer<?> originalDeserializer) {
-                return new JsonMapKeyDeserializer(originalDeserializer, beanDescription);
-            }
-        });
         mapper.registerModule(module);
     }
 }

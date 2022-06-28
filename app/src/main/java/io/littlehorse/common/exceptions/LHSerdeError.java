@@ -1,27 +1,23 @@
 package io.littlehorse.common.exceptions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+public class LHSerdeError extends RuntimeException {
+    public Exception exn;
+    public String msg;
 
-public class LHSerdeError extends LHException {
-    public Exception parent;
-    public String message;
+    public LHSerdeError(String msg) {
+        this.msg = msg;
+    }
 
-    @Override
+    public LHSerdeError(String message, Exception parent) {
+        this.exn = parent;
+        this.msg = message;
+    }
+
     public String getMessage() {
-        return message;
-    }
-
-    public LHSerdeError(Exception parent, String message) {
-        this.parent = parent;
-        this.message = message;
-    }
-
-    public LHSerdeError(JsonProcessingException exn) {
-        parent = exn;
-        message = "Got a jsonprocessing exception: " + exn.getMessage();
-    }
-
-    public LHSerdeError(String message) {
-        this.message = message;
+        String out = msg;
+        if (exn != null) {
+            out += "\n" + exn.getMessage();
+        }
+        return out;
     }
 }

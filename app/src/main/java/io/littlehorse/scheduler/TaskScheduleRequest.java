@@ -1,7 +1,7 @@
 package io.littlehorse.scheduler;
 
 import java.util.HashMap;
-import io.littlehorse.common.objects.BaseSchema;
+import io.littlehorse.common.model.BaseSchema;
 
 public class TaskScheduleRequest extends BaseSchema {
     public String taskDefId;

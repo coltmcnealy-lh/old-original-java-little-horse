@@ -2,25 +2,16 @@ package io.littlehorse.scheduler;
 
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
-import io.javalin.Javalin;
+import org.apache.kafka.streams.KafkaStreams.StateListener;
 import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.exceptions.LHConnectionError;
-import io.littlehorse.common.objects.metadata.WFSpec;
-import io.littlehorse.common.util.KStreamsStateListener;
-import io.littlehorse.common.util.LHUtil;
-import io.littlehorse.deployers.examples.common.DeployerConfig;
+
 
 public class Scheduler {
-    private DeployerConfig ddConfig;
     private LHConfig config;
-    private KStreamsStateListener listener;
+    private StateListener listener;
 
-    public Scheduler(
-        DeployerConfig ddConfig,
-        LHConfig config,
-        KStreamsStateListener listener
-    ) {
-        this.ddConfig = ddConfig;
+    public Scheduler(LHConfig config, StateListener listener) {
         this.config = config;
         this.listener = listener;
     }
@@ -40,17 +31,14 @@ public class Scheduler {
         schedulerStreams.start();
     }
 
-    public static void main(String[] args) throws LHConnectionError {
-        KStreamsStateListener listener = new KStreamsStateListener();
-        Scheduler ww = new Scheduler(
-            new DeployerConfig(), new LHConfig(), listener
-        );
-        LHConfig config = new LHConfig();
+    public static void run(LHConfig config) throws LHConnectionError {
+        // // TODO: Re-enable kafka streams healthchecks here.
+        // if (config.getShouldExposeHealth()) {
+        //     Javalin app = LHUtil.createAppWithHealth(listener);
+        //     app.start(config.getAdvertisedPort());
+        // }
 
-        Javalin app = LHUtil.createAppWithHealth(listener);
-        if (config.getShouldExposeHealth()) {
-            app.start(config.getAdvertisedPort());
-        }
-        ww.run();
+        Scheduler s = new Scheduler(config, null);
+        s.run();
     }
 }
