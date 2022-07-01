@@ -124,16 +124,6 @@ public abstract class GETable extends BaseSchema {
     }
 
     @JsonIgnore
-    public Future<RecordMetadata> save() {
-        ProducerRecord<String, Bytes> record = new ProducerRecord<String, Bytes>(
-            getIdKafkaTopic(this.config, this.getClass()),
-            getObjectId(),
-            new Bytes(this.toBytes())
-        );
-        return this.config.send(record);
-    }
-
-    @JsonIgnore
     public static<T extends GETable> Future<RecordMetadata> sendNullRecord(
         String id, LHConfig config, Class<T> cls
     ) {

@@ -16,8 +16,10 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private ThreadRunPb() {
+    activeTaskRuns_ = java.util.Collections.emptyList();
     status_ = 0;
     currentNode_ = "";
+    threadSpecName_ = "";
   }
 
   @java.lang.Override
@@ -65,16 +67,12 @@ private static final long serialVersionUID = 0L;
             break;
           }
           case 18: {
-            io.littlehorse.proto.TaskRunPb.Builder subBuilder = null;
-            if (((bitField0_ & 0x00000001) != 0)) {
-              subBuilder = currentTaskRun_.toBuilder();
+            if (!((mutable_bitField0_ & 0x00000002) != 0)) {
+              activeTaskRuns_ = new java.util.ArrayList<io.littlehorse.proto.TaskRunPb>();
+              mutable_bitField0_ |= 0x00000002;
             }
-            currentTaskRun_ = input.readMessage(io.littlehorse.proto.TaskRunPb.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(currentTaskRun_);
-              currentTaskRun_ = subBuilder.buildPartial();
-            }
-            bitField0_ |= 0x00000001;
+            activeTaskRuns_.add(
+                input.readMessage(io.littlehorse.proto.TaskRunPb.parser(), extensionRegistry));
             break;
           }
           case 24: {
@@ -85,8 +83,14 @@ private static final long serialVersionUID = 0L;
           }
           case 34: {
             java.lang.String s = input.readStringRequireUtf8();
-            bitField0_ |= 0x00000002;
+            bitField0_ |= 0x00000001;
             currentNode_ = s;
+            break;
+          }
+          case 42: {
+            java.lang.String s = input.readStringRequireUtf8();
+
+            threadSpecName_ = s;
             break;
           }
           default: {
@@ -104,6 +108,9 @@ private static final long serialVersionUID = 0L;
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
     } finally {
+      if (((mutable_bitField0_ & 0x00000002) != 0)) {
+        activeTaskRuns_ = java.util.Collections.unmodifiableList(activeTaskRuns_);
+      }
       this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
@@ -215,30 +222,44 @@ private static final long serialVersionUID = 0L;
     return map.get(key);
   }
 
-  public static final int CURRENT_TASK_RUN_FIELD_NUMBER = 2;
-  private io.littlehorse.proto.TaskRunPb currentTaskRun_;
+  public static final int ACTIVE_TASK_RUNS_FIELD_NUMBER = 2;
+  private java.util.List<io.littlehorse.proto.TaskRunPb> activeTaskRuns_;
   /**
-   * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
-   * @return Whether the currentTaskRun field is set.
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
    */
   @java.lang.Override
-  public boolean hasCurrentTaskRun() {
-    return ((bitField0_ & 0x00000001) != 0);
+  public java.util.List<io.littlehorse.proto.TaskRunPb> getActiveTaskRunsList() {
+    return activeTaskRuns_;
   }
   /**
-   * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
-   * @return The currentTaskRun.
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
    */
   @java.lang.Override
-  public io.littlehorse.proto.TaskRunPb getCurrentTaskRun() {
-    return currentTaskRun_ == null ? io.littlehorse.proto.TaskRunPb.getDefaultInstance() : currentTaskRun_;
+  public java.util.List<? extends io.littlehorse.proto.TaskRunPbOrBuilder> 
+      getActiveTaskRunsOrBuilderList() {
+    return activeTaskRuns_;
   }
   /**
-   * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
    */
   @java.lang.Override
-  public io.littlehorse.proto.TaskRunPbOrBuilder getCurrentTaskRunOrBuilder() {
-    return currentTaskRun_ == null ? io.littlehorse.proto.TaskRunPb.getDefaultInstance() : currentTaskRun_;
+  public int getActiveTaskRunsCount() {
+    return activeTaskRuns_.size();
+  }
+  /**
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+   */
+  @java.lang.Override
+  public io.littlehorse.proto.TaskRunPb getActiveTaskRuns(int index) {
+    return activeTaskRuns_.get(index);
+  }
+  /**
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+   */
+  @java.lang.Override
+  public io.littlehorse.proto.TaskRunPbOrBuilder getActiveTaskRunsOrBuilder(
+      int index) {
+    return activeTaskRuns_.get(index);
   }
 
   public static final int STATUS_FIELD_NUMBER = 3;
@@ -268,7 +289,7 @@ private static final long serialVersionUID = 0L;
    */
   @java.lang.Override
   public boolean hasCurrentNode() {
-    return ((bitField0_ & 0x00000002) != 0);
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <code>string current_node = 4;</code>
@@ -306,6 +327,44 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int THREAD_SPEC_NAME_FIELD_NUMBER = 5;
+  private volatile java.lang.Object threadSpecName_;
+  /**
+   * <code>string thread_spec_name = 5;</code>
+   * @return The threadSpecName.
+   */
+  @java.lang.Override
+  public java.lang.String getThreadSpecName() {
+    java.lang.Object ref = threadSpecName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      threadSpecName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string thread_spec_name = 5;</code>
+   * @return The bytes for threadSpecName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getThreadSpecNameBytes() {
+    java.lang.Object ref = threadSpecName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      threadSpecName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -326,14 +385,17 @@ private static final long serialVersionUID = 0L;
         internalGetVariables(),
         VariablesDefaultEntryHolder.defaultEntry,
         1);
-    if (((bitField0_ & 0x00000001) != 0)) {
-      output.writeMessage(2, getCurrentTaskRun());
+    for (int i = 0; i < activeTaskRuns_.size(); i++) {
+      output.writeMessage(2, activeTaskRuns_.get(i));
     }
     if (status_ != io.littlehorse.proto.LHStatusPb.STARTING.getNumber()) {
       output.writeEnum(3, status_);
     }
-    if (((bitField0_ & 0x00000002) != 0)) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 4, currentNode_);
+    }
+    if (!getThreadSpecNameBytes().isEmpty()) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 5, threadSpecName_);
     }
     unknownFields.writeTo(output);
   }
@@ -354,16 +416,19 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, variables__);
     }
-    if (((bitField0_ & 0x00000001) != 0)) {
+    for (int i = 0; i < activeTaskRuns_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(2, getCurrentTaskRun());
+        .computeMessageSize(2, activeTaskRuns_.get(i));
     }
     if (status_ != io.littlehorse.proto.LHStatusPb.STARTING.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(3, status_);
     }
-    if (((bitField0_ & 0x00000002) != 0)) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, currentNode_);
+    }
+    if (!getThreadSpecNameBytes().isEmpty()) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, threadSpecName_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -382,17 +447,16 @@ private static final long serialVersionUID = 0L;
 
     if (!internalGetVariables().equals(
         other.internalGetVariables())) return false;
-    if (hasCurrentTaskRun() != other.hasCurrentTaskRun()) return false;
-    if (hasCurrentTaskRun()) {
-      if (!getCurrentTaskRun()
-          .equals(other.getCurrentTaskRun())) return false;
-    }
+    if (!getActiveTaskRunsList()
+        .equals(other.getActiveTaskRunsList())) return false;
     if (status_ != other.status_) return false;
     if (hasCurrentNode() != other.hasCurrentNode()) return false;
     if (hasCurrentNode()) {
       if (!getCurrentNode()
           .equals(other.getCurrentNode())) return false;
     }
+    if (!getThreadSpecName()
+        .equals(other.getThreadSpecName())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -408,9 +472,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + VARIABLES_FIELD_NUMBER;
       hash = (53 * hash) + internalGetVariables().hashCode();
     }
-    if (hasCurrentTaskRun()) {
-      hash = (37 * hash) + CURRENT_TASK_RUN_FIELD_NUMBER;
-      hash = (53 * hash) + getCurrentTaskRun().hashCode();
+    if (getActiveTaskRunsCount() > 0) {
+      hash = (37 * hash) + ACTIVE_TASK_RUNS_FIELD_NUMBER;
+      hash = (53 * hash) + getActiveTaskRunsList().hashCode();
     }
     hash = (37 * hash) + STATUS_FIELD_NUMBER;
     hash = (53 * hash) + status_;
@@ -418,6 +482,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CURRENT_NODE_FIELD_NUMBER;
       hash = (53 * hash) + getCurrentNode().hashCode();
     }
+    hash = (37 * hash) + THREAD_SPEC_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getThreadSpecName().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -568,23 +634,25 @@ private static final long serialVersionUID = 0L;
     private void maybeForceBuilderInitialization() {
       if (com.google.protobuf.GeneratedMessageV3
               .alwaysUseFieldBuilders) {
-        getCurrentTaskRunFieldBuilder();
+        getActiveTaskRunsFieldBuilder();
       }
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
       internalGetMutableVariables().clear();
-      if (currentTaskRunBuilder_ == null) {
-        currentTaskRun_ = null;
+      if (activeTaskRunsBuilder_ == null) {
+        activeTaskRuns_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
       } else {
-        currentTaskRunBuilder_.clear();
+        activeTaskRunsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000002);
       status_ = 0;
 
       currentNode_ = "";
       bitField0_ = (bitField0_ & ~0x00000004);
+      threadSpecName_ = "";
+
       return this;
     }
 
@@ -615,19 +683,21 @@ private static final long serialVersionUID = 0L;
       int to_bitField0_ = 0;
       result.variables_ = internalGetVariables();
       result.variables_.makeImmutable();
-      if (((from_bitField0_ & 0x00000002) != 0)) {
-        if (currentTaskRunBuilder_ == null) {
-          result.currentTaskRun_ = currentTaskRun_;
-        } else {
-          result.currentTaskRun_ = currentTaskRunBuilder_.build();
+      if (activeTaskRunsBuilder_ == null) {
+        if (((bitField0_ & 0x00000002) != 0)) {
+          activeTaskRuns_ = java.util.Collections.unmodifiableList(activeTaskRuns_);
+          bitField0_ = (bitField0_ & ~0x00000002);
         }
-        to_bitField0_ |= 0x00000001;
+        result.activeTaskRuns_ = activeTaskRuns_;
+      } else {
+        result.activeTaskRuns_ = activeTaskRunsBuilder_.build();
       }
       result.status_ = status_;
       if (((from_bitField0_ & 0x00000004) != 0)) {
-        to_bitField0_ |= 0x00000002;
+        to_bitField0_ |= 0x00000001;
       }
       result.currentNode_ = currentNode_;
+      result.threadSpecName_ = threadSpecName_;
       result.bitField0_ = to_bitField0_;
       onBuilt();
       return result;
@@ -679,8 +749,31 @@ private static final long serialVersionUID = 0L;
       if (other == io.littlehorse.proto.ThreadRunPb.getDefaultInstance()) return this;
       internalGetMutableVariables().mergeFrom(
           other.internalGetVariables());
-      if (other.hasCurrentTaskRun()) {
-        mergeCurrentTaskRun(other.getCurrentTaskRun());
+      if (activeTaskRunsBuilder_ == null) {
+        if (!other.activeTaskRuns_.isEmpty()) {
+          if (activeTaskRuns_.isEmpty()) {
+            activeTaskRuns_ = other.activeTaskRuns_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureActiveTaskRunsIsMutable();
+            activeTaskRuns_.addAll(other.activeTaskRuns_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.activeTaskRuns_.isEmpty()) {
+          if (activeTaskRunsBuilder_.isEmpty()) {
+            activeTaskRunsBuilder_.dispose();
+            activeTaskRunsBuilder_ = null;
+            activeTaskRuns_ = other.activeTaskRuns_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+            activeTaskRunsBuilder_ = 
+              com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                 getActiveTaskRunsFieldBuilder() : null;
+          } else {
+            activeTaskRunsBuilder_.addAllMessages(other.activeTaskRuns_);
+          }
+        }
       }
       if (other.status_ != 0) {
         setStatusValue(other.getStatusValue());
@@ -688,6 +781,10 @@ private static final long serialVersionUID = 0L;
       if (other.hasCurrentNode()) {
         bitField0_ |= 0x00000004;
         currentNode_ = other.currentNode_;
+        onChanged();
+      }
+      if (!other.getThreadSpecName().isEmpty()) {
+        threadSpecName_ = other.threadSpecName_;
         onChanged();
       }
       this.mergeUnknownFields(other.unknownFields);
@@ -848,124 +945,244 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private io.littlehorse.proto.TaskRunPb currentTaskRun_;
-    private com.google.protobuf.SingleFieldBuilderV3<
-        io.littlehorse.proto.TaskRunPb, io.littlehorse.proto.TaskRunPb.Builder, io.littlehorse.proto.TaskRunPbOrBuilder> currentTaskRunBuilder_;
-    /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
-     * @return Whether the currentTaskRun field is set.
-     */
-    public boolean hasCurrentTaskRun() {
-      return ((bitField0_ & 0x00000002) != 0);
+    private java.util.List<io.littlehorse.proto.TaskRunPb> activeTaskRuns_ =
+      java.util.Collections.emptyList();
+    private void ensureActiveTaskRunsIsMutable() {
+      if (!((bitField0_ & 0x00000002) != 0)) {
+        activeTaskRuns_ = new java.util.ArrayList<io.littlehorse.proto.TaskRunPb>(activeTaskRuns_);
+        bitField0_ |= 0x00000002;
+       }
     }
+
+    private com.google.protobuf.RepeatedFieldBuilderV3<
+        io.littlehorse.proto.TaskRunPb, io.littlehorse.proto.TaskRunPb.Builder, io.littlehorse.proto.TaskRunPbOrBuilder> activeTaskRunsBuilder_;
+
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
-     * @return The currentTaskRun.
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public io.littlehorse.proto.TaskRunPb getCurrentTaskRun() {
-      if (currentTaskRunBuilder_ == null) {
-        return currentTaskRun_ == null ? io.littlehorse.proto.TaskRunPb.getDefaultInstance() : currentTaskRun_;
+    public java.util.List<io.littlehorse.proto.TaskRunPb> getActiveTaskRunsList() {
+      if (activeTaskRunsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(activeTaskRuns_);
       } else {
-        return currentTaskRunBuilder_.getMessage();
+        return activeTaskRunsBuilder_.getMessageList();
       }
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public Builder setCurrentTaskRun(io.littlehorse.proto.TaskRunPb value) {
-      if (currentTaskRunBuilder_ == null) {
+    public int getActiveTaskRunsCount() {
+      if (activeTaskRunsBuilder_ == null) {
+        return activeTaskRuns_.size();
+      } else {
+        return activeTaskRunsBuilder_.getCount();
+      }
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public io.littlehorse.proto.TaskRunPb getActiveTaskRuns(int index) {
+      if (activeTaskRunsBuilder_ == null) {
+        return activeTaskRuns_.get(index);
+      } else {
+        return activeTaskRunsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public Builder setActiveTaskRuns(
+        int index, io.littlehorse.proto.TaskRunPb value) {
+      if (activeTaskRunsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        currentTaskRun_ = value;
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.set(index, value);
         onChanged();
       } else {
-        currentTaskRunBuilder_.setMessage(value);
+        activeTaskRunsBuilder_.setMessage(index, value);
       }
-      bitField0_ |= 0x00000002;
       return this;
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public Builder setCurrentTaskRun(
-        io.littlehorse.proto.TaskRunPb.Builder builderForValue) {
-      if (currentTaskRunBuilder_ == null) {
-        currentTaskRun_ = builderForValue.build();
+    public Builder setActiveTaskRuns(
+        int index, io.littlehorse.proto.TaskRunPb.Builder builderForValue) {
+      if (activeTaskRunsBuilder_ == null) {
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.set(index, builderForValue.build());
         onChanged();
       } else {
-        currentTaskRunBuilder_.setMessage(builderForValue.build());
+        activeTaskRunsBuilder_.setMessage(index, builderForValue.build());
       }
-      bitField0_ |= 0x00000002;
       return this;
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public Builder mergeCurrentTaskRun(io.littlehorse.proto.TaskRunPb value) {
-      if (currentTaskRunBuilder_ == null) {
-        if (((bitField0_ & 0x00000002) != 0) &&
-            currentTaskRun_ != null &&
-            currentTaskRun_ != io.littlehorse.proto.TaskRunPb.getDefaultInstance()) {
-          currentTaskRun_ =
-            io.littlehorse.proto.TaskRunPb.newBuilder(currentTaskRun_).mergeFrom(value).buildPartial();
-        } else {
-          currentTaskRun_ = value;
+    public Builder addActiveTaskRuns(io.littlehorse.proto.TaskRunPb value) {
+      if (activeTaskRunsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
         }
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.add(value);
         onChanged();
       } else {
-        currentTaskRunBuilder_.mergeFrom(value);
+        activeTaskRunsBuilder_.addMessage(value);
       }
-      bitField0_ |= 0x00000002;
       return this;
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public Builder clearCurrentTaskRun() {
-      if (currentTaskRunBuilder_ == null) {
-        currentTaskRun_ = null;
+    public Builder addActiveTaskRuns(
+        int index, io.littlehorse.proto.TaskRunPb value) {
+      if (activeTaskRunsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.add(index, value);
         onChanged();
       } else {
-        currentTaskRunBuilder_.clear();
+        activeTaskRunsBuilder_.addMessage(index, value);
       }
-      bitField0_ = (bitField0_ & ~0x00000002);
       return this;
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public io.littlehorse.proto.TaskRunPb.Builder getCurrentTaskRunBuilder() {
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return getCurrentTaskRunFieldBuilder().getBuilder();
+    public Builder addActiveTaskRuns(
+        io.littlehorse.proto.TaskRunPb.Builder builderForValue) {
+      if (activeTaskRunsBuilder_ == null) {
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.add(builderForValue.build());
+        onChanged();
+      } else {
+        activeTaskRunsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    public io.littlehorse.proto.TaskRunPbOrBuilder getCurrentTaskRunOrBuilder() {
-      if (currentTaskRunBuilder_ != null) {
-        return currentTaskRunBuilder_.getMessageOrBuilder();
+    public Builder addActiveTaskRuns(
+        int index, io.littlehorse.proto.TaskRunPb.Builder builderForValue) {
+      if (activeTaskRunsBuilder_ == null) {
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.add(index, builderForValue.build());
+        onChanged();
       } else {
-        return currentTaskRun_ == null ?
-            io.littlehorse.proto.TaskRunPb.getDefaultInstance() : currentTaskRun_;
+        activeTaskRunsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public Builder addAllActiveTaskRuns(
+        java.lang.Iterable<? extends io.littlehorse.proto.TaskRunPb> values) {
+      if (activeTaskRunsBuilder_ == null) {
+        ensureActiveTaskRunsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, activeTaskRuns_);
+        onChanged();
+      } else {
+        activeTaskRunsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public Builder clearActiveTaskRuns() {
+      if (activeTaskRunsBuilder_ == null) {
+        activeTaskRuns_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+      } else {
+        activeTaskRunsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public Builder removeActiveTaskRuns(int index) {
+      if (activeTaskRunsBuilder_ == null) {
+        ensureActiveTaskRunsIsMutable();
+        activeTaskRuns_.remove(index);
+        onChanged();
+      } else {
+        activeTaskRunsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public io.littlehorse.proto.TaskRunPb.Builder getActiveTaskRunsBuilder(
+        int index) {
+      return getActiveTaskRunsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public io.littlehorse.proto.TaskRunPbOrBuilder getActiveTaskRunsOrBuilder(
+        int index) {
+      if (activeTaskRunsBuilder_ == null) {
+        return activeTaskRuns_.get(index);  } else {
+        return activeTaskRunsBuilder_.getMessageOrBuilder(index);
       }
     }
     /**
-     * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
      */
-    private com.google.protobuf.SingleFieldBuilderV3<
+    public java.util.List<? extends io.littlehorse.proto.TaskRunPbOrBuilder> 
+         getActiveTaskRunsOrBuilderList() {
+      if (activeTaskRunsBuilder_ != null) {
+        return activeTaskRunsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(activeTaskRuns_);
+      }
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public io.littlehorse.proto.TaskRunPb.Builder addActiveTaskRunsBuilder() {
+      return getActiveTaskRunsFieldBuilder().addBuilder(
+          io.littlehorse.proto.TaskRunPb.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public io.littlehorse.proto.TaskRunPb.Builder addActiveTaskRunsBuilder(
+        int index) {
+      return getActiveTaskRunsFieldBuilder().addBuilder(
+          index, io.littlehorse.proto.TaskRunPb.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+     */
+    public java.util.List<io.littlehorse.proto.TaskRunPb.Builder> 
+         getActiveTaskRunsBuilderList() {
+      return getActiveTaskRunsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilderV3<
         io.littlehorse.proto.TaskRunPb, io.littlehorse.proto.TaskRunPb.Builder, io.littlehorse.proto.TaskRunPbOrBuilder> 
-        getCurrentTaskRunFieldBuilder() {
-      if (currentTaskRunBuilder_ == null) {
-        currentTaskRunBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+        getActiveTaskRunsFieldBuilder() {
+      if (activeTaskRunsBuilder_ == null) {
+        activeTaskRunsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
             io.littlehorse.proto.TaskRunPb, io.littlehorse.proto.TaskRunPb.Builder, io.littlehorse.proto.TaskRunPbOrBuilder>(
-                getCurrentTaskRun(),
+                activeTaskRuns_,
+                ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
                 isClean());
-        currentTaskRun_ = null;
+        activeTaskRuns_ = null;
       }
-      return currentTaskRunBuilder_;
+      return activeTaskRunsBuilder_;
     }
 
     private int status_ = 0;
@@ -1101,6 +1318,82 @@ private static final long serialVersionUID = 0L;
   checkByteStringIsUtf8(value);
       bitField0_ |= 0x00000004;
       currentNode_ = value;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object threadSpecName_ = "";
+    /**
+     * <code>string thread_spec_name = 5;</code>
+     * @return The threadSpecName.
+     */
+    public java.lang.String getThreadSpecName() {
+      java.lang.Object ref = threadSpecName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        threadSpecName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string thread_spec_name = 5;</code>
+     * @return The bytes for threadSpecName.
+     */
+    public com.google.protobuf.ByteString
+        getThreadSpecNameBytes() {
+      java.lang.Object ref = threadSpecName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        threadSpecName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string thread_spec_name = 5;</code>
+     * @param value The threadSpecName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setThreadSpecName(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      threadSpecName_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string thread_spec_name = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearThreadSpecName() {
+      
+      threadSpecName_ = getDefaultInstance().getThreadSpecName();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string thread_spec_name = 5;</code>
+     * @param value The bytes for threadSpecName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setThreadSpecNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      threadSpecName_ = value;
       onChanged();
       return this;
     }

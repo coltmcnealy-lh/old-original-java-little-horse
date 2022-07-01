@@ -42,19 +42,28 @@ public interface ThreadRunPbOrBuilder extends
       java.lang.String key);
 
   /**
-   * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
-   * @return Whether the currentTaskRun field is set.
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
    */
-  boolean hasCurrentTaskRun();
+  java.util.List<io.littlehorse.proto.TaskRunPb> 
+      getActiveTaskRunsList();
   /**
-   * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
-   * @return The currentTaskRun.
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
    */
-  io.littlehorse.proto.TaskRunPb getCurrentTaskRun();
+  io.littlehorse.proto.TaskRunPb getActiveTaskRuns(int index);
   /**
-   * <code>.lh_proto.TaskRunPb current_task_run = 2;</code>
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
    */
-  io.littlehorse.proto.TaskRunPbOrBuilder getCurrentTaskRunOrBuilder();
+  int getActiveTaskRunsCount();
+  /**
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+   */
+  java.util.List<? extends io.littlehorse.proto.TaskRunPbOrBuilder> 
+      getActiveTaskRunsOrBuilderList();
+  /**
+   * <code>repeated .lh_proto.TaskRunPb active_task_runs = 2;</code>
+   */
+  io.littlehorse.proto.TaskRunPbOrBuilder getActiveTaskRunsOrBuilder(
+      int index);
 
   /**
    * <code>.lh_proto.LHStatusPb status = 3;</code>
@@ -83,4 +92,16 @@ public interface ThreadRunPbOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCurrentNodeBytes();
+
+  /**
+   * <code>string thread_spec_name = 5;</code>
+   * @return The threadSpecName.
+   */
+  java.lang.String getThreadSpecName();
+  /**
+   * <code>string thread_spec_name = 5;</code>
+   * @return The bytes for threadSpecName.
+   */
+  com.google.protobuf.ByteString
+      getThreadSpecNameBytes();
 }

@@ -9,11 +9,11 @@ public class WFRunEvent {
     private WFRunRequest runRequest;
     private TaskCompletedEvent completedEvent;
 
-    public String getWFRunId() {
+    public String getWfRunId() {
         return wfRunId;
     }
 
-    public void setWFRunId(String wFRunId) {
+    public void setWfRunId(String wFRunId) {
         wfRunId = wFRunId;
     }
 

@@ -63,4 +63,16 @@ public interface WFRunEventPbOrBuilder extends
    * <code>.lh_proto.TaskCompletedEventPb completed_event = 4;</code>
    */
   io.littlehorse.proto.TaskCompletedEventPbOrBuilder getCompletedEventOrBuilder();
+
+  /**
+   * <code>string wf_spec_id = 5;</code>
+   * @return The wfSpecId.
+   */
+  java.lang.String getWfSpecId();
+  /**
+   * <code>string wf_spec_id = 5;</code>
+   * @return The bytes for wfSpecId.
+   */
+  com.google.protobuf.ByteString
+      getWfSpecIdBytes();
 }

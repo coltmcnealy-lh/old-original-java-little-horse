@@ -1,15 +1,14 @@
 package io.littlehorse.common.model.metadata;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.ByteString;
-import io.littlehorse.common.LHConfig;
-import io.littlehorse.common.model.BaseSchema;
 import io.littlehorse.common.exceptions.VarSubError;
+import io.littlehorse.common.model.BaseSchema;
 import io.littlehorse.common.util.LHUtil;
 import io.littlehorse.proto.VariableTypePb;
 import io.littlehorse.proto.VariableValuePb;
@@ -27,13 +26,7 @@ public class VariableValue extends BaseSchema {
     // Constructors
     public VariableValue() {}
 
-    public VariableValue(LHConfig config) {
-        this.config = config;
-    }
-
-    public VariableValue(LHConfig config, Object val) throws VarSubError {
-        this.config = config;
-
+    public VariableValue(Object val) throws VarSubError {
         if (val != null) {
             type = getTypeEnumFromClass(val.getClass());
             this.setValue(val);
@@ -152,7 +145,7 @@ public class VariableValue extends BaseSchema {
     @JsonIgnore
     public Object getValue() throws VarSubError {
         try {
-            return LHUtil.getObjectMapper(config).readValue(
+            return LHUtil.getObjectMapper().readValue(
                 serializedVal, getValueClass()
             );
         } catch(IOException exn) {
@@ -182,7 +175,7 @@ public class VariableValue extends BaseSchema {
         }
 
         try {
-            serializedVal = LHUtil.getObjectMapper(config).writeValueAsBytes(val);
+            serializedVal = LHUtil.getObjectMapper().writeValueAsBytes(val);
         } catch(JsonProcessingException exn) {
             throw new VarSubError(
                 exn, "Failed saving variable value: " + exn.getMessage()
@@ -192,7 +185,7 @@ public class VariableValue extends BaseSchema {
 
     @JsonIgnore
     public VariableValue castToType(LHVarType newType) throws VarSubError {
-        return new VariableValue(config, getValueAs(newType));
+        return new VariableValue(getValueAs(newType));
     }
 
     @JsonIgnore
@@ -278,7 +271,7 @@ public class VariableValue extends BaseSchema {
             return (List<Object>) o;
         } else if (o instanceof String) {
             try {
-                return LHUtil.getObjectMapper(config).readValue(
+                return LHUtil.getObjectMapper().readValue(
                     (String) o, List.class
                 );
             } catch (JsonProcessingException exn) {
@@ -302,7 +295,7 @@ public class VariableValue extends BaseSchema {
             return (Map<Object, Object>) o;
         } else if (o instanceof String) {
             try {
-                return LHUtil.getObjectMapper(config).readValue(
+                return LHUtil.getObjectMapper().readValue(
                     (String) o, Map.class
                 );
             } catch (JsonProcessingException exn) {
@@ -349,19 +342,19 @@ public class VariableValue extends BaseSchema {
         }
 
         if (type == LHVarType.INT) {
-            return new VariableValue(config, asInt() + other.asInt());
+            return new VariableValue(asInt() + other.asInt());
 
         } else if (type == LHVarType.STRING) {
-            return new VariableValue(config, asString() + other.asString());
+            return new VariableValue(asString() + other.asString());
 
         } else if (type == LHVarType.ARRAY) {
             List<Object> out = asArray();
             out.add(other.getValue());
-            return new VariableValue(config, out);
+            return new VariableValue(out);
 
         } else {
             assert type == LHVarType.DOUBLE;
-            return new VariableValue(config, asDouble() + other.asDouble());
+            return new VariableValue(asDouble() + other.asDouble());
         }
     }
 
@@ -371,7 +364,7 @@ public class VariableValue extends BaseSchema {
             throw new VarSubError(null, "Tried to divide by zero or null.");
         }
 
-        VariableValue newVal = new VariableValue(config, asDouble() / o);
+        VariableValue newVal = new VariableValue(asDouble() / o);
         return newVal.castToType(type);
     }
 
@@ -380,7 +373,7 @@ public class VariableValue extends BaseSchema {
         if (o == null) {
             throw new VarSubError(null, "Tried to multiply by null.");
         }
-        return new VariableValue(config, asDouble() * o).castToType(type);
+        return new VariableValue(asDouble() * o).castToType(type);
     }
 
     public VariableValue subtract(VariableValue other) throws VarSubError {
@@ -388,7 +381,7 @@ public class VariableValue extends BaseSchema {
         if (o == null) {
             throw new VarSubError(null, "Tried to subtract null.");
         }
-        return new VariableValue(config, asDouble() - o).castToType(type);
+        return new VariableValue(asDouble() - o).castToType(type);
     }
 
     public VariableValue extend(VariableValue other) throws VarSubError {
@@ -400,31 +393,31 @@ public class VariableValue extends BaseSchema {
         for (Object o: other.asArray()) {
             lhsList.add(o);
         }
-        return new VariableValue(config, lhsList);
+        return new VariableValue(lhsList);
     }
 
     public VariableValue removeIfPresent(VariableValue other) throws VarSubError {
         List<Object> lhsList = asArray();
         Object o = other.getValue();
         lhsList.removeIf((i) -> Objects.equals(i, o));
-        return new VariableValue(config, lhsList);
+        return new VariableValue(lhsList);
     }
 
     public VariableValue removeIndex(VariableValue other) throws VarSubError {
         List<Object> lhsList = asArray();
         Integer idx = other.asInt();
         lhsList.remove(idx);
-        return new VariableValue(config, lhsList);
+        return new VariableValue(lhsList);
     }
 
     public VariableValue removeKey(VariableValue other) throws VarSubError {
         Map<Object, Object> lhsMap = asMap();
         lhsMap.remove(other.getValue());
-        return new VariableValue(config, lhsMap);
+        return new VariableValue(lhsMap);
     }
 
     public VariableValue copy() {
-        VariableValue val = new VariableValue(config);
+        VariableValue val = new VariableValue();
         try {
             val.setSerializedVal(serializedVal);
             val.setType(type);

@@ -1,5 +1,6 @@
 package io.littlehorse.common;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,8 +21,14 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.littlehorse.common.exceptions.LHConnectionError;
+import io.littlehorse.common.model.metadata.WFSpec;
 import io.littlehorse.common.util.Constants;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 
 public class LHConfig {
@@ -354,5 +361,36 @@ public class LHConfig {
             this.getBootstrapServers()
         );
         this.kafkaAdmin = Admin.create(akProperties);
+    }
+
+    private static ObjectMapper mapper = null;
+
+    public ObjectMapper getMapper() {
+        if (mapper == null) {
+            mapper = new ObjectMapper();
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        }
+        return mapper;
+    }
+
+    public WFSpec getWFSpec(String idOrName) throws LHConnectionError {
+        String url = getAPIUrlFor("/WFSpec/" + idOrName);
+        System.out.println(url);
+        try {
+            Request req = new Request.Builder().url(url).build();
+            Response resp = getHttpClient().newCall(req).execute();
+
+            byte[] body = resp.body().bytes();
+            if (resp.code() >= 300 || resp.code() < 200) {
+                throw new LHConnectionError(
+                    "Got a non-200 response for url " + url + " : " + resp.code(), null
+                );
+            }
+            return getMapper().readValue(body, WFSpec.class);
+
+        } catch(IOException exn) {
+            throw new LHConnectionError(
+                "Had a mishap for url " + url + " :" + exn.getMessage(), exn);
+        }
     }
 }

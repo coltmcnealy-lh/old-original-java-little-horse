@@ -3,10 +3,10 @@
  */
 package io.littlehorse;
 
-import com.fasterxml.jackson.dataformat.avro.AvroMapper;
-import com.fasterxml.jackson.dataformat.avro.AvroSchema;
-import com.fasterxml.jackson.dataformat.avro.schema.AvroSchemaGenerator;
+import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.littlehorse.common.LHConfig;
+import io.littlehorse.common.model.wfrun.WFRunEvent;
 import io.littlehorse.scheduler.Scheduler;
 
 class Foo {
@@ -16,16 +16,19 @@ class Foo {
 public class App {
 
     public static void experiment() throws Exception {
-        AvroSchemaGenerator gen = new AvroSchemaGenerator();
-        AvroMapper mapper = new AvroMapper();
-        mapper.acceptJsonFormatVisitor(Foo.class, gen);
+        String data = "{\"wfRunId\":\"asdfasdf\",\"runRequest\":{\"wfSpecId\":\"profile_workflow\",\"wfRunId\":\"21489hgasdfldj2th4poajfdslkfj\",\"variableValues\":{}}}";
 
-        AvroSchema schema = gen.getGeneratedSchema();
+        ObjectMapper mapper = new ObjectMapper();
+        WFRunEvent value = mapper.readValue(data, WFRunEvent.class);
+        System.out.println(value.getWfRunId());
 
-        String data = "{\"bar\": 5432}";
-        Foo f = mapper.readerFor(Foo.class).with(schema).readValue(data.getBytes());
-        System.out.println(f);
-        System.out.println(f.bar);
+        for (int i = 0; i < 100; i++) {
+            mapper.readValue(data, Map.class);
+        }
+
+        long start = System.nanoTime();
+        mapper.readValue(data, Map.class);
+        System.out.println(System.nanoTime() - start);
     }
 
     public static void doMain(String[] args) throws Exception {

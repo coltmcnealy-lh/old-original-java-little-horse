@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import io.littlehorse.common.model.BaseSchema;
 
 
 // Just scoping for the purposes of the json parser
@@ -15,7 +16,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
     property = "name",
     scope = WFSpec.class
 )
-public class WFSpec extends GETable {
+public class WFSpec extends BaseSchema {
     @JsonIgnore
     public static String typeName = "wfSpec";
 
@@ -25,7 +26,7 @@ public class WFSpec extends GETable {
     // Actual definition here.
     @JsonManagedReference
     public List<ThreadSpec> threadSpecs;
-    
+
     public HashSet<String> interruptEvents;
     public String entrypointThreadName;
 

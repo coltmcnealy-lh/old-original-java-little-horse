@@ -15,15 +15,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.streams.KafkaStreams.StateListener;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.hash.Hashing;
 import com.jayway.jsonpath.JsonPath;
 import io.javalin.Javalin;
-import io.littlehorse.common.LHConfig;
 import io.littlehorse.common.exceptions.VarSubError;
-import io.littlehorse.common.model.BaseSchema;
 
 public class LHUtil {
     private static ObjectMapper mapper = null;
@@ -32,9 +28,9 @@ public class LHUtil {
         return UUID.randomUUID().toString().replaceAll("-", "");
     }
 
-    public static ObjectMapper getObjectMapper(LHConfig cfg) {
+    public static ObjectMapper getObjectMapper() {
         if (mapper == null) {
-            mapper = new MapperInitializer(cfg).getMapper();
+            mapper = new MapperInitializer().getMapper();
         }
         return mapper;
     }
@@ -115,18 +111,18 @@ public class LHUtil {
         return out.toString();
     }
 
-    public static String toJsonString(Object thing, LHConfig cfg) {
+    public static String toJsonString(Object thing) {
         try {
-            return getObjectMapper(cfg).writeValueAsString(thing);
+            return getObjectMapper().writeValueAsString(thing);
         } catch(JsonProcessingException exn) {
             exn.printStackTrace();
             return null;
         }
     }
 
-    public static Object stringToObj(String data, LHConfig cfg) {
+    public static Object stringToObj(String data) {
         try {
-            Object obj = LHUtil.getObjectMapper(cfg).readValue(data, Object.class);
+            Object obj = LHUtil.getObjectMapper().readValue(data, Object.class);
             return obj;
         } catch(Exception exn) {
             // LHUtil.logBack(
@@ -246,16 +242,8 @@ class MapperInitializer {
         return mapper;
     }
 
-    public MapperInitializer(LHConfig cfg) {
+    public MapperInitializer() {
         this.mapper = new ObjectMapper();
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        InjectableValues inject = new InjectableValues.Std().addValue(
-            BaseSchema.class, cfg
-        ).addValue(LHConfig.class, cfg);
-
-        mapper.setInjectableValues(inject);
-        SimpleModule module = new SimpleModule();
-        mapper.registerModule(module);
     }
 }
