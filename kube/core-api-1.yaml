@@ -62,7 +62,7 @@ spec:
           - name: "LHORSE_ADVERTISED_PROTO"
             value: "http"
           - name: "LHORSE_DEFAULT_PARTITIONS"
-            value: "9"
+            value: "36"
           - name: "LHORSE_DEFAULT_REPLICAS"
             value: "3"
           - name: "LHORSE_EXPOSE_KSTREAMS_HEALTH"

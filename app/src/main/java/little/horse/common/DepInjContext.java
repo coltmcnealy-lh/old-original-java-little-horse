@@ -112,6 +112,7 @@ public class DepInjContext {
             );
         }
 
+
         Properties conf = new Properties();
         conf.put(ConsumerConfig.GROUP_ID_CONFIG, this.getAppId());
         conf.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, this.getAppInstanceId());
@@ -232,6 +233,8 @@ public class DepInjContext {
             StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG,
             org.apache.kafka.streams.errors.DefaultProductionExceptionHandler.class
         );
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 12);
+
         props.put(StreamsConfig.TOPOLOGY_OPTIMIZATION_CONFIG, "all");
         return props;
     }
@@ -382,7 +385,7 @@ public class DepInjContext {
     }
 
     public int getDefaultPartitions() {
-        return Integer.valueOf(getOrSetDefault(Constants.DEFAULT_PARTITIONS_KEY, "1"));
+        return Integer.valueOf(getOrSetDefault(Constants.DEFAULT_PARTITIONS_KEY, "36"));
     }
 
     public String getWFRunEventTopicPrefix() {

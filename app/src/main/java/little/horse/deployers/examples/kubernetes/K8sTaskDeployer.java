@@ -100,6 +100,11 @@ public class K8sTaskDeployer implements TaskDeployer {
             ));
         }
 
+        EnvEntry iid = EnvEntry.fromValueFrom(
+            Constants.KAFKA_APPLICATION_IID_KEY, "metadata.name"
+        );
+        container.env.add(iid);
+
         Template template = new Template();
         template.metadata = new DeploymentMetadata();
         template.metadata.name = kdConfig.getK8sName(spec);
@@ -117,9 +122,7 @@ public class K8sTaskDeployer implements TaskDeployer {
 
         dp.spec.template = template;
 
-        if (meta.replicas > 1) throw new RuntimeException("Not yet supported!");
-    
-        dp.spec.replicas = 1; // TODO: Support more, which will need StatefulSet
+        dp.spec.replicas = meta.replicas;
         dp.spec.selector = new Selector();
         dp.spec.selector.matchLabels = new HashMap<String, String>();
         dp.spec.selector.matchLabels.put("app", kdConfig.getK8sName(spec));

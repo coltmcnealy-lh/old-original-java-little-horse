@@ -20,6 +20,6 @@ public class K8sTaskDeployMeta extends BaseSchema {
     public String pythonFunction;
 
     public HashMap<String, String> env;
-    public int replicas = 1;
+    public int replicas = 5;
     public String namespace;
 }
